@@ -1,0 +1,16 @@
+{{ define "pages/index.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

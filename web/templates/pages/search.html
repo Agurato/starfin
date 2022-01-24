@@ -1,0 +1,33 @@
+{{ define "pages/search.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                <form action="" method="get" id="search-form">
+                    <input type="text" id="q" name="q" size="30" placeholder="Search" {{if .searchQuery}}value="{{.searchQuery}}"{{end}}>
+                    <button type="submit">Search</button>
+                </form>
+            </section>
+            <section id="search-results">
+                {{ range .searchResults }}
+                    <aside>
+                        <span class="media {{ .MediaType }}">{{ .MediaType }}</span>
+                        <a class="details" href="{{ .MediaURL }}"><h3>{{ .Title }} - {{ .Date }}</h3>
+                        {{ if .Poster }}<img src="{{ .Poster }}" alt="poster">{{ end }}</a>
+                        <button class="req" tmdbId="{{ .ID }}" mediaType="{{ .MediaType }}" action="{{ .Action }}" onclick="request(this)">
+                            {{ if eq .Action "add" }}
+                                Request
+                            {{ else }}
+                                Un-request
+                            {{ end }}
+                        </button>
+                    </aside>
+                {{ end }}
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

@@ -1,0 +1,27 @@
+{{ define "pages/register.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                <form action="/register" method="post">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" size="25" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
+                    <label for="password1">Password:</label>
+                    <input type="password" id="password1" name="password1" size="25" placeholder="Password">
+                    <label for="password2">Re-enter password:</label>
+                    <input type="password" id="password2" name="password2" size="25" placeholder="Password">
+                    <button type="submit">Submit</button>
+                </form>
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

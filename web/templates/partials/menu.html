@@ -1,0 +1,23 @@
+{{ define "partials/menu.html" }}
+<header>
+    <nav>
+        <h1><a href="/">down-low-d</a></h1>
+        <ul>
+            {{ if .user.isLoggedIn }}
+            <li><a href="/search">Search</a></li>
+            <li><a href="">{{ .user.name }}</a>
+                <ul>
+                    <li><a href="/u/{{ .user.name }}">Profile</a></li>
+                    <li><a href="/settings">Settings</a></li>
+                    <li><a href="/logout">Logout</a></li>
+                </ul>
+            </li>
+            {{ else }}
+            <li><a href="/login">Login</a></li>
+            <li><a href="/register">Register</a></li>
+            {{ end }}
+        </ul>
+    </nav>
+    <h1>{{ .title }}</h1>
+</header>
+{{ end }}

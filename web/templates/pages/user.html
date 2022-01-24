@@ -1,0 +1,32 @@
+{{ define "pages/user.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                {{ range .queries }}
+                    <aside>
+                        <span class="media {{ .MediaType }}">{{ .MediaType }}</span>
+                        <a class="details" href="{{ .MediaURL }}"><h3>{{ .Title }} - {{ .Date }}</h3>
+                        {{ if .Poster }}<img src="{{ .Poster }}" alt="poster">{{ end }}</a>
+                        <button class="req" tmdbId="{{ .ID }}" mediaType="{{ .MediaType }}" action="{{ .Action }}" onclick="request(this)">
+                            {{ if eq .Action "add" }}
+                                Request
+                            {{ else }}
+                                Un-request
+                            {{ end }}
+                        </button>
+                    </aside>
+                {{ end }}
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

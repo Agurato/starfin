@@ -1,0 +1,25 @@
+{{ define "pages/login.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                <form action="/login" method="post">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" size="20" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Password">
+                    <button type="submit">Submit</button>
+                </form>
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}
