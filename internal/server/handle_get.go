@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Handle404 displays the 404 page
@@ -17,17 +18,23 @@ func Handle404(c *gin.Context) {
 	})
 }
 
-// HandleGETIndex displays the index page
-func HandleGETIndex(c *gin.Context) {
-	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
-		"title": "down-low-d",
+// HandleGETStart allows regsitration of first user (admin)
+func HandleGETStart(c *gin.Context) {
+	if GetUserNb() > 0 {
+		// TODO: log
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	}
+	RenderHTML(c, http.StatusOK, "pages/start.html", gin.H{
+		"title": "Create admin account",
 	})
 }
 
-// HandleGETRegister displays the registration page
-func HandleGETRegister(c *gin.Context) {
-	RenderHTML(c, http.StatusOK, "pages/register.html", gin.H{
-		"title": "Register",
+// HandleGETIndex displays the index page
+func HandleGETIndex(c *gin.Context) {
+	// TODO: display recently added movies in index page
+	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
+		"title": "down-low-d",
 	})
 }
 
@@ -90,7 +97,6 @@ func HandleGETSearch(c *gin.Context) {
 func HandleGETMovie(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey).(User)
-	userColl := mongoDb.Collection("users")
 
 	// Fetch info from TMDB
 	// tmdbIDInt, err := strconv.Atoi(c.Param("tmdbId"))
@@ -103,7 +109,7 @@ func HandleGETMovie(c *gin.Context) {
 	// }
 
 	var userDB User
-	if err := userColl.FindOne(MongoCtx, bson.M{"_id": user.ID}).Decode(&userDB); err != nil {
+	if err := mongoUsers.FindOne(MongoCtx, bson.M{"_id": user.ID}).Decode(&userDB); err != nil {
 		// TODO
 	}
 
@@ -127,14 +133,11 @@ func HandleGETSettings(c *gin.Context) {
 func HandleGETUser(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey).(User)
-	userColl := mongoDb.Collection("users")
 
-	var (
-		userDB User
-	)
+	var userDB User
 
 	// Check for user existence and fetch all queries
-	if err := userColl.FindOne(MongoCtx, bson.M{"_id": user.ID}).Decode(&userDB); err != nil {
+	if err := GetUserFromID(user.ID, &userDB); err != nil {
 		RenderHTML(c, http.StatusOK, "pages/user.html", gin.H{
 			"title": fmt.Sprintf("%s's profile", c.Param("userId")),
 			"error": "User does not exist!",
@@ -145,5 +148,56 @@ func HandleGETUser(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/user.html", gin.H{
 		"title": fmt.Sprintf("%s's profile", c.Param("userId")),
 		"user":  c.Param("userId"),
+	})
+}
+
+// HandleGETAdmin displays the admin page
+func HandleGETAdmin(c *gin.Context) {
+	volumes := GetVolumes()
+	var volumesWithStringID []gin.H
+	for _, vol := range volumes {
+		volumesWithStringID = append(volumesWithStringID, gin.H{
+			"id":  vol.ID.Hex(),
+			"obj": vol,
+		})
+	}
+	RenderHTML(c, http.StatusOK, "pages/admin.html", gin.H{
+		"title":   "Admin",
+		"volumes": volumesWithStringID,
+	})
+}
+
+func HandleGETVolume(c *gin.Context) {
+	volumeIdStr := c.Param("volumeId")
+
+	// If we're adding a new volume
+	if volumeIdStr == "new" {
+		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+			"title":  "Add new volume",
+			"volume": Volume{},
+			"new":    true,
+		})
+		return
+	}
+
+	volumeId, err := primitive.ObjectIDFromHex(volumeIdStr)
+	if err != nil {
+		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+			"title": "Edit volume",
+			"error": "Incorrect volume ID!",
+		})
+	}
+	var volume Volume
+	if err := GetVolumeFromID(volumeId, &volume); err != nil {
+		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+			"title": "Edit volume",
+			"error": "Volume does not exist!",
+		})
+		return
+	}
+	RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+		"title":  "Edit volume",
+		"volume": volume,
+		"new":    false,
 	})
 }

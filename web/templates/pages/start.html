@@ -1,4 +1,4 @@
-{{ define "pages/register.html" }}
+{{ define "pages/start.html" }}
 <!DOCTYPE html>
 <html>
     {{ template "partials/head.html" . }}
@@ -11,7 +11,7 @@
                 {{ end }}
             </section>
             <section>
-                <form action="/register" method="post">
+                <form action="/start" method="post">
                     <label for="username">Username:</label>
                     <input type="text" id="username" name="username" size="25" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
                     <label for="password1">Password:</label>

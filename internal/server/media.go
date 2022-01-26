@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
@@ -150,4 +152,137 @@ func MediaMovieDetails(tmdbID int, inUserQueries bool) (MediaInfo, error) {
 		Backdrop:  backdropPath,
 		Action:    action,
 	}, nil
+}
+
+// IsVideoFileExtension checks if extension is corresponding to a known video file extension
+// See https://en.wikipedia.org/wiki/Video_file_format
+func IsVideoFileExtension(ext string) bool {
+	ext = strings.ToLower(ext)
+	if ext == ".mkv" ||
+		ext == ".mp4" || ext == ".m4p" || ext == ".m4v" ||
+		ext == ".mpg" || ext == ".mp2" || ext == ".mpeg" || ext == ".mpe" || ext == ".mpv" || ext == ".m2v" ||
+		ext == ".avi" ||
+		ext == ".webm" ||
+		ext == ".flv" || ext == ".f4v" || ext == ".f4p" || ext == ".f4a" || ext == ".f4b" ||
+		ext == ".vob" ||
+		ext == ".ogv" || ext == ".ogg" ||
+		ext == ".mts" || ext == ".m2ts" || ext == ".ts" ||
+		ext == ".mov" ||
+		ext == ".wmv" ||
+		ext == ".yuv" ||
+		ext == ".asf" {
+		return true
+	}
+	return false
+}
+
+// ListVideoFiles lists all the files that are considered as video files in a folder
+// See func isVideoFileExtension(string)
+func ListVideoFiles(root string, recursive bool) ([]string, error) {
+	var (
+		files      []string
+		videoFiles []string
+		err        error
+	)
+	if recursive {
+		// files, err = filepath.Glob(path + "/**/*.mkv")
+
+		err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// files, err = filepath.Glob(path + "/*.mkv")
+
+		f, err := os.Open(root)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		fileInfos, err := f.Readdir(-1)
+		if err != nil {
+			return nil, err
+		}
+		for _, fileInfo := range fileInfos {
+			if !fileInfo.IsDir() {
+				files = append(files, filepath.Join(root, fileInfo.Name()))
+			}
+		}
+	}
+
+	for _, file := range files {
+		if IsVideoFileExtension(filepath.Ext(file)) {
+			videoFiles = append(videoFiles, file)
+		}
+	}
+
+	return videoFiles, nil
+}
+
+// ScanVolume scans files from volume that have not been added to the db yet
+func ScanVolume(volume Volume) {
+	files, err := ListVideoFiles(volume.Path, volume.IsRecursive)
+	if err != nil {
+		// TODO: log
+	}
+
+	// releaseDateRegex, _ := regexp.Compile(`(\d\d\d\d)`)
+
+	// For each file
+	for _, file := range files {
+		// Get movie name
+		movieName, releaseDate := GetMovieInfoFromFileName(filepath.Base(file))
+		fmt.Println(movieName)
+		fmt.Println(releaseDate)
+
+		// Search on TMDB
+
+		// Add to DB
+
+		// TODO: log
+	}
+}
+
+// GetMovieInfoFromFileName returns movie name and release year inferred from the file name
+// TODO: unit test
+func GetMovieInfoFromFileName(filename string) (movieName string, releaseYear int) {
+
+	// Split on '.' and ' '
+	parts := strings.Split(strings.ReplaceAll(filename, ".", " "), " ")
+	i := len(parts) - 1
+
+	// Iterate in reverse and stop at first year info
+	for ; i >= 0; i-- {
+		potentialYear := parts[i]
+		if len(potentialYear) == 4 {
+			year, err := strconv.Atoi(potentialYear)
+			if err == nil {
+				releaseYear = year
+				break
+			}
+		}
+		if len(potentialYear) == 6 && potentialYear[0] == '(' && potentialYear[5] == ')' {
+			year, err := strconv.Atoi(potentialYear[1:5])
+			if err == nil {
+				releaseYear = year
+				break
+			}
+		}
+	}
+
+	// The movie name should be right before the movie year
+	if releaseYear > 0 && i >= 0 {
+		movieName = strings.Join(parts[:i], " ")
+	} else {
+		movieName = strings.Join(parts, " ")
+	}
+	return
 }

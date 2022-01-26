@@ -1,0 +1,28 @@
+{{ define "pages/admin.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                {{ range .volumes }}
+                <aside>
+                    <span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span>
+                    <a href="/admin/volume/{{ .id }}"><h3>{{ .obj.Name }}</h3></a>
+                    <code>{{ .obj.Path }}</code>
+                </aside>
+                {{ end }}
+                <aside>
+                    <a href="/admin/volume/new">Add new volume</a>
+                </aside>
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

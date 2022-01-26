@@ -23,8 +23,27 @@ type User struct {
 	IsAdmin  bool               `bson:"is_admin"`
 }
 
+// Volume holds the volume paths to fetch media from
+type Volume struct {
+	ID          primitive.ObjectID `bson:"_id"`
+	Name        string             `bson:"name"`
+	Path        string             `bson:"path"`
+	IsRecursive bool               `bson:"is_recursive"`
+	MediaType   string             `bson:"media_type"`
+}
+
+// Media is the link between the filepath and the corresponding media ID from TMDB
+type Media struct {
+	ID       primitive.ObjectID `bson:"_id"`
+	FilePath string             `bson:"file_path"`
+	TmdbID   string             `bson:"tmdb_id"`
+	VolumeID primitive.ObjectID `bson:"volume_id"`
+}
+
 var (
-	mongoDb *mongo.Database
+	mongoDb      *mongo.Database
+	mongoUsers   *mongo.Collection
+	mongoVolumes *mongo.Collection
 )
 
 // InitMongo init mongo db
@@ -42,13 +61,14 @@ func InitMongo() (mongoClient *mongo.Client) {
 	}
 
 	mongoDb = mongoClient.Database(os.Getenv(EnvDBName))
+	mongoUsers = mongoDb.Collection("users")
+	mongoVolumes = mongoDb.Collection("volumes")
 	return
 }
 
 // AddUser adds a user to the database after checking parameter
 func AddUser(username, password1, password2 string, isAdmin bool) error {
 	argon := argon2.DefaultConfig()
-	userColl := mongoDb.Collection("users")
 
 	// Check username length
 	if len(username) < 3 || len(username) > 25 {
@@ -56,7 +76,10 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	}
 
 	// Check if username is not already taken
-	count, _ := userColl.CountDocuments(MongoCtx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
+	count, err := mongoUsers.CountDocuments(MongoCtx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
+	if err != nil {
+		// TODO: log
+	}
 	if count > 0 {
 		return errors.New("this username is already taken")
 	}
@@ -84,6 +107,47 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 		Password: string(encoded),
 		IsAdmin:  isAdmin,
 	}
-	_, err = userColl.InsertOne(MongoCtx, user)
+	_, err = mongoUsers.InsertOne(MongoCtx, user)
+	return err
+}
+
+// GetUserFromID
+func GetUserFromID(id primitive.ObjectID, user *User) error {
+	return mongoUsers.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&user)
+}
+
+func GetUserNb() int64 {
+	count, err := mongoUsers.CountDocuments(MongoCtx, bson.M{})
+	if err != nil {
+		// TODO: log
+	}
+	return count
+}
+
+func GetVolumeFromID(id primitive.ObjectID, volume *Volume) error {
+	return mongoVolumes.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&volume)
+}
+
+func GetVolumes() (volumes []Volume) {
+	volumeCur, err := mongoVolumes.Find(MongoCtx, bson.M{})
+	if err != nil {
+		// TODO: log
+	}
+	for volumeCur.Next(MongoCtx) {
+		var vol Volume
+		err := volumeCur.Decode(&vol)
+		if err != nil {
+			// TODO: log
+		}
+		volumes = append(volumes, vol)
+	}
+	return
+}
+
+func AddVolume(volume Volume) error {
+	_, err := mongoVolumes.InsertOne(MongoCtx, volume)
+	if err == nil {
+		go ScanVolume(volume)
+	}
 	return err
 }

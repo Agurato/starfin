@@ -6,10 +6,34 @@ import (
 
 	"github.com/matthewhartstonge/argon2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
+
+// HandlePOSTStart handles registration (only available for first account)
+func HandlePOSTStart(c *gin.Context) {
+	if GetUserNb() != 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Admin user has already been created"})
+		return
+	}
+	// Fetch username and passwords from POST data
+	username := strings.Trim(c.PostForm("username"), " ")
+	password1 := strings.Trim(c.PostForm("password1"), " ")
+	password2 := strings.Trim(c.PostForm("password2"), " ")
+
+	if err := AddUser(username, password1, password2, true); err != nil {
+		RenderHTML(c, http.StatusUnauthorized, "pages/start.html", gin.H{
+			"title":    "Start",
+			"error":    err.Error(),
+			"username": username,
+		})
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, "/")
+}
 
 // HandlePOSTRegister handles registration from POST request
 func HandlePOSTRegister(c *gin.Context) {
@@ -34,7 +58,6 @@ func HandlePOSTRegister(c *gin.Context) {
 // HandlePOSTLogin handles login from POST request
 func HandlePOSTLogin(c *gin.Context) {
 	session := sessions.Default(c)
-	userColl := mongoDb.Collection("users")
 	// Fetch username and password from POST data
 	username := strings.Trim(c.PostForm("username"), " ")
 	password := strings.Trim(c.PostForm("password"), " ")
@@ -51,7 +74,7 @@ func HandlePOSTLogin(c *gin.Context) {
 
 	// Fetch encoded password from DB
 	var user User
-	if err := userColl.FindOne(MongoCtx, bson.M{"name": username}).Decode(&user); err != nil {
+	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": username}).Decode(&user); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
 			"title":    "Login",
 			"error":    "Authentication failed",
@@ -80,11 +103,8 @@ func HandlePOSTLogin(c *gin.Context) {
 	}
 
 	// Save cookie
-	userSession := User{
-		ID:   user.ID,
-		Name: user.Name,
-	}
-	session.Set(UserKey, userSession)
+	user.Password = ""
+	session.Set(UserKey, user)
 	if err := session.Save(); err != nil {
 		RenderHTML(c, http.StatusInternalServerError, "pages/login.html", gin.H{
 			"title":    "Login",
@@ -100,7 +120,6 @@ func HandlePOSTLogin(c *gin.Context) {
 // HandlePOSTSetPassword handles changing password from POST request
 func HandlePOSTSetPassword(c *gin.Context) {
 	session := sessions.Default(c)
-	userColl := mongoDb.Collection("users")
 	user := session.Get(UserKey).(User)
 	argon := argon2.DefaultConfig()
 	// Fetch username and password from POST data
@@ -127,7 +146,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 
 	// Fetch encoded password from DB
 	var userDB User
-	if err := userColl.FindOne(MongoCtx, bson.M{"name": user.Name}).Decode(&userDB); err != nil {
+	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": user.Name}).Decode(&userDB); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while checking for your password",
@@ -163,7 +182,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	}
 
 	change := bson.M{"$set": bson.M{"password": string(encoded)}}
-	if _, err := userColl.UpdateOne(MongoCtx, bson.M{"_id": userDB.ID}, change); err != nil {
+	if _, err := mongoUsers.UpdateOne(MongoCtx, bson.M{"_id": userDB.ID}, change); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while saving your password",
@@ -172,4 +191,28 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusSeeOther, "/settings?setpassword=success")
+}
+
+// HandlePOSTAddVolume handles editing (and adding) a volume from POST request
+func HandlePOSTEditVolume(c *gin.Context) {
+	volumeID := c.PostForm("id")
+	volumeName := strings.Trim(c.PostForm("name"), " ")
+	volumePath := strings.Trim(c.PostForm("path"), " ")
+	volumeIsRecursive := c.PostForm("recursive") == "recursive"
+	volumeMediaType := c.PostForm("mediatype") // "Movie" or "TV"
+
+	if volumeID == "" {
+		// Adding a volume
+		AddVolume(Volume{
+			ID:          primitive.NewObjectID(),
+			Name:        volumeName,
+			Path:        volumePath,
+			IsRecursive: volumeIsRecursive,
+			MediaType:   volumeMediaType,
+		})
+	} else {
+		// TODO: editing a volume
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin")
 }

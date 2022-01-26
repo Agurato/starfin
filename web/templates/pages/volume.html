@@ -1,0 +1,48 @@
+{{ define "pages/volume.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                <!-- TODO: QOL - Auto-complete path input -->
+                {{ if .new }}
+                <form action="/admin/editvolume" method="post">
+                    <input type="hidden" id="id" name="id" value="">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" size="20" placeholder="Volume name">
+                    <label for="path">Path:</label>
+                    <input type="text" id="path" name="path" placeholder="Path to volume">
+                    <input type="checkbox" id="recursive" name="recursive" value="recursive">
+                    <label for="recursive">Include subfolders</label><br>
+                    <label>Media type:</label>
+                    <input type="radio" id="mediatype-movie" name="mediatype" value="Movie" checked> <label for="mediatype-movie">Movie</label>
+                    <input type="radio" id="mediatype-tv" name="mediatype" value="TV"> <label for="mediatype-tv">TV Series</label><br>
+                    <button type="submit">Add new volume</button>
+                </form>
+                {{ else }}
+                <form action="/admin/editvolume" method="post">
+                    <input type="hidden" id="id" name="id" value="{{ .volume.ID }}">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" size="20" placeholder="Volume name" {{ if .volume.Name }}value="{{ .volume.Name }}"{{ end }}>
+                    <label for="path">Path:</label>
+                    <input type="text" id="path" name="path" placeholder="Path to volume">
+                    <input type="checkbox" id="recursive" name="recursive" value="recursive" {{ if .volume.IsRecursive }}checked{{ end }}>
+                    <label for="recursive">Include subfolders</label><br>
+                    <label>Media type:</label>
+                    <input type="radio" id="mediatype-movie" name="mediatype" value="Movie" {{ if eq .volume.MediaType "Movie" }}checked{{ end }}> <label for="mediatype-movie">Movie</label>
+                    <input type="radio" id="mediatype-tv" name="mediatype" value="TV" {{ if eq .volume.MediaType "TV" }}checked{{ end }}> <label for="mediatype-tv">TV Series</label><br>
+                    <button type="submit">Edit volume</button>
+                </form>
+                {{ end }}
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

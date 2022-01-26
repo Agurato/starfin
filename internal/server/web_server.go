@@ -18,9 +18,11 @@ const (
 // InitServer initializes the server
 func InitServer() *gin.Engine {
 	// Set Gin to production mode
-	gin.SetMode(gin.ReleaseMode)
+	// TODO: change to release for deployment
+	gin.SetMode(gin.DebugMode)
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Cookies
 	store := cookie.NewStore([]byte(os.Getenv(EnvCookieSecret)))
@@ -34,6 +36,10 @@ func InitServer() *gin.Engine {
 	router.Static("/static", "./web/static")
 	// 404
 	router.NoRoute(Handle404)
+
+	// Start pages
+	router.GET("/start", HandleGETStart)
+	router.POST("/start", HandlePOSTStart)
 
 	// Basic pages
 	router.GET("/", HandleGETIndex)
@@ -57,7 +63,18 @@ func InitServer() *gin.Engine {
 		needsLogin.GET("/u/:userId", HandleGETUser)
 
 		needsLogin.GET("/settings", HandleGETSettings)
-		router.POST("/setpassword", HandlePOSTSetPassword)
+		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
+	}
+
+	needsAdmin := router.Group("/")
+	needsAdmin.Use(AdminRequired)
+	{
+		needsAdmin.GET("/admin", HandleGETAdmin)
+		needsAdmin.GET("/admin/volume/:volumeId", HandleGETVolume)
+		needsAdmin.POST("/admin/editvolume", HandlePOSTEditVolume)
+
+		needsAdmin.GET("/adduser")
+		needsAdmin.POST("/adduser")
 	}
 
 	return router
@@ -70,12 +87,15 @@ func RenderHTML(c *gin.Context, code int, name string, obj gin.H) {
 	if user == nil {
 		obj["user"] = gin.H{
 			"isLoggedIn": false,
+			"isAdmin":    false,
 			"name":       "",
 		}
 	} else {
+		realUser := user.(User)
 		obj["user"] = gin.H{
 			"isLoggedIn": true,
-			"name":       user.(User).Name,
+			"isAdmin":    realUser.IsAdmin,
+			"name":       realUser.Name,
 		}
 	}
 	c.HTML(code, name, obj)
@@ -91,6 +111,30 @@ func AuthRequired(c *gin.Context) {
 		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
 			"title": "down-low-d",
 			"error": "You need to be logged in to use this functionality",
+		})
+		return
+	}
+	c.Next()
+}
+
+// AuthRequired ensures that a request will be aborted if the user is not authenticated
+func AdminRequired(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(UserKey)
+	// Abort request if user is not in cookies
+	if user == nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
+			"title": "down-low-d",
+			"error": "You need to be logged in to use this functionality",
+		})
+		return
+	}
+	if !user.(User).IsAdmin {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
+			"title": "down-low-d",
+			"error": "You need to be admin to use this functionality",
 		})
 		return
 	}

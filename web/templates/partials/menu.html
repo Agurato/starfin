@@ -5,6 +5,9 @@
         <ul>
             {{ if .user.isLoggedIn }}
             <li><a href="/search">Search</a></li>
+            {{ if .user.isAdmin }}
+            <li><a href="/admin">Admin</a></li>
+            {{ end }}
             <li><a href="">{{ .user.name }}</a>
                 <ul>
                     <li><a href="/u/{{ .user.name }}">Profile</a></li>
@@ -14,7 +17,6 @@
             </li>
             {{ else }}
             <li><a href="/login">Login</a></li>
-            <li><a href="/register">Register</a></li>
             {{ end }}
         </ul>
     </nav>
