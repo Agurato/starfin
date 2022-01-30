@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Agurato/down-low-d/internal/media"
 	"github.com/matthewhartstonge/argon2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -203,7 +204,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 
 	if volumeID == "" {
 		// Adding a volume
-		AddVolume(Volume{
+		AddVolume(media.Volume{
 			ID:          primitive.NewObjectID(),
 			Name:        volumeName,
 			Path:        volumePath,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Agurato/down-low-d/internal/media"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
@@ -65,32 +66,32 @@ func HandleGETLogout(c *gin.Context) {
 
 // HandleGETSearch displays the search & results page
 func HandleGETSearch(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserKey).(User)
+	// session := sessions.Default(c)
+	// user := session.Get(UserKey).(User)
 
-	searchQuery := c.Query("q")
+	// searchQuery := c.Query("q")
 
-	if len(searchQuery) == 0 {
-		RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
-			"title":       "Search",
-			"searchQuery": searchQuery,
-		})
-		return
-	}
+	// if len(searchQuery) == 0 {
+	// 	RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
+	// 		"title":       "Search",
+	// 		"searchQuery": searchQuery,
+	// 	})
+	// 	return
+	// }
 
-	searchResults, err := MediaSearchMulti(searchQuery, user)
-	if err != nil {
-		RenderHTML(c, http.StatusServiceUnavailable, "pages/search.html", gin.H{
-			"title": "Search",
-			"error": "An error occured during the search",
-		})
-	}
+	// searchResults, err := MediaSearchMulti(searchQuery, user)
+	// if err != nil {
+	// 	RenderHTML(c, http.StatusServiceUnavailable, "pages/search.html", gin.H{
+	// 		"title": "Search",
+	// 		"error": "An error occured during the search",
+	// 	})
+	// }
 
-	RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
-		"title":         "Search",
-		"searchQuery":   searchQuery,
-		"searchResults": searchResults,
-	})
+	// RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
+	// 	"title":         "Search",
+	// 	"searchQuery":   searchQuery,
+	// 	"searchResults": searchResults,
+	// })
 }
 
 // HandleGETMovie displays information about a movie
@@ -174,7 +175,7 @@ func HandleGETVolume(c *gin.Context) {
 	if volumeIdStr == "new" {
 		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
 			"title":  "Add new volume",
-			"volume": Volume{},
+			"volume": media.Volume{},
 			"new":    true,
 		})
 		return
@@ -187,7 +188,7 @@ func HandleGETVolume(c *gin.Context) {
 			"error": "Incorrect volume ID!",
 		})
 	}
-	var volume Volume
+	var volume media.Volume
 	if err := GetVolumeFromID(volumeId, &volume); err != nil {
 		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
 			"title": "Edit volume",

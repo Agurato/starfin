@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Agurato/down-low-d/internal/media"
 	"github.com/matthewhartstonge/argon2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,27 +24,12 @@ type User struct {
 	IsAdmin  bool               `bson:"is_admin"`
 }
 
-// Volume holds the volume paths to fetch media from
-type Volume struct {
-	ID          primitive.ObjectID `bson:"_id"`
-	Name        string             `bson:"name"`
-	Path        string             `bson:"path"`
-	IsRecursive bool               `bson:"is_recursive"`
-	MediaType   string             `bson:"media_type"`
-}
-
-// Media is the link between the filepath and the corresponding media ID from TMDB
-type Media struct {
-	ID       primitive.ObjectID `bson:"_id"`
-	FilePath string             `bson:"file_path"`
-	TmdbID   string             `bson:"tmdb_id"`
-	VolumeID primitive.ObjectID `bson:"volume_id"`
-}
-
 var (
+	MongoCtx     context.Context
 	mongoDb      *mongo.Database
 	mongoUsers   *mongo.Collection
 	mongoVolumes *mongo.Collection
+	mongoMovies  *mongo.Collection
 )
 
 // InitMongo init mongo db
@@ -63,6 +49,7 @@ func InitMongo() (mongoClient *mongo.Client) {
 	mongoDb = mongoClient.Database(os.Getenv(EnvDBName))
 	mongoUsers = mongoDb.Collection("users")
 	mongoVolumes = mongoDb.Collection("volumes")
+	mongoMovies = mongoDb.Collection("movies")
 	return
 }
 
@@ -124,17 +111,17 @@ func GetUserNb() int64 {
 	return count
 }
 
-func GetVolumeFromID(id primitive.ObjectID, volume *Volume) error {
+func GetVolumeFromID(id primitive.ObjectID, volume *media.Volume) error {
 	return mongoVolumes.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&volume)
 }
 
-func GetVolumes() (volumes []Volume) {
+func GetVolumes() (volumes []media.Volume) {
 	volumeCur, err := mongoVolumes.Find(MongoCtx, bson.M{})
 	if err != nil {
 		// TODO: log
 	}
 	for volumeCur.Next(MongoCtx) {
-		var vol Volume
+		var vol media.Volume
 		err := volumeCur.Decode(&vol)
 		if err != nil {
 			// TODO: log
@@ -144,10 +131,46 @@ func GetVolumes() (volumes []Volume) {
 	return
 }
 
-func AddVolume(volume Volume) error {
+func AddVolume(volume media.Volume) error {
 	_, err := mongoVolumes.InsertOne(MongoCtx, volume)
 	if err == nil {
-		go ScanVolume(volume)
+		go func() {
+			for _, mediaFile := range volume.Scan() {
+				// If media is already in DB, add the current Volume to the media's origin
+				if IsMediaInDB(&mediaFile) {
+					fmt.Printf("%s is in DB\n", mediaFile.(*media.Movie).Path)
+				} else {
+					AddMediaToDB(&mediaFile)
+				}
+			}
+		}()
 	}
 	return err
+}
+
+// IsMediaInDB checks if a given media is already present in DB
+// TODO: case TVSeries
+func IsMediaInDB(mediaFile *media.Media) bool {
+
+	switch (*mediaFile).(type) {
+	case *media.Movie:
+		movie := (*mediaFile).(*media.Movie)
+		res := mongoMovies.FindOne(MongoCtx, bson.M{"path": movie.Path})
+		return res.Err() != mongo.ErrNoDocuments
+	}
+
+	return false
+}
+
+// AddMediaToDB adds a given media to the DB
+// TODO: case TVSeries
+func AddMediaToDB(mediaFile *media.Media) {
+	switch (*mediaFile).(type) {
+	case *media.Movie:
+		movie := (*mediaFile).(*media.Movie)
+		_, err := mongoMovies.InsertOne(MongoCtx, movie)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
