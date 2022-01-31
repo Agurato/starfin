@@ -1,7 +1,6 @@
 package media
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 type Media interface {
 	FetchMediaID() error
 	FetchMediaDetails()
+	GetTMDBID() int
 }
 
 // CreateMediaFromFilename instantiates a struct implementing the Media interface
@@ -54,7 +54,6 @@ func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
 	} else {
 		movie.Name = strings.Join(parts, " ")
 	}
-	fmt.Println("Found movie", movie.Name, movie.ReleaseYear)
 
 	movie.FromVolumes = append(movie.FromVolumes, volumeID)
 	return &movie

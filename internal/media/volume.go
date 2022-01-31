@@ -1,10 +1,10 @@
 package media
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -67,10 +67,10 @@ func (v Volume) ListVideoFiles() ([]string, error) {
 func (v Volume) Scan() (medias []Media) {
 	files, err := v.ListVideoFiles()
 	if err != nil {
-		// TODO: log
+		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
 	}
 
-	fmt.Println("Scanning", v.Path)
+	log.WithField("volumePath", v.Path).Debugln("Scnaning volume")
 	// For each file
 	for _, file := range files {
 		media := CreateMediaFromFilename(file, v.ID)
@@ -78,18 +78,15 @@ func (v Volume) Scan() (medias []Media) {
 		// Search ID on TMDB
 		err = media.FetchMediaID()
 		if err != nil {
-			// TODO: log
-			fmt.Printf("err: %v\n", err)
+			log.WithField("media", media).Warningln("Unable to fetch movie ID from TMDB")
 			continue
 		}
-		fmt.Println("Found media with TMDB ID", media.(*Movie).TMDBID)
+		log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")
 
 		// Fill info from TMDB
 		media.FetchMediaDetails()
 
 		medias = append(medias, media)
-
-		// TODO: log
 	}
 
 	return

@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/Agurato/down-low-d/internal/media"
 	"github.com/matthewhartstonge/argon2"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -65,7 +65,7 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	// Check if username is not already taken
 	count, err := mongoUsers.CountDocuments(MongoCtx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
 	if err != nil {
-		// TODO: log
+		log.WithFields(log.Fields{"name": username, "error": err}).Errorln("Unable to check if user exists")
 	}
 	if count > 0 {
 		return errors.New("this username is already taken")
@@ -98,15 +98,16 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	return err
 }
 
-// GetUserFromID
+// GetUserFromID gets user from its ID
 func GetUserFromID(id primitive.ObjectID, user *User) error {
 	return mongoUsers.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&user)
 }
 
+// GetUserNb returns the number of users from the DB
 func GetUserNb() int64 {
 	count, err := mongoUsers.CountDocuments(MongoCtx, bson.M{})
 	if err != nil {
-		// TODO: log
+		log.WithField("error", err).Errorln("Unable to retrieve number of users")
 	}
 	return count
 }
@@ -115,22 +116,24 @@ func GetVolumeFromID(id primitive.ObjectID, volume *media.Volume) error {
 	return mongoVolumes.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&volume)
 }
 
+// GetVolumes
 func GetVolumes() (volumes []media.Volume) {
 	volumeCur, err := mongoVolumes.Find(MongoCtx, bson.M{})
 	if err != nil {
-		// TODO: log
+		log.WithField("error", err).Errorln("Unable to retrieve volumes from database")
 	}
 	for volumeCur.Next(MongoCtx) {
 		var vol media.Volume
 		err := volumeCur.Decode(&vol)
 		if err != nil {
-			// TODO: log
+			log.WithField("error", err).Errorln("Unable to fetch volume from database")
 		}
 		volumes = append(volumes, vol)
 	}
 	return
 }
 
+// AddVolume
 func AddVolume(volume media.Volume) error {
 	_, err := mongoVolumes.InsertOne(MongoCtx, volume)
 	if err == nil {
@@ -138,7 +141,7 @@ func AddVolume(volume media.Volume) error {
 			for _, mediaFile := range volume.Scan() {
 				// If media is already in DB, add the current Volume to the media's origin
 				if IsMediaInDB(&mediaFile) {
-					fmt.Printf("%s is in DB\n", mediaFile.(*media.Movie).Path)
+					AddVolumeSourceToMedia(&mediaFile, &volume)
 				} else {
 					AddMediaToDB(&mediaFile)
 				}
@@ -151,7 +154,6 @@ func AddVolume(volume media.Volume) error {
 // IsMediaInDB checks if a given media is already present in DB
 // TODO: case TVSeries
 func IsMediaInDB(mediaFile *media.Media) bool {
-
 	switch (*mediaFile).(type) {
 	case *media.Movie:
 		movie := (*mediaFile).(*media.Movie)
@@ -170,7 +172,22 @@ func AddMediaToDB(mediaFile *media.Media) {
 		movie := (*mediaFile).(*media.Movie)
 		_, err := mongoMovies.InsertOne(MongoCtx, movie)
 		if err != nil {
-			fmt.Println(err)
+			log.WithField("path", movie.Path).Errorln("Unable to add movie to database")
+		}
+	}
+}
+
+// AddVolumeSourceToMedia adds the volume as a source to the given media
+// TODO: case TVSeries
+func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
+	switch (*mediaFile).(type) {
+	case *media.Movie:
+		movie := (*mediaFile).(*media.Movie)
+		res, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"path": movie.Path}, bson.M{"$addToSet": bson.M{"fromvolumes": volume.ID}})
+		if err != nil || res.ModifiedCount == 0 {
+			log.WithField("path", movie.Path).Warningln("Unable to volume as source of movie to database")
+		} else {
+			log.WithField("path", movie.Path).Debugln("Added volume as source of movie to database")
 		}
 	}
 }
