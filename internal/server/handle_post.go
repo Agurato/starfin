@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -196,24 +197,100 @@ func HandlePOSTSetPassword(c *gin.Context) {
 
 // HandlePOSTAddVolume handles editing (and adding) a volume from POST request
 func HandlePOSTEditVolume(c *gin.Context) {
-	volumeID := c.PostForm("id")
+	volumeIdStr := c.PostForm("id")
 	volumeName := strings.Trim(c.PostForm("name"), " ")
 	volumePath := strings.Trim(c.PostForm("path"), " ")
 	volumeIsRecursive := c.PostForm("recursive") == "recursive"
 	volumeMediaType := c.PostForm("mediatype") // "Movie" or "TV"
 
-	if volumeID == "" {
+	if volumeIdStr == "" {
 		// Adding a volume
-		AddVolume(media.Volume{
+		if err := AddVolume(media.Volume{
 			ID:          primitive.NewObjectID(),
 			Name:        volumeName,
 			Path:        volumePath,
 			IsRecursive: volumeIsRecursive,
 			MediaType:   volumeMediaType,
-		})
+		}); err != nil {
+			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.html", gin.H{
+				"title":  "Add new volume",
+				"volume": media.Volume{},
+				"new":    true,
+				"error":  err.Error(),
+			})
+			return
+		}
 	} else {
 		// TODO: editing a volume
+		var volume media.Volume
+		volumeID, _ := primitive.ObjectIDFromHex(volumeIdStr)
+		GetVolumeFromID(volumeID, &volume)
+		RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.html", gin.H{
+			"title":  "Edit volume",
+			"volume": volume,
+			"id":     volume.ID.Hex(),
+			"new":    false,
+			"error":  "This functionality is not available yet!",
+		})
+		return
 	}
 
 	c.Redirect(http.StatusSeeOther, "/admin")
+}
+
+func HandlePOSTDeleteVolume(c *gin.Context) {
+	volumeID := c.PostForm("volumeId")
+
+	err := DeleteVolume(volumeID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": err})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Volume #%s deleted", volumeID)})
+}
+
+func HandlePOSTEditUser(c *gin.Context) {
+	userIdStr := c.PostForm("id")
+	username := strings.Trim(c.PostForm("username"), " ")
+	password1 := strings.Trim(c.PostForm("password1"), " ")
+	password2 := strings.Trim(c.PostForm("password2"), " ")
+	isAdmin := c.PostForm("isadmin") == "isadmin"
+
+	if userIdStr == "" {
+		if err := AddUser(username, password1, password2, isAdmin); err != nil {
+			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.html", gin.H{
+				"title":    "Add new user",
+				"userEdit": User{},
+				"new":      true,
+				"error":    err.Error(),
+			})
+			return
+		}
+	} else {
+		// TODO: editing a user
+		var user User
+		userID, _ := primitive.ObjectIDFromHex(userIdStr)
+		GetUserFromID(userID, &user)
+		RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.html", gin.H{
+			"title":    "Edit user",
+			"userEdit": user,
+			"id":       user.ID.Hex(),
+			"new":      false,
+			"error":    "This functionality is not available yet!",
+		})
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin")
+}
+
+func HandlePOSTDeleteUser(c *gin.Context) {
+	userID := c.PostForm("userId")
+
+	err := DeleteUser(userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": err})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("User #%s deleted", userID)})
 }

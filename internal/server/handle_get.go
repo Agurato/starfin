@@ -162,18 +162,27 @@ func HandleGETAdmin(c *gin.Context) {
 			"obj": vol,
 		})
 	}
+	users := GetUsers()
+	var usersWithStringID []gin.H
+	for _, user := range users {
+		usersWithStringID = append(usersWithStringID, gin.H{
+			"id":  user.ID.Hex(),
+			"obj": user,
+		})
+	}
 	RenderHTML(c, http.StatusOK, "pages/admin.html", gin.H{
 		"title":   "Admin",
 		"volumes": volumesWithStringID,
+		"users":   usersWithStringID,
 	})
 }
 
-func HandleGETVolume(c *gin.Context) {
+func HandleGETAdminVolume(c *gin.Context) {
 	volumeIdStr := c.Param("volumeId")
 
 	// If we're adding a new volume
 	if volumeIdStr == "new" {
-		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
 			"title":  "Add new volume",
 			"volume": media.Volume{},
 			"new":    true,
@@ -183,22 +192,59 @@ func HandleGETVolume(c *gin.Context) {
 
 	volumeId, err := primitive.ObjectIDFromHex(volumeIdStr)
 	if err != nil {
-		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
 			"title": "Edit volume",
 			"error": "Incorrect volume ID!",
 		})
 	}
 	var volume media.Volume
 	if err := GetVolumeFromID(volumeId, &volume); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
 			"title": "Edit volume",
 			"error": "Volume does not exist!",
 		})
 		return
 	}
-	RenderHTML(c, http.StatusOK, "pages/volume.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
 		"title":  "Edit volume",
 		"volume": volume,
+		"id":     volume.ID.Hex(),
 		"new":    false,
+	})
+}
+
+func HandleGETAdminUser(c *gin.Context) {
+	userIdStr := c.Param("userId")
+
+	// If we're adding a new user
+	if userIdStr == "new" {
+		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+			"title": "Add new user",
+			"user":  User{},
+			"new":   true,
+		})
+		return
+	}
+
+	userId, err := primitive.ObjectIDFromHex(userIdStr)
+	if err != nil {
+		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+			"title": "Edit user",
+			"error": "Incorrect user ID!",
+		})
+	}
+	var user User
+	if err := GetUserFromID(userId, &user); err != nil {
+		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+			"title": "Edit user",
+			"error": "User does not exist!",
+		})
+		return
+	}
+	RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+		"title":    "Edit user",
+		"userEdit": user,
+		"id":       user.ID.Hex(),
+		"new":      false,
 	})
 }

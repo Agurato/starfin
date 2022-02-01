@@ -1,4 +1,4 @@
-{{ define "pages/volume.html" }}
+{{ define "pages/admin_volume.html" }}
 <!DOCTYPE html>
 <html>
     {{ template "partials/head.html" . }}
@@ -28,7 +28,7 @@
                 </form>
                 {{ else }}
                 <form action="/admin/editvolume" method="post">
-                    <input type="hidden" id="id" name="id" value="{{ .volume.ID }}">
+                    <input type="hidden" id="id" name="id" value="{{ .id }}">
                     <label for="name">Name:</label>
                     <input type="text" id="name" name="name" size="20" placeholder="Volume name" {{ if .volume.Name }}value="{{ .volume.Name }}"{{ end }}>
                     <label for="path">Path:</label>

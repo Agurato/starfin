@@ -98,6 +98,23 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	return err
 }
 
+// DeleteUser deletes the user from the DB
+func DeleteUser(hexId string) error {
+	userId, err := primitive.ObjectIDFromHex(hexId)
+	if err != nil {
+		return errors.New("invalid volume id")
+	}
+	res, err := mongoUsers.DeleteOne(MongoCtx, bson.M{"_id": userId})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount != 1 {
+		return errors.New("unable to delete user")
+	}
+
+	return nil
+}
+
 // GetUserFromID gets user from its ID
 func GetUserFromID(id primitive.ObjectID, user *User) error {
 	return mongoUsers.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&user)
@@ -112,11 +129,29 @@ func GetUserNb() int64 {
 	return count
 }
 
+// GetUsers returns the list of users in the DB
+func GetUsers() (users []User) {
+	usersCur, err := mongoUsers.Find(MongoCtx, bson.M{})
+	if err != nil {
+		log.WithField("error", err).Errorln("Unable to retrieve users from database")
+	}
+	for usersCur.Next(MongoCtx) {
+		var user User
+		err := usersCur.Decode(&user)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch user from database")
+		}
+		users = append(users, user)
+	}
+	return
+}
+
+// Fetches volume from DB using specified ID and returns it via pointer
 func GetVolumeFromID(id primitive.ObjectID, volume *media.Volume) error {
 	return mongoVolumes.FindOne(MongoCtx, bson.M{"_id": id}).Decode(&volume)
 }
 
-// GetVolumes
+// GetVolumes returns the list of volumes in the DB
 func GetVolumes() (volumes []media.Volume) {
 	volumeCur, err := mongoVolumes.Find(MongoCtx, bson.M{})
 	if err != nil {
@@ -133,9 +168,23 @@ func GetVolumes() (volumes []media.Volume) {
 	return
 }
 
-// AddVolume
+// AddVolume adds a volume to the DB and start scanning the volume
 func AddVolume(volume media.Volume) error {
-	_, err := mongoVolumes.InsertOne(MongoCtx, volume)
+	// Check volume name length
+	if len(volume.Name) < 3 {
+		return errors.New("volume name must be between 3 and 25 characters")
+	}
+
+	// Check path is a directory
+	fileInfo, err := os.Stat(volume.Path)
+	if err != nil {
+		return errors.New("volume path does not exist")
+	}
+	if !fileInfo.IsDir() {
+		return errors.New("volume path is not a directory")
+	}
+
+	_, err = mongoVolumes.InsertOne(MongoCtx, volume)
 	if err == nil {
 		go func() {
 			for _, mediaFile := range volume.Scan() {
@@ -149,6 +198,38 @@ func AddVolume(volume media.Volume) error {
 		}()
 	}
 	return err
+}
+
+// DeleteVolume deletes the volume from the DB and all the media which originated only from this volume
+func DeleteVolume(hexId string) error {
+	volumeId, err := primitive.ObjectIDFromHex(hexId)
+	if err != nil {
+		return errors.New("invalid volume id")
+	}
+	res, err := mongoVolumes.DeleteOne(MongoCtx, bson.M{"_id": volumeId})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount != 1 {
+		return errors.New("unable to delete volume")
+	}
+
+	// Remove specified volume from all media source
+	// TODO: TV Series
+	_, err = mongoMovies.UpdateMany(MongoCtx,
+		bson.M{},
+		bson.D{
+			{Key: "$pull", Value: bson.D{{Key: "fromvolumes", Value: volumeId}}},
+		})
+	if err != nil {
+		return err
+	}
+	_, err = mongoMovies.DeleteMany(MongoCtx, bson.M{"fromvolumes": bson.D{{Key: "$size", Value: 0}}})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // IsMediaInDB checks if a given media is already present in DB

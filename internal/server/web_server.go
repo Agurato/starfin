@@ -70,11 +70,13 @@ func InitServer() *gin.Engine {
 	needsAdmin.Use(AdminRequired)
 	{
 		needsAdmin.GET("/admin", HandleGETAdmin)
-		needsAdmin.GET("/admin/volume/:volumeId", HandleGETVolume)
+		needsAdmin.GET("/admin/volume/:volumeId", HandleGETAdminVolume)
 		needsAdmin.POST("/admin/editvolume", HandlePOSTEditVolume)
+		needsAdmin.POST("/admin/deletevolume", HandlePOSTDeleteVolume)
 
-		needsAdmin.GET("/adduser")
-		needsAdmin.POST("/adduser")
+		needsAdmin.GET("/admin/user/:userId", HandleGETAdminUser)
+		needsAdmin.POST("/admin/edituser", HandlePOSTEditUser)
+		needsAdmin.POST("/admin/deleteuser", HandlePOSTDeleteUser)
 	}
 
 	return router

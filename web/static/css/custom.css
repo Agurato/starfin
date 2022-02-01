@@ -97,7 +97,27 @@ img[alt=poster] {
     margin-right: auto;
 }
 
-:root {
+code {
+    background-color: #005221;
+}
+
+table a {
+    color: var(--color-text);
+}
+
+table button {
+    padding: 0;
+    margin: 0;
+    border: none;
+    color: var(--color-text);
+    background-color: transparent;
+}
+
+td.admin-add-new {
+    text-align: center !important;
+}
+
+/* :root {
     --color: #B5BD68;
     --color-accent: #8C9440;
 
@@ -111,4 +131,4 @@ img[alt=poster] {
 
     --color-text: #C5C8C6;
     --color-text-secondary: #707880;
-}
+} */

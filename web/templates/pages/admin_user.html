@@ -1,0 +1,30 @@
+{{ define "pages/admin_user.html" }}
+<!DOCTYPE html>
+<html>
+    {{ template "partials/head.html" . }}
+    <body>
+        {{ template "partials/menu.html" . }}
+        <main>
+            <section>
+                {{ if .error }}
+                <p style="color:red">{{ .error }}</p>
+                {{ end }}
+            </section>
+            <section>
+                <form action="/admin/edituser" method="post">
+                    <input type="hidden" id="id" name="id" value="{{if not .new }}{{ .id }}{{end}}">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" size="25" placeholder="Username" {{if not .new }}value="{{ .userEdit.Name }}"{{end}}>
+                    <label for="password1">Password:</label>
+                    <input type="password" id="password1" name="password1" size="25" placeholder="Password">
+                    <label for="password2">Re-enter password:</label>
+                    <input type="password" id="password2" name="password2" size="25" placeholder="Password">
+                    <input type="checkbox" id="isadmin" name="isadmin" value="isadmin" {{if not .new }}{{if .userEdit.IsAdmin }}checked{{end}}{{end}}>
+                    <label for="isadmin">Admin</label><br>
+                    <button type="submit">{{if .new }}Add new{{else}}Edit{{end}} user</button>
+                </form>
+            </section>
+        </main>
+    </body>
+</html>
+{{ end }}

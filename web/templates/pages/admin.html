@@ -11,16 +11,65 @@
                 {{ end }}
             </section>
             <section>
-                {{ range .volumes }}
-                <aside>
-                    <span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span>
-                    <a href="/admin/volume/{{ .id }}"><h3>{{ .obj.Name }}</h3></a>
-                    <code>{{ .obj.Path }}</code>
-                </aside>
-                {{ end }}
-                <aside>
-                    <a href="/admin/volume/new">Add new volume</a>
-                </aside>
+                <header>
+                    <h2>Volumes</h2>
+                </header>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Path</th>
+                            <th>Is Recursive</th>
+                            <th>Type</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .volumes }}
+                        <tr>
+                            <td><a href="/admin/volume/{{ .id }}">{{ .obj.Name }}</a></td>
+                            <td><code>{{ .obj.Path }}</code></td>
+                            <td>{{if .obj.IsRecursive}}✓{{end}}</td>
+                            <td><span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span></td>
+                            <td><button onclick="deleteVolume(this)" volumeId="{{ .id }}"><i class="fas fa-trash-alt"></i></button></td>
+                        </tr>
+                        {{ end }}
+                        <tr>
+                            <td colspan="5" class="admin-add-new"><a href="/admin/volume/new">Add new volume</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <hr>
+            <section>
+                <header>
+                    <h2>Users</h2>
+                </header>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Is Admin</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range $index, $user := .users }}
+                        <tr>
+                            <td><a href="/admin/user/{{ $user.id }}">{{ $user.obj.Name }}</a></td>
+                            <td>{{if $user.obj.IsAdmin}}✓{{end}}</td>
+                            {{if eq $index 0}}
+                            <td></td>
+                            {{else}}
+                            <td><button onclick="deleteUser(this)" userId="{{ $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
+                            {{end}}
+                        </tr>
+                        {{ end }}
+                        <tr>
+                            <td colspan="3" class="admin-add-new"><a href="/admin/user/new">Add new user</a></td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
         </main>
     </body>
