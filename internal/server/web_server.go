@@ -37,18 +37,11 @@ func InitServer() *gin.Engine {
 	// 404
 	router.NoRoute(Handle404)
 
-	// Start pages
+	// Start page
 	router.GET("/start", HandleGETStart)
 	router.POST("/start", HandlePOSTStart)
 
-	// Basic pages
-	router.GET("/", HandleGETIndex)
-
 	// Authentication actions
-	// Removed Register handling for production
-	// Adding new user is now done via command line (-gen-user)
-	// router.GET("/register", HandleGETRegister)
-	// router.POST("/register", HandlePOSTRegister)
 	router.GET("/login", HandleGETLogin)
 	router.POST("/login", HandlePOSTLogin)
 	router.GET("/logout", HandleGETLogout)
@@ -57,10 +50,10 @@ func InitServer() *gin.Engine {
 	needsLogin := router.Group("/")
 	needsLogin.Use(AuthRequired)
 	{
+		needsLogin.GET("/", HandleGETIndex)
+
 		needsLogin.GET("/search", HandleGETSearch)
 		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
-
-		needsLogin.GET("/u/:userId", HandleGETUser)
 
 		needsLogin.GET("/settings", HandleGETSettings)
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
@@ -109,11 +102,8 @@ func AuthRequired(c *gin.Context) {
 	user := session.Get(UserKey)
 	// Abort request if user is not in cookies
 	if user == nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
-			"title": "down-low-d",
-			"error": "You need to be logged in to use this functionality",
-		})
+		c.Redirect(http.StatusFound, "/login")
+		c.Abort()
 		return
 	}
 	c.Next()

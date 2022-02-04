@@ -82,6 +82,7 @@ func (v Volume) Scan() (medias []Media) {
 			continue
 		}
 		log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")
+		// TODO: if movies already exists in DB, do something?
 
 		// Fill info from TMDB
 		media.FetchMediaDetails()

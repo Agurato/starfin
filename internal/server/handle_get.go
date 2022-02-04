@@ -20,6 +20,7 @@ func Handle404(c *gin.Context) {
 }
 
 // HandleGETStart allows regsitration of first user (admin)
+// TODO: Get to this page automatically
 func HandleGETStart(c *gin.Context) {
 	if GetUserNb() > 0 {
 		// TODO: log
@@ -33,9 +34,11 @@ func HandleGETStart(c *gin.Context) {
 
 // HandleGETIndex displays the index page
 func HandleGETIndex(c *gin.Context) {
-	// TODO: display recently added movies in index page
+	movies := GetMovies()
+
 	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
-		"title": "down-low-d",
+		"title":  "down-low-d",
+		"movies": movies,
 	})
 }
 

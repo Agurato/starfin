@@ -58,8 +58,8 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	argon := argon2.DefaultConfig()
 
 	// Check username length
-	if len(username) < 3 || len(username) > 25 {
-		return errors.New("username must be between 3 and 25 characters")
+	if len(username) < 2 || len(username) > 25 {
+		return errors.New("username must be between 2 and 25 characters")
 	}
 
 	// Check if username is not already taken
@@ -172,7 +172,7 @@ func GetVolumes() (volumes []media.Volume) {
 func AddVolume(volume media.Volume) error {
 	// Check volume name length
 	if len(volume.Name) < 3 {
-		return errors.New("volume name must be between 3 and 25 characters")
+		return errors.New("volume name must be between 3")
 	}
 
 	// Check path is a directory
@@ -271,4 +271,21 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 			log.WithField("path", movie.Path).Debugln("Added volume as source of movie to database")
 		}
 	}
+}
+
+// GetMovies returns a slice of Movie
+func GetMovies() (movies []media.Movie) {
+	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{})
+	if err != nil {
+		log.WithField("error", err).Errorln("Unable to retrieve movies from database")
+	}
+	for moviesCur.Next(MongoCtx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
 }

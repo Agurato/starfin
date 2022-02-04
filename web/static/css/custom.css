@@ -117,18 +117,44 @@ td.admin-add-new {
     text-align: center !important;
 }
 
-/* :root {
-    --color: #B5BD68;
-    --color-accent: #8C9440;
+header,
+main {
+    padding: 0em 1em;
+}
 
-    --color-bg: #1D1F21;
-    --color-bg-secondary: #282A2E;
+nav {
+    margin-bottom: 0;
+}
 
-    --color-secondary: #F0C674;
-    --color-secondary-accent: #DE935F;
+:root {
+    --width-card: 100px;
+}
 
-    --color-shadow: #81A2BE;
+section aside {
+    margin: 0.5rem;
+    padding: 0.25rem;
+}
 
-    --color-text: #C5C8C6;
-    --color-text-secondary: #707880;
-} */
+.item {
+    width: 154px !important;
+    height: 255px;
+    /* border: black 1px solid; */
+    margin: 10px;
+    position: relative;
+}
+
+.item span {
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    width: 100%;
+    font-size: 10pt;
+    position: absolute;
+    bottom: 0px;
+    left: 2px;
+}
+
+.row {
+    --bs-gutter-x: 0;
+}

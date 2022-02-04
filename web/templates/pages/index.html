@@ -10,6 +10,20 @@
                 <p style="color:red">{{ .error }}</p>
                 {{ end }}
             </section>
+            <section>
+                <!-- TODO: search bar & filter here-->
+            </section>
+            <div class="container">
+                <div class="row row-cols-auto">
+                    {{range $index, $movie := .movies}}
+                    <div class="col item">
+                        <img src="https://image.tmdb.org/t/p/w154{{$movie.MovieDetails.PosterPath}}">
+                        <br>
+                        <span>{{$movie.MovieDetails.Title}}</span>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
         </main>
     </body>
 </html>
