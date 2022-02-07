@@ -15,8 +15,15 @@ const (
 	UserKey = "user"
 )
 
+var (
+	setupDone = false
+)
+
 // InitServer initializes the server
 func InitServer() *gin.Engine {
+
+	setupDone = IsOwnerInDatabase()
+
 	// Set Gin to production mode
 	// TODO: change to release for deployment
 	gin.SetMode(gin.DebugMode)
@@ -41,13 +48,17 @@ func InitServer() *gin.Engine {
 	router.GET("/start", HandleGETStart)
 	router.POST("/start", HandlePOSTStart)
 
-	// Authentication actions
-	router.GET("/login", HandleGETLogin)
-	router.POST("/login", HandlePOSTLogin)
-	router.GET("/logout", HandleGETLogout)
+	mainRouter := router.Group("/")
+	mainRouter.Use(CheckSetupDone)
+	{
+		// Authentication actions
+		mainRouter.GET("/login", HandleGETLogin)
+		mainRouter.POST("/login", HandlePOSTLogin)
+		mainRouter.GET("/logout", HandleGETLogout)
+	}
 
 	// User needs to be logged in to access these pages
-	needsLogin := router.Group("/")
+	needsLogin := mainRouter.Group("/")
 	needsLogin.Use(AuthRequired)
 	{
 		needsLogin.GET("/", HandleGETIndex)
@@ -59,7 +70,7 @@ func InitServer() *gin.Engine {
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
 	}
 
-	needsAdmin := router.Group("/")
+	needsAdmin := mainRouter.Group("/")
 	needsAdmin.Use(AdminRequired)
 	{
 		needsAdmin.GET("/admin", HandleGETAdmin)
@@ -94,6 +105,16 @@ func RenderHTML(c *gin.Context, code int, name string, obj gin.H) {
 		}
 	}
 	c.HTML(code, name, obj)
+}
+
+// CheckSetupDone ensures that the setup has been done once (a user is registered in the database)
+func CheckSetupDone(c *gin.Context) {
+	if !setupDone {
+		c.Redirect(http.StatusSeeOther, "/start")
+		c.Abort()
+		return
+	}
+	c.Next()
 }
 
 // AuthRequired ensures that a request will be aborted if the user is not authenticated

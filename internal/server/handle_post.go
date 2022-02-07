@@ -34,27 +34,8 @@ func HandlePOSTStart(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusSeeOther, "/")
-}
-
-// HandlePOSTRegister handles registration from POST request
-func HandlePOSTRegister(c *gin.Context) {
-	// Fetch username and passwords from POST data
-	username := strings.Trim(c.PostForm("username"), " ")
-	password1 := strings.Trim(c.PostForm("password1"), " ")
-	password2 := strings.Trim(c.PostForm("password2"), " ")
-	// isAdmin := strings.Trim(c.PostForm("isAdmin"), " ")
-
-	if err := AddUser(username, password1, password2, false); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/register.html", gin.H{
-			"title":    "Register",
-			"error":    err.Error(),
-			"username": username,
-		})
-		return
-	}
-
-	c.Redirect(http.StatusSeeOther, "/")
+	setupDone = true
+	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
 // HandlePOSTLogin handles login from POST request

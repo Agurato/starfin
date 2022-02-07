@@ -14,14 +14,22 @@ type Media interface {
 	GetTMDBID() int
 }
 
+type VolumeFile struct {
+	Path       string
+	FromVolume primitive.ObjectID
+}
+
 // CreateMediaFromFilename instantiates a struct implementing the Media interface
 // Currently only handles Movies
 // TODO: TVSeries
 func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
 	filename := filepath.Base(file)
 	movie := Movie{
-		ID:   primitive.NewObjectID(),
-		Path: file,
+		ID: primitive.NewObjectID(),
+		Paths: []VolumeFile{{
+			Path:       file,
+			FromVolume: volumeID,
+		}},
 	}
 	// Split on '.' and ' '
 	parts := strings.FieldsFunc(filename, func(r rune) bool {
@@ -55,7 +63,6 @@ func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
 		movie.Name = strings.Join(parts, " ")
 	}
 
-	movie.FromVolumes = append(movie.FromVolumes, volumeID)
 	return &movie
 }
 

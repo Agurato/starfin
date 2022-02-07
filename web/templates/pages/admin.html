@@ -50,6 +50,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Is Admin</th>
+                            <th>Is Owner</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -58,15 +59,17 @@
                         <tr>
                             <td><a href="/admin/user/{{ $user.id }}">{{ $user.obj.Name }}</a></td>
                             <td>{{if $user.obj.IsAdmin}}✓{{end}}</td>
-                            {{if eq $index 0}}
+                            {{if $user.obj.IsOwner}}
+                            <td>✓</td>
                             <td></td>
                             {{else}}
+                            <td></td>
                             <td><button onclick="deleteUser(this)" userId="{{ $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
                             {{end}}
                         </tr>
                         {{ end }}
                         <tr>
-                            <td colspan="3" class="admin-add-new"><a href="/admin/user/new">Add new user</a></td>
+                            <td colspan="4" class="admin-add-new"><a href="/admin/user/new">Add new user</a></td>
                         </tr>
                     </tbody>
                 </table>

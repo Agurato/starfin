@@ -11,11 +11,10 @@ import (
 
 type Movie struct {
 	ID          primitive.ObjectID `bson:"_id"`
-	Path        string
+	Paths       []VolumeFile
 	Name        string
 	ReleaseYear int
 	TMDBID      int
-	FromVolumes []primitive.ObjectID
 	*tmdb.MovieDetails
 	*tmdb.MovieCredits
 }

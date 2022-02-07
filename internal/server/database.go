@@ -21,6 +21,7 @@ type User struct {
 	ID       primitive.ObjectID `bson:"_id"`
 	Name     string             `bson:"name"`
 	Password string             `bson:"password"`
+	IsOwner  bool               `bson:"is_owner"`
 	IsAdmin  bool               `bson:"is_admin"`
 }
 
@@ -51,6 +52,14 @@ func InitMongo() (mongoClient *mongo.Client) {
 	mongoVolumes = mongoDb.Collection("volumes")
 	mongoMovies = mongoDb.Collection("movies")
 	return
+}
+
+func IsOwnerInDatabase() bool {
+	countOwners, err := mongoUsers.CountDocuments(MongoCtx, bson.M{"is_owner": true})
+	if err != nil {
+		log.Errorln("Could not retrieve if owner is present in the database")
+	}
+	return countOwners > 0
 }
 
 // AddUser adds a user to the database after checking parameter
@@ -92,6 +101,7 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 		ID:       primitive.NewObjectID(),
 		Name:     username,
 		Password: string(encoded),
+		IsOwner:  !IsOwnerInDatabase(),
 		IsAdmin:  isAdmin,
 	}
 	_, err = mongoUsers.InsertOne(MongoCtx, user)
@@ -219,12 +229,12 @@ func DeleteVolume(hexId string) error {
 	_, err = mongoMovies.UpdateMany(MongoCtx,
 		bson.M{},
 		bson.D{
-			{Key: "$pull", Value: bson.D{{Key: "fromvolumes", Value: volumeId}}},
+			{Key: "$pull", Value: bson.D{{Key: "paths", Value: bson.D{{Key: "fromvolume", Value: volumeId}}}}},
 		})
 	if err != nil {
 		return err
 	}
-	_, err = mongoMovies.DeleteMany(MongoCtx, bson.M{"fromvolumes": bson.D{{Key: "$size", Value: 0}}})
+	_, err = mongoMovies.DeleteMany(MongoCtx, bson.M{"paths": bson.D{{Key: "$size", Value: 0}}})
 	if err != nil {
 		return err
 	}
@@ -238,7 +248,7 @@ func IsMediaInDB(mediaFile *media.Media) bool {
 	switch (*mediaFile).(type) {
 	case *media.Movie:
 		movie := (*mediaFile).(*media.Movie)
-		res := mongoMovies.FindOne(MongoCtx, bson.M{"path": movie.Path})
+		res := mongoMovies.FindOne(MongoCtx, bson.M{"tmdbid": movie.TMDBID})
 		return res.Err() != mongo.ErrNoDocuments
 	}
 
@@ -253,7 +263,7 @@ func AddMediaToDB(mediaFile *media.Media) {
 		movie := (*mediaFile).(*media.Movie)
 		_, err := mongoMovies.InsertOne(MongoCtx, movie)
 		if err != nil {
-			log.WithField("path", movie.Path).Errorln("Unable to add movie to database")
+			log.WithField("path", movie.Paths[0].Path).Errorln("Unable to add movie to database")
 		}
 	}
 }
@@ -264,11 +274,11 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 	switch (*mediaFile).(type) {
 	case *media.Movie:
 		movie := (*mediaFile).(*media.Movie)
-		res, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"path": movie.Path}, bson.M{"$addToSet": bson.M{"fromvolumes": volume.ID}})
+		res, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"paths": movie.Paths[0]}})
 		if err != nil || res.ModifiedCount == 0 {
-			log.WithField("path", movie.Path).Warningln("Unable to volume as source of movie to database")
+			log.WithField("path", movie.Paths[0].Path).Warningln("Unable to volume as source of movie to database")
 		} else {
-			log.WithField("path", movie.Path).Debugln("Added volume as source of movie to database")
+			log.WithField("path", movie.Paths[0].Path).Debugln("Added volume as source of movie to database")
 		}
 	}
 }
