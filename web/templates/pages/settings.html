@@ -1,30 +1,26 @@
-{{ define "pages/settings.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-                {{ if .success }}
-                <p style="color:green">{{ .success }}</p>
-                {{ end }}
-            </section>
-            <section>
-                <form action="/setpassword" method="post">
-                    <label for="old-password">Enter old password:</label>
-                    <input type="password" id="old-password" name="old-password" placeholder="Old password">
-                    <label for="password1">Enter new password:</label>
-                    <input type="password" id="password1" name="password1" placeholder="Password">
-                    <label for="password2">Re-enter new password:</label>
-                    <input type="password" id="password2" name="password2" placeholder="Password">
-                    <button type="submit">Change password</button>
-                </form>
-            </section>
-        </main>
-    </body>
-</html>
-{{ end }}
+{{ define "pages/settings.html" }} {{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }} {{ if .success }}
+    <p style="color:green">{{ .success }}</p>
+    {{ end }}
+</section>
+<div class="container py-5 w-50">
+    <form action="/setpassword" method="post">
+        <div class="mb-3">
+            <label for="old-password">Enter old password:</label>
+            <input class="form-control" type="password" id="old-password" name="old-password" placeholder="Old password">
+        </div>
+        <div class="mb-3">
+            <label for="password1">Enter new password:</label>
+            <input class="form-control" type="password" id="password1" name="password1" placeholder="Password">
+        </div>
+        <div class="mb-3">
+            <label for="password2">Re-enter new password:</label>
+            <input class="form-control" type="password" id="password2" name="password2" placeholder="Password">
+        </div>
+        <button type="submit" class="btn btn-primary">Change password</button>
+    </form>
+</div>
+{{ template "partials/footer.html" . }} {{ end }}

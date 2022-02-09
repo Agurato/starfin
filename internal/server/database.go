@@ -216,17 +216,10 @@ func DeleteVolume(hexId string) error {
 	if err != nil {
 		return errors.New("invalid volume id")
 	}
-	res, err := mongoVolumes.DeleteOne(MongoCtx, bson.M{"_id": volumeId})
-	if err != nil {
-		return err
-	}
-	if res.DeletedCount != 1 {
-		return errors.New("unable to delete volume")
-	}
 
 	// Remove specified volume from all media source
 	// TODO: TV Series
-	_, err = mongoMovies.UpdateMany(MongoCtx,
+	update, err := mongoMovies.UpdateMany(MongoCtx,
 		bson.M{},
 		bson.D{
 			{Key: "$pull", Value: bson.D{{Key: "paths", Value: bson.D{{Key: "fromvolume", Value: volumeId}}}}},
@@ -234,10 +227,22 @@ func DeleteVolume(hexId string) error {
 	if err != nil {
 		return err
 	}
-	_, err = mongoMovies.DeleteMany(MongoCtx, bson.M{"paths": bson.D{{Key: "$size", Value: 0}}})
+	log.WithField("volumeId", hexId).Infof("%d movies are concerned with this volume deletion\n", update.ModifiedCount)
+	del, err := mongoMovies.DeleteMany(MongoCtx, bson.M{"paths": bson.D{{Key: "$size", Value: 0}}})
 	if err != nil {
 		return err
 	}
+	log.WithField("volumeId", hexId).Infof("%d movies were removed from database\n", del.DeletedCount)
+
+	// Remove specified volume from "volumes" collection
+	res, err := mongoVolumes.DeleteOne(MongoCtx, bson.M{"_id": volumeId})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount != 1 {
+		return errors.New("unable to delete volume")
+	}
+	log.WithField("volumeId", hexId).Infoln("Volume removed from database")
 
 	return nil
 }

@@ -1,30 +1,29 @@
-{{ define "pages/admin_user.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-            </section>
-            <section>
-                <form action="/admin/edituser" method="post">
-                    <input type="hidden" id="id" name="id" value="{{if not .new }}{{ .id }}{{end}}">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" size="25" placeholder="Username" {{if not .new }}value="{{ .userEdit.Name }}"{{end}}>
-                    <label for="password1">Password:</label>
-                    <input type="password" id="password1" name="password1" size="25" placeholder="Password">
-                    <label for="password2">Re-enter password:</label>
-                    <input type="password" id="password2" name="password2" size="25" placeholder="Password">
-                    <input type="checkbox" id="isadmin" name="isadmin" value="isadmin" {{if not .new }}{{if .userEdit.IsAdmin }}checked{{end}}{{end}}>
-                    <label for="isadmin">Admin</label><br>
-                    <button type="submit">{{if .new }}Add new{{else}}Edit{{end}} user</button>
-                </form>
-            </section>
-        </main>
-    </body>
-</html>
-{{ end }}
+{{ define "pages/admin_user.html" }} {{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<div class="container py-5 w-50">
+    <form action="/admin/edituser" method="post">
+        <input type="hidden" id="id" name="id" value="{{if not .new }}{{ .id }}{{end}}">
+        <div class="mb-3">
+            <label for="username">Username:</label>
+            <input class="form-control" type="text" id="username" name="username" size="25" placeholder="Username" {{if not .new }}value="{{ .userEdit.Name }}" {{end}}>
+        </div>
+        <div class="mb-3">
+            <label for="password1">Password:</label>
+            <input class="form-control" type="password" id="password1" name="password1" size="25" placeholder="Password">
+        </div>
+        <div class="mb-3">
+            <label for="password2">Re-enter password:</label>
+            <input class="form-control" type="password" id="password2" name="password2" size="25" placeholder="Password">
+        </div>
+        <div class="mb-3">
+            <input class="form-check-input" type="checkbox" id="isadmin" name="isadmin" value="isadmin" {{if not .new }}{{if .userEdit.IsAdmin }}checked{{end}}{{end}}>
+            <label class="form-check-label" for="isadmin">Admin</label>
+        </div>
+        <button type="submit" class="btn btn-primary">{{if .new }}Add new{{else}}Edit{{end}} user</button>
+    </form>
+</div>
+{{ template "partials/footer.html" . }} {{ end }}

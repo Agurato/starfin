@@ -46,10 +46,10 @@ func HandlePOSTLogin(c *gin.Context) {
 	password := strings.Trim(c.PostForm("password"), " ")
 
 	// Check username length
-	if len(username) < 3 || len(username) > 25 {
+	if len(username) < 2 || len(username) > 25 {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
 			"title":    "Login",
-			"error":    "Username must be between 3 and 25 characters",
+			"error":    "Username must be between 2 and 25 characters",
 			"username": username,
 		})
 		return

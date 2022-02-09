@@ -1,30 +1,20 @@
-{{ define "pages/index.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-            </section>
-            <section>
-                <!-- TODO: search bar & filter here-->
-            </section>
-            <div class="container">
-                <div class="row row-cols-auto">
-                    {{range $index, $movie := .movies}}
-                    <div class="col item">
-                        <img src="https://image.tmdb.org/t/p/w154{{$movie.MovieDetails.PosterPath}}">
-                        <br>
-                        <span>{{$movie.MovieDetails.Title}}</span>
-                    </div>
-                    {{end}}
-                </div>
-            </div>
-        </main>
-    </body>
-</html>
-{{ end }}
+{{ define "pages/index.html" }} {{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<section>
+    <!-- TODO: search bar & filter here-->
+</section>
+<div id="media-grid">
+    <div class="row row-cols-auto gx-0 justify-content-center">
+        {{range $index, $movie := .movies}}
+        <div class="col item">
+            <img src="https://image.tmdb.org/t/p/w154{{$movie.MovieDetails.PosterPath}}" class="rounded">
+            <span>{{$movie.MovieDetails.Title}}</span>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{ template "partials/footer.html" . }} {{ end }}

@@ -1,150 +1,19 @@
-form {
-    box-shadow: initial;
-    border: 1px solid var(--color-bg-secondary);
-}
-
-section aside {
-    box-shadow: initial;
-    border: 1px solid var(--color-bg-secondary);
-}
-
-aside:hover {
-    border: 1px solid #555961;
-}
-
-#search-form input {
-    display: initial;
-    margin-bottom: initial;
-    margin-right: 20px;
-}
-
-#search-form button {
-    padding: initial;
-    padding-right: 0.5rem;
-    padding-left: 0.5rem;
-}
-
-#search-results {
-    margin-top: 20px;
-}
-
-button {
-    background-color: var(--color-secondary);
-    border: 2px solid var(--color-secondary);
-}
-
-button.req {
-    border: none;
-    color: var(--color-bg);
-    font-size: small;
+table a,
+table a:hover {
+    color: white;
     font-weight: bold;
-    margin-top: 1rem;
-    padding: initial;
-    position: relative;
-    text-align: center;
-    display: block;
     text-decoration: none;
-    --hover-brightness: initial;
-    width: 100%;
-    height: 25px;
-    margin-bottom: 0px;
-}
-
-button.req[action="add"] {
-    background-color: var(--color);
-}
-
-button.req[action="add"]:hover {
-    background-color: var(--color-accent);
-}
-
-button.req[action="remove"] {
-    background-color: #bb5555;
-}
-
-button.req[action="remove"]:hover {
-    background-color: #9c3f3f;
-}
-
-a.details {
-    color: var(--color-text);
-}
-
-span.media {
-    border-radius: var(--border-radius);
-    color: var(--color-bg);
-    font-size: x-small;
-    font-weight: bold;
-    margin: 0.2rem;
-    padding: 0.2rem 0.3rem;
-    position: relative;
-    text-align: center;
-    display: block;
-}
-
-span.Movie {
-    background-color: #B294BB;
-}
-
-span.TV {
-    background-color: #8ABEB7;
-}
-
-img[alt=poster] {
-    max-height: 427.5px;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-code {
-    background-color: #005221;
-}
-
-table a {
-    color: var(--color-text);
-}
-
-table button {
-    padding: 0;
-    margin: 0;
-    border: none;
-    color: var(--color-text);
-    background-color: transparent;
-}
-
-td.admin-add-new {
-    text-align: center !important;
-}
-
-header,
-main {
-    padding: 0em 1em;
-}
-
-nav {
-    margin-bottom: 0;
-}
-
-:root {
-    --width-card: 100px;
-}
-
-section aside {
-    margin: 0.5rem;
-    padding: 0.25rem;
 }
 
 .item {
-    width: 154px !important;
+    width: 154px;
     height: 255px;
-    /* border: black 1px solid; */
     margin: 10px;
     position: relative;
 }
 
 .item span {
-    overflow: hidden !important;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
@@ -153,8 +22,4 @@ section aside {
     position: absolute;
     bottom: 0px;
     left: 2px;
-}
-
-.row {
-    --bs-gutter-x: 0;
 }

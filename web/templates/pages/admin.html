@@ -1,80 +1,66 @@
-{{ define "pages/admin.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-            </section>
-            <section>
-                <header>
-                    <h2>Volumes</h2>
-                </header>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Path</th>
-                            <th>Is Recursive</th>
-                            <th>Type</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{ range .volumes }}
-                        <tr>
-                            <td><a href="/admin/volume/{{ .id }}">{{ .obj.Name }}</a></td>
-                            <td><code>{{ .obj.Path }}</code></td>
-                            <td>{{if .obj.IsRecursive}}✓{{end}}</td>
-                            <td><span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span></td>
-                            <td><button onclick="deleteVolume(this)" volumeId="{{ .id }}"><i class="fas fa-trash-alt"></i></button></td>
-                        </tr>
-                        {{ end }}
-                        <tr>
-                            <td colspan="5" class="admin-add-new"><a href="/admin/volume/new">Add new volume</a></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-            <hr>
-            <section>
-                <header>
-                    <h2>Users</h2>
-                </header>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Is Admin</th>
-                            <th>Is Owner</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{ range $index, $user := .users }}
-                        <tr>
-                            <td><a href="/admin/user/{{ $user.id }}">{{ $user.obj.Name }}</a></td>
-                            <td>{{if $user.obj.IsAdmin}}✓{{end}}</td>
-                            {{if $user.obj.IsOwner}}
-                            <td>✓</td>
-                            <td></td>
-                            {{else}}
-                            <td></td>
-                            <td><button onclick="deleteUser(this)" userId="{{ $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
-                            {{end}}
-                        </tr>
-                        {{ end }}
-                        <tr>
-                            <td colspan="4" class="admin-add-new"><a href="/admin/user/new">Add new user</a></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
-    </body>
-</html>
-{{ end }}
+{{ define "pages/admin.html" }} {{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<div class="container py-5 text-center">
+    <h2>Volumes</h2>
+    <table class="table table-dark table-striped w-50 mx-auto">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Path</th>
+                <th>Recursive</th>
+                <th>Type</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .volumes }}
+            <tr>
+                <td><a href="/admin/volume/{{ .id }}">{{ .obj.Name }}</a></td>
+                <td><code>{{ .obj.Path }}</code></td>
+                <td>{{if .obj.IsRecursive}}✓{{end}}</td>
+                <td><span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span></td>
+                <td><button class="btn p-0 text-white" onclick="deleteVolume(this)" volumeId="{{ .id }}"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+            {{ end }}
+            <tr>
+                <td colspan="5" class="admin-add-new"><a href="/admin/volume/new">Add new volume</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="container py-5 text-center">
+    <h2>Users</h2>
+    <table class="table table-dark table-striped w-50 mx-auto">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Admin</th>
+                <th>Owner</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range $index, $user := .users }}
+            <tr>
+                <td><a href="/admin/user/{{ $user.id }}">{{ $user.obj.Name }}</a></td>
+                <td>{{if $user.obj.IsAdmin}}✓{{end}}</td>
+                {{if $user.obj.IsOwner}}
+                <td>✓</td>
+                <td></td>
+                {{else}}
+                <td></td>
+                <td><button class="btn p-0 text-white" onclick="deleteUser(this)" userId="{{ $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
+                {{end}}
+            </tr>
+            {{ end }}
+            <tr>
+                <td colspan="4" class="admin-add-new"><a href="/admin/user/new">Add new user</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{{ template "partials/footer.html" . }} {{ end }}

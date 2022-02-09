@@ -1,20 +1,13 @@
 {{ define "pages/media.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-                {{ if .info }}
-                    {{ if .info.Poster }}<img src="{{ .info.Poster }}" alt="poster">{{ end }}
-                    <!-- {{ if .info.Backdrop }}<img src="{{ .info.Backdrop }}" alt="backdrop">{{ end }} -->
-                {{ end }}
-            </section>
-        </main>
-    </body>
-</html>
+{{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+    {{ if .info }}
+        {{ if .info.Poster }}<img src="{{ .info.Poster }}" alt="poster">{{ end }}
+        <!-- {{ if .info.Backdrop }}<img src="{{ .info.Backdrop }}" alt="backdrop">{{ end }} -->
+    {{ end }}
+</section>
+{{ template "partials/footer.html" . }}
 {{ end }}

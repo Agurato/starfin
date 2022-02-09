@@ -1,25 +1,20 @@
-{{ define "pages/login.html" }}
-<!DOCTYPE html>
-<html>
-    {{ template "partials/head.html" . }}
-    <body>
-        {{ template "partials/menu.html" . }}
-        <main>
-            <section>
-                {{ if .error }}
-                <p style="color:red">{{ .error }}</p>
-                {{ end }}
-            </section>
-            <section>
-                <form action="/login" method="post">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" size="20" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" placeholder="Password">
-                    <button type="submit">Submit</button>
-                </form>
-            </section>
-        </main>
-    </body>
-</html>
-{{ end }}
+{{ define "pages/login.html" }} {{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<div class="container py-5 w-50">
+    <form action="/login" method="post">
+        <div class="mb-3">
+            <label for="username">Username:</label>
+            <input class="form-control" type="text" id="username" name="username" size="20" placeholder="Username" {{if .username}}value="{{.username}}" {{end}}>
+        </div>
+        <div class="mb-3">
+            <label for="password">Password:</label>
+            <input class="form-control" type="password" id="password" name="password" placeholder="Password">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+{{ template "partials/footer.html" . }} {{ end }}
