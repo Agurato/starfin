@@ -1,4 +1,5 @@
-{{ define "pages/admin_user.html" }} {{ template "partials/header.html" . }}
+{{ define "pages/admin_user.html" }}
+{{ template "partials/header.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -26,4 +27,5 @@
         <button type="submit" class="btn btn-primary">{{if .new }}Add new{{else}}Edit{{end}} user</button>
     </form>
 </div>
-{{ template "partials/footer.html" . }} {{ end }}
+{{ template "partials/footer.html" . }}
+{{ end }}

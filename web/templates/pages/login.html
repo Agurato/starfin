@@ -1,4 +1,5 @@
-{{ define "pages/login.html" }} {{ template "partials/header.html" . }}
+{{ define "pages/login.html" }}
+{{ template "partials/header.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -17,4 +18,5 @@
         <button type="submit" class="btn btn-primary">Submit</button>
     </form>
 </div>
-{{ template "partials/footer.html" . }} {{ end }}
+{{ template "partials/footer.html" . }}
+{{ end }}

@@ -1,0 +1,26 @@
+{{ define "pages/movies.html" }}
+{{ template "partials/header.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<section>
+    <!-- TODO: search bar & filter here-->
+</section>
+<div class="row row-cols-auto gx-0 justify-content-center">
+    {{range $index, $movie := .movies}}
+    <div class="col item">
+        <a href="/movie/{{$movie.TMDBID}}">
+            {{if $movie.TinyPosterPath}}
+            <img src="{{$movie.TinyPosterPath}}" class="rounded" />
+            {{else}}
+            <img src="/static/images/no_poster.png" class="rounded" />
+            {{end}}
+        </a>
+        <span>{{$movie.Title}}</span>
+    </div>
+    {{end}}
+</div>
+{{ template "partials/footer.html" . }}
+{{ end }}

@@ -1,4 +1,5 @@
-{{ define "pages/settings.html" }} {{ template "partials/header.html" . }}
+{{ define "pages/settings.html" }}
+{{ template "partials/header.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -23,4 +24,5 @@
         <button type="submit" class="btn btn-primary">Change password</button>
     </form>
 </div>
-{{ template "partials/footer.html" . }} {{ end }}
+{{ template "partials/footer.html" . }}
+{{ end }}

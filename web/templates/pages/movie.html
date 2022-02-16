@@ -1,0 +1,72 @@
+{{ define "pages/movie.html" }}
+{{ template "partials/header.html" . }}
+<style>
+    header {
+        background: rgba(var(--bs-dark-rgb), 0.9);
+    }
+
+    .backdrop {
+        position: fixed;
+        z-index: -999;
+        top: 0;
+        -webkit-mask-image:-webkit-gradient(linear, left top, left bottom, from(rgba(0,0,0,0.2)), to(rgba(0,0,0,0)));
+        mask-image: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0));
+
+        min-height:100%;
+        min-width:100%;
+        transform: translateX(-50%);
+        width:auto;
+        height:auto;
+        left: 50%;
+
+        pointer-events: none;
+    }
+
+    .classif {
+        border: 0.09em solid;
+        padding: 0 0.6em 0.1em 0.6em;
+        border-radius: 0.1em;
+        font-size: 80%;
+    }
+</style>
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<img class="backdrop" src="{{.movie.BackdropPath}}" ondragstart="return false;" />
+<div class="container">
+    <div class="row mt-5">
+        <div class="col-12 col-sm-4 mb-3">
+            <img class="img-fluid" src="{{.movie.PosterPath}}"/>
+        </div>
+        <div class="col">
+            <p class="mb-1">
+                <span class="fs-1 fw-bold">{{.movie.Title}}</span>
+                {{if ne .movie.Title .movie.OriginalTitle}}
+                <span class="ms-3 fs-3 fst-italic">{{.movie.OriginalTitle}}</span>
+                {{end}}
+            </p>
+            <p>
+                <span class="me-4 fw-bold">{{.movie.ReleaseYear}}</span>
+                <span class="me-4">{{.movie.Runtime}} min</span>
+                {{if .movie.Classification}}<span class="me-4 classif">{{.movie.Classification}}</span>{{end}}
+                {{if .movie.IMDbRating}}<i class="fa-solid fa-star" style="color: #eed33a"></i> <span class="me-4">{{.movie.IMDbRating}}</span>{{end}}
+                {{if .movie.LetterboxdRating}}<img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> <span class="me-4">{{.movie.LetterboxdRating}}</span>{{end}}
+            </p>
+            <p>
+                {{$genreLength := len .movie.Genres}}{{if gt $genreLength 1}}Genres{{else}}Genre{{end}} {{join .movie.Genres ", "}}
+            </p>
+            <p>
+                Director 
+            </p>
+            <p>
+                Writers 
+            </p>
+            <p class="fst-italic">{{.movie.Tagline}}</p>
+            <p>{{.movie.Overview}}</p>
+        </div>
+    </div>
+</div>
+{{ template "partials/footer.html" . }}
+{{ end }}

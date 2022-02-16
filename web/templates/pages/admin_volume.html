@@ -1,4 +1,5 @@
-{{ define "pages/admin_volume.html" }} {{ template "partials/header.html" . }}
+{{ define "pages/admin_volume.html" }}
+{{ template "partials/header.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -64,4 +65,5 @@
     </form>
     {{ end }}
 </div>
-{{ template "partials/footer.html" . }} {{ end }}
+{{ template "partials/footer.html" . }}
+{{ end }}

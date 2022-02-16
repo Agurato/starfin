@@ -12,7 +12,7 @@ table a:hover {
     position: relative;
 }
 
-.item span {
+.item > span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -22,4 +22,42 @@ table a:hover {
     position: absolute;
     bottom: 0px;
     left: 2px;
+}
+
+.item img {
+    background-color: black;
+}
+
+.item img:hover {
+    opacity: 0.6;
+    outline: 2px red solid;
+}
+
+.item a {
+    color: white;
+    text-decoration: none;
+}
+
+.item div.poster {
+    width: 154px;
+    height: 231px;
+    background-color: #44494d;
+}
+
+.item div.poster:hover {
+    opacity: 0.6;
+    outline: 2px red solid;
+}
+
+.item div.poster span {
+    display: block;
+    margin: 0px 5px;
+    font-size: 20pt;
+    height: 100%;
+}
+
+.movie-container {
+    min-height: 720px;
+    background-size: 100%;
+    background-repeat: no-repeat;
 }

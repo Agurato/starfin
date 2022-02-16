@@ -5,26 +5,29 @@
             <a class="navbar-brand" href="/">down-low-d</a>
             <button class="navbar-toggler col-md-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
-            </button>
+            </button> 
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    {{ if .user.isLoggedIn }}
-                    <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
+                {{ if .user.isLoggedIn }}
+                <ul class="navbar-nav me-auto mb-0">
                     {{ if .user.isAdmin }}
-                    <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
                     {{ end }}
+                </ul>
+                <ul class="navbar-nav mb-0 me-auto justify-content-center">
+                    <li class="nav-item"><a class="nav-link" href="/movies">Movies</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/series">TV Series</a></li>
+                </ul>
+                <ul class="navbar-nav mb-0 me-0 justify-content-center">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarProfileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ .user.name }}
-                            </a>
-                        <ul class="dropdown-menu bg-dark border-light" aria-labelledby="navbarProfileDropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarProfileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ .user.name }}</a>
+                        <ul class="dropdown-menu dropdown-menu-end bg-dark border-light" aria-labelledby="navbarProfileDropdown">
                             <li class="nav-item"><a class="nav-link" href="/u/{{ .user.name }}">Profile</a></li>
                             <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
                             <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                         </ul>
                     </li>
-                    {{ end }}
                 </ul>
+                {{ end }}
             </div>
         </div>
     </nav>

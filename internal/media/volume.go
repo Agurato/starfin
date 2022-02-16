@@ -64,7 +64,7 @@ func (v Volume) ListVideoFiles() ([]string, error) {
 }
 
 // Scan files from volume that have not been added to the db yet
-func (v Volume) Scan() (medias []Media) {
+func (v Volume) Scan(mediaChan chan Media) {
 	files, err := v.ListVideoFiles()
 	if err != nil {
 		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
@@ -87,8 +87,9 @@ func (v Volume) Scan() (medias []Media) {
 		// Fill info from TMDB
 		media.FetchMediaDetails()
 
-		medias = append(medias, media)
+		// Send media to the channel
+		mediaChan <- media
 	}
 
-	return
+	close(mediaChan)
 }

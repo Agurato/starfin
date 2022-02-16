@@ -3,12 +3,12 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Agurato/down-low-d/internal/media"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -34,11 +34,8 @@ func HandleGETStart(c *gin.Context) {
 
 // HandleGETIndex displays the index page
 func HandleGETIndex(c *gin.Context) {
-	movies := GetMovies()
-
 	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
-		"title":  "down-low-d",
-		"movies": movies,
+		"title": "down-low-d",
 	})
 }
 
@@ -99,25 +96,30 @@ func HandleGETSearch(c *gin.Context) {
 
 // HandleGETMovie displays information about a movie
 func HandleGETMovie(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserKey).(User)
-
-	// Fetch info from TMDB
-	// tmdbIDInt, err := strconv.Atoi(c.Param("tmdbId"))
-	// if err != nil {
-	// 	RenderHTML(c, http.StatusOK, "pages/media.html", gin.H{
-	// 		"title": "Movie",
-	// 		"error": "This ID could not be found",
-	// 	})
-	// 	return
-	// }
-
-	var userDB User
-	if err := mongoUsers.FindOne(MongoCtx, bson.M{"_id": user.ID}).Decode(&userDB); err != nil {
-		// TODO
+	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
 	}
+	movie := GetMovieFromID(tmdbID)
 
-	RenderHTML(c, http.StatusOK, "pages/media.html", gin.H{})
+	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
+		"title": movie.OriginalTitle,
+		"movie": movie,
+	})
+}
+
+// HandleGETMovies displays the list of movies
+// TODO: Sort movies by name (removing a, the, …)
+func HandleGETMovies(c *gin.Context) {
+	movies := GetMovies()
+
+	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
+		"title":  "down-low-d",
+		"movies": movies,
+	})
 }
 
 // HandleGETSettings displays the user settings page

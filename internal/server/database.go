@@ -196,8 +196,13 @@ func AddVolume(volume media.Volume) error {
 
 	_, err = mongoVolumes.InsertOne(MongoCtx, volume)
 	if err == nil {
+		// Separate goroutine to return the page asap
 		go func() {
-			for _, mediaFile := range volume.Scan() {
+			// Channel to add media to DB as they are fetched from TMDB
+			mediaChan := make(chan media.Media)
+
+			go volume.Scan(mediaChan)
+			for mediaFile := range mediaChan {
 				// If media is already in DB, add the current Volume to the media's origin
 				if IsMediaInDB(&mediaFile) {
 					AddVolumeSourceToMedia(&mediaFile, &volume)
@@ -303,4 +308,11 @@ func GetMovies() (movies []media.Movie) {
 		movies = append(movies, movie)
 	}
 	return
+}
+
+// GetMovieFromID returns a movie from its TMDB ID
+func GetMovieFromID(TMDBID int) (movie media.Movie) {
+	mongoMovies.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&movie)
+
+	return movie
 }
