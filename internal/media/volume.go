@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/alitto/pond"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -71,23 +72,33 @@ func (v Volume) Scan(mediaChan chan Media) {
 	}
 
 	log.WithField("volumePath", v.Path).Debugln("Scanning volume")
+
+	// Create worker pool of size 10
+	pool := pond.New(10, 0, pond.MinWorkers(10))
+
 	// For each file
 	for _, file := range files {
-		media := CreateMediaFromFilename(file, v.ID)
+		file := file
+		pool.Submit(func() {
+			media := CreateMediaFromFilename(file, v.ID)
 
-		// Search ID on TMDB
-		err = media.FetchMediaID()
-		if err != nil {
-			log.WithField("media", media).Warningln("Unable to fetch movie ID from TMDB")
-			continue
-		}
-		log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")
-		// TODO: if movies already exists in DB, do something?
+			// Search ID on TMDB
+			err = media.FetchMediaID()
+			if err != nil {
+				log.WithField("media", media).Warningln("Unable to fetch movie ID from TMDB")
+				return
+			}
+			log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")
+			// TODO: if movies already exists in DB, do something?
 
-		// Fill info from TMDB
-		media.FetchMediaDetails()
+			// Fill info from TMDB
+			media.FetchMediaDetails()
 
-		// Send media to the channel
-		mediaChan <- media
+			// Send media to the channel
+			mediaChan <- media
+		})
 	}
+
+	pool.StopAndWait()
+	close(mediaChan)
 }

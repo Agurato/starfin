@@ -120,6 +120,11 @@ func (m *Movie) FetchMediaDetails() {
 			m.Cast = append(m.Cast, cast.Name)
 		}
 	}
+
+	// Set production countries
+	for _, country := range details.ProductionCountries {
+		m.ProdCountries = append(m.ProdCountries, country.Iso3166_1)
+	}
 }
 
 func (m Movie) GetTMDBID() int {
