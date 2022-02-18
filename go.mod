@@ -14,6 +14,8 @@ require (
 	go.mongodb.org/mongo-driver v1.8.3
 )
 
+require github.com/agnivade/levenshtein v1.1.1 // indirect
+
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

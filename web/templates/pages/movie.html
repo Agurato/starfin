@@ -41,10 +41,10 @@
             <img class="img-fluid" src="{{.movie.PosterPath}}"/>
         </div>
         <div class="col">
-            <p class="mb-1">
-                <span class="fs-1 fw-bold">{{.movie.Title}}</span>
+            <p class="mb-2">
+                <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
                 {{if ne .movie.Title .movie.OriginalTitle}}
-                <span class="ms-3 fs-3 fst-italic">{{.movie.OriginalTitle}}</span>
+                <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
                 {{end}}
             </p>
             <p>

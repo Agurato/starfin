@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/agnivade/levenshtein"
 	tmdb "github.com/cyruzin/golang-tmdb"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -57,8 +58,11 @@ func (m *Movie) FetchMediaID() error {
 	mostPopular := float32(0)
 	for _, res := range tmdbSearchRes.Results {
 		if res.Popularity > mostPopular {
-			m.TMDBID = int(res.ID)
-			mostPopular = res.Popularity
+			// Levenshtein distance so that the name corresponds at least a little bit
+			if levenshtein.ComputeDistance(m.Name, res.Title) < len(m.Name)/3 || mostPopular == 0 {
+				m.TMDBID = int(res.ID)
+				mostPopular = res.Popularity
+			}
 		}
 	}
 	return nil
