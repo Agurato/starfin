@@ -1,3 +1,4 @@
 .env
 *.exe
 *.code-workspace
+mediaInfo_test.go

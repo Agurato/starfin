@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Agurato/down-low-d/internal/media"
+	"github.com/Agurato/starfin/internal/media"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
@@ -20,7 +20,6 @@ func Handle404(c *gin.Context) {
 }
 
 // HandleGETStart allows regsitration of first user (admin)
-// TODO: Get to this page automatically
 func HandleGETStart(c *gin.Context) {
 	if GetUserNb() > 0 {
 		// TODO: log
@@ -35,7 +34,7 @@ func HandleGETStart(c *gin.Context) {
 // HandleGETIndex displays the index page
 func HandleGETIndex(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
-		"title": "down-low-d",
+		"title": "starfin",
 	})
 }
 
@@ -117,7 +116,7 @@ func HandleGETMovies(c *gin.Context) {
 	movies := GetMovies()
 
 	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
-		"title":  "down-low-d",
+		"title":  "Movies",
 		"movies": movies,
 	})
 }

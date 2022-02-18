@@ -1,4 +1,4 @@
-# down-low-d
+# Starfin
 
 Website for your friends to download your legally-obtained movies 🤫
 
@@ -14,10 +14,11 @@ DB_NAME=
 DB_USER=
 DB_PASSWORD=
 TMDB_API_KEY=
+MEDIAINFO_PATH=
 ```
 
 Build & run (windows)
 
 ```
-go build .\cmd\down-low-d\ && .\down-low-d.exe
+go build .\cmd\starfin\ && .\starfin.exe
 ```

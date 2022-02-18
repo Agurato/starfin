@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Agurato/down-low-d/internal/media"
+	"github.com/Agurato/starfin/internal/media"
 	"github.com/matthewhartstonge/argon2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"

@@ -55,13 +55,13 @@
                 {{if .movie.LetterboxdRating}}<img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> <span class="me-4">{{.movie.LetterboxdRating}}</span>{{end}}
             </p>
             <p>
-                {{$genreLength := len .movie.Genres}}{{if gt $genreLength 1}}Genres{{else}}Genre{{end}} {{join .movie.Genres ", "}}
+                {{$genresLength := len .movie.Genres}}{{if gt $genresLength 1}}Genres{{else}}Genre{{end}} {{join .movie.Genres ", "}}
             </p>
             <p>
-                Director 
+                {{$directorsLength := len .movie.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}} {{join .movie.Directors ", "}}
             </p>
             <p>
-                Writers 
+                {{$writersLength := len .movie.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}} {{join .movie.Writers ", "}}
             </p>
             <p class="fst-italic">{{.movie.Tagline}}</p>
             <p>{{.movie.Overview}}</p>

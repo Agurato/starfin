@@ -70,7 +70,7 @@ func (v Volume) Scan(mediaChan chan Media) {
 		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
 	}
 
-	log.WithField("volumePath", v.Path).Debugln("Scnaning volume")
+	log.WithField("volumePath", v.Path).Debugln("Scanning volume")
 	// For each file
 	for _, file := range files {
 		media := CreateMediaFromFilename(file, v.ID)
@@ -90,6 +90,4 @@ func (v Volume) Scan(mediaChan chan Media) {
 		// Send media to the channel
 		mediaChan <- media
 	}
-
-	close(mediaChan)
 }

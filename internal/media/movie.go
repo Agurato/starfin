@@ -34,7 +34,8 @@ type Movie struct {
 	IMDbRating       string
 	LetterboxdRating string
 	Genres           []string
-	Crew             []string
+	Directors        []string
+	Writers          []string
 	Cast             []string
 	ProdCountries    []string
 }
@@ -52,8 +53,14 @@ func (m *Movie) FetchMediaID() error {
 	if len(tmdbSearchRes.Results) == 0 {
 		return errors.New("movie not found")
 	}
-	// TODO: Get most popular movie instead
-	m.TMDBID = int(tmdbSearchRes.Results[0].ID)
+
+	mostPopular := float32(0)
+	for _, res := range tmdbSearchRes.Results {
+		if res.Popularity > mostPopular {
+			m.TMDBID = int(res.ID)
+			mostPopular = res.Popularity
+		}
+	}
 	return nil
 }
 
@@ -78,19 +85,40 @@ func (m *Movie) FetchMediaDetails() {
 	m.IMDbRating = GetIMDbRating(m.IMDbID)
 	m.LetterboxdRating = GetLetterboxdRating(m.IMDbID)
 
+	// Set genres
+	for _, genre := range details.Genres {
+		m.Genres = append(m.Genres, genre.Name)
+	}
+
+	// Set classification
 	releaseDates, err := TMDBClient.GetMovieReleaseDates(m.TMDBID)
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie release dates from TMDB")
-	}
-	// Set classification
-	for _, releasesCountry := range releaseDates.Results {
-		if releasesCountry.Iso3166_1 == "US" {
-			m.Classification = releasesCountry.ReleaseDates[0].Certification
-			break
+	} else {
+		for _, releasesCountry := range releaseDates.Results {
+			if releasesCountry.Iso3166_1 == "US" {
+				m.Classification = releasesCountry.ReleaseDates[0].Certification
+				break
+			}
 		}
 	}
-	for _, genre := range details.Genres {
-		m.Genres = append(m.Genres, genre.Name)
+
+	// Set crew
+	credits, err := TMDBClient.GetMovieCredits(m.TMDBID, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie credits from TMDB")
+	} else {
+		for _, crew := range credits.Crew {
+			if crew.Job == "Director" {
+				m.Directors = append(m.Directors, crew.Name)
+			}
+			if crew.Department == "Writing" {
+				m.Writers = append(m.Writers, crew.Name)
+			}
+		}
+		for _, cast := range credits.Cast {
+			m.Cast = append(m.Cast, cast.Name)
+		}
 	}
 }
 
@@ -121,7 +149,7 @@ func GetIMDbRating(imdbId string) string {
 
 // GetLetterboxdRating fetchs rating from letterboxd using IMDbID
 func GetLetterboxdRating(imdbId string) string {
-	res, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/%s/", imdbId))
+	res, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/films/%s/", imdbId))
 	if err != nil {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
 		return ""

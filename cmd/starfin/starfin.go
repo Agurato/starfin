@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/Agurato/down-low-d/internal/media"
-	"github.com/Agurato/down-low-d/internal/server"
+	"github.com/Agurato/starfin/internal/media"
+	"github.com/Agurato/starfin/internal/server"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 )

@@ -1,10 +1,12 @@
 package media
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -17,6 +19,7 @@ type Media interface {
 type VolumeFile struct {
 	Path       string
 	FromVolume primitive.ObjectID
+	Info       MediaInfo
 }
 
 // CreateMediaFromFilename instantiates a struct implementing the Media interface
@@ -24,11 +27,16 @@ type VolumeFile struct {
 // TODO: TVSeries
 func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
 	filename := filepath.Base(file)
+	mediaInfo, err := GetMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
+	if err != nil {
+		log.WithField("file", file).Errorln("Could not get media info")
+	}
 	movie := Movie{
 		ID: primitive.NewObjectID(),
 		Paths: []VolumeFile{{
 			Path:       file,
 			FromVolume: volumeID,
+			Info:       mediaInfo,
 		}},
 	}
 	// Split on '.' and ' '

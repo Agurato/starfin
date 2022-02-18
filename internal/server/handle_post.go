@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Agurato/down-low-d/internal/media"
+	"github.com/Agurato/starfin/internal/media"
 	"github.com/matthewhartstonge/argon2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
