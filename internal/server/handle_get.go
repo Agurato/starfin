@@ -3,9 +3,11 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/Agurato/starfin/internal/media"
+	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
@@ -111,9 +113,14 @@ func HandleGETMovie(c *gin.Context) {
 }
 
 // HandleGETMovies displays the list of movies
-// TODO: Sort movies by name (removing a, the, …)
 func HandleGETMovies(c *gin.Context) {
 	movies := GetMovies()
+	sort.Slice(movies, func(i, j int) bool {
+		titleI, titleJ := movies[i].Title, movies[j].Title
+		titleI = utilities.RemoveArticle(titleI)
+		titleJ = utilities.RemoveArticle(titleJ)
+		return titleI < titleJ
+	})
 
 	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
 		"title":  "Movies",
