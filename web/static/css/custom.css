@@ -1,3 +1,28 @@
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-Regular.ttf");
+}
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-Bold.ttf");
+    font-weight: bold;
+}
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-Italic.ttf");
+    font-style: italic;
+}
+@font-face {
+    font-family: "Noto Sans";
+    src: url("/static/fonts/NotoSans-BoldItalic.ttf");
+    font-weight: bold;
+    font-style: italic;
+}
+
+body {
+    font-family: "Noto Sans";
+}
+
 table a,
 table a:hover {
     color: white;

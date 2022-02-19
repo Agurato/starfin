@@ -28,6 +28,15 @@
         border-radius: 0.1em;
         font-size: 80%;
     }
+
+    td {
+        padding-left: 0px !important;
+        width: 10%;
+    }
+
+    a[download] {
+        color: white;
+    }
 </style>
 <section>
     {{ if .error }}
@@ -41,30 +50,51 @@
             <img class="img-fluid" src="{{.movie.PosterPath}}"/>
         </div>
         <div class="col">
-            <p class="mb-2">
-                <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
-                {{if ne .movie.Title .movie.OriginalTitle}}
-                <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
-                {{end}}
-            </p>
-            <p>
-                <span class="me-4 fw-bold">{{.movie.ReleaseYear}}</span>
-                <span class="me-4">{{.movie.Runtime}} min</span>
-                {{if .movie.Classification}}<span class="me-4 classif">{{.movie.Classification}}</span>{{end}}
-                {{if .movie.IMDbRating}}<i class="fa-solid fa-star" style="color: #eed33a"></i> <span class="me-4">{{.movie.IMDbRating}}</span>{{end}}
-                {{if .movie.LetterboxdRating}}<img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> <span class="me-4">{{.movie.LetterboxdRating}}</span>{{end}}
-            </p>
-            <p>
-                {{$genresLength := len .movie.Genres}}{{if gt $genresLength 1}}Genres{{else}}Genre{{end}} {{join .movie.Genres ", "}}
-            </p>
-            <p>
-                {{$directorsLength := len .movie.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}} {{join .movie.Directors ", "}}
-            </p>
-            <p>
-                {{$writersLength := len .movie.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}} {{join .movie.Writers ", "}}
-            </p>
-            <p class="fst-italic">{{.movie.Tagline}}</p>
-            <p>{{.movie.Overview}}</p>
+            <div class="row mb-2">
+                <div class="col-12 col-sm-11">
+                    <p class="mb-2">
+                        <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
+                        {{if ne .movie.Title .movie.OriginalTitle}}
+                        <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
+                        {{end}}
+                    </p>
+                    <div class="row row-cols-auto my-3">
+                        <div class="col mb-2"><span class="fw-bold">{{.movie.ReleaseYear}}</span></div>
+                        <div class="col">{{.movie.Runtime}} min</div>
+                        <div class="col">{{if .movie.Classification}}<span class="classif">{{.movie.Classification}}</span>{{end}}</div>
+                        <div class="col">{{if .movie.IMDbRating}}<i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}{{end}}</div>
+                        <div class="col">{{if .movie.LetterboxdRating}}<img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}{{end}}</div>
+                        <div class="col">
+                            {{range $_, $country := .movie.ProdCountries}}
+                            <span class="flag-icon flag-icon-{{lower $country}}"></span>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                <div class="col my-auto fs-3 text-center">
+                    <a href="/movie/{{.movie.TMDBID}}/download/0" download="{{$path := index .movie.Paths 0}}{{basename $path.Path}}"><i class="fa-solid fa-download"></i></a>
+                </div>
+            </div>
+            <div>
+                <table class="table table-borderless table-sm text-white">
+                    <tbody>
+                        <tr>
+                            <td>{{$genresLength := len .movie.Genres}}{{if gt $genresLength 1}}Genres{{else}}Genre{{end}}</td>
+                            <th>{{join .movie.Genres ", "}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{$directorsLength := len .movie.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}}</td>
+                            <th>{{join .movie.Directors ", "}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{$writersLength := len .movie.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}}</td>
+                            <th>{{join .movie.Writers ", "}}</th>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="fst-italic">{{.movie.Tagline}}</p>
+                <p>{{.movie.Overview}}</p>
+            </div>
         </div>
     </div>
 </div>

@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-contrib/sessions"
@@ -38,7 +39,9 @@ func InitServer() *gin.Engine {
 	router.Use(sessions.Sessions("user-session", store))
 
 	// Load templates
+	router.FuncMap["basename"] = filepath.Base
 	router.FuncMap["join"] = strings.Join
+	router.FuncMap["lower"] = strings.ToLower
 	router.LoadHTMLGlob("web/templates/**/*")
 
 	// Static files
@@ -68,6 +71,7 @@ func InitServer() *gin.Engine {
 		needsLogin.GET("/search", HandleGETSearch)
 		needsLogin.GET("/movies", HandleGETMovies)
 		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
+		needsLogin.GET("/movie/:tmdbId/download/:idx", HandleGETDownloadMovie)
 
 		needsLogin.GET("/settings", HandleGETSettings)
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)

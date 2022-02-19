@@ -311,8 +311,7 @@ func GetMovies() (movies []media.Movie) {
 }
 
 // GetMovieFromID returns a movie from its TMDB ID
-func GetMovieFromID(TMDBID int) (movie media.Movie) {
-	mongoMovies.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&movie)
-
-	return movie
+func GetMovieFromID(TMDBID int) (movie media.Movie, err error) {
+	err = mongoMovies.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&movie)
+	return movie, err
 }

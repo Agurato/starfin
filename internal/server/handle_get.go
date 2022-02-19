@@ -104,7 +104,13 @@ func HandleGETMovie(c *gin.Context) {
 		})
 		return
 	}
-	movie := GetMovieFromID(tmdbID)
+	movie, err := GetMovieFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
 
 	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
 		"title": movie.OriginalTitle,
@@ -112,13 +118,38 @@ func HandleGETMovie(c *gin.Context) {
 	})
 }
 
+func HandleGETDownloadMovie(c *gin.Context) {
+	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	fileIndex, err := strconv.Atoi(c.Param("idx"))
+	if err != nil {
+		fileIndex = 0
+	}
+
+	movie, err := GetMovieFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	if len(movie.Paths) > fileIndex {
+		fileIndex = len(movie.Paths) - 1
+	}
+	http.ServeFile(c.Writer, c.Request, movie.Paths[fileIndex].Path)
+}
+
 // HandleGETMovies displays the list of movies
 func HandleGETMovies(c *gin.Context) {
 	movies := GetMovies()
 	sort.Slice(movies, func(i, j int) bool {
-		titleI, titleJ := movies[i].Title, movies[j].Title
-		titleI = utilities.RemoveArticle(titleI)
-		titleJ = utilities.RemoveArticle(titleJ)
+		titleI := utilities.RemoveArticle(movies[i].Title)
+		titleJ := utilities.RemoveArticle(movies[j].Title)
 		return titleI < titleJ
 	})
 
