@@ -17,6 +17,7 @@ type Movie struct {
 	ID          primitive.ObjectID `bson:"_id"`
 	Paths       []VolumeFile
 	Name        string // Name fetched from filename
+	Resolution  string // Resolution fetched from filename
 	ReleaseYear int    // Release year fetched from filename
 	TMDBID      int
 	IMDbID      string

@@ -112,9 +112,29 @@ func HandleGETMovie(c *gin.Context) {
 		return
 	}
 
+	var volumes []string
+	for _, path := range movie.Paths {
+		var volume media.Volume
+		GetVolumeFromID(path.FromVolume, &volume)
+		volumes = append(volumes, volume.Name)
+	}
+
+	// var files []struct{
+	// 	basename string
+
+	// }
+	// for _, path := range movie.Paths {
+	// 	file := make(map[string]string)
+	// 	file["basename"] = filepath.Base(path.Path)
+	// 	file["fullMediaInfo"] = path.Info.FullOutput
+
+	// 	files = append(files, file)
+	// }
+
 	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
-		"title": movie.OriginalTitle,
-		"movie": movie,
+		"title":   movie.OriginalTitle,
+		"movie":   movie,
+		"volumes": volumes,
 	})
 }
 

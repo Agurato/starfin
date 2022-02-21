@@ -42,6 +42,7 @@ func InitServer() *gin.Engine {
 	router.FuncMap["basename"] = filepath.Base
 	router.FuncMap["join"] = strings.Join
 	router.FuncMap["lower"] = strings.ToLower
+	router.FuncMap["replace"] = strings.ReplaceAll
 	router.LoadHTMLGlob("web/templates/**/*")
 
 	// Static files

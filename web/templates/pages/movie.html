@@ -36,6 +36,27 @@
 
     a[download] {
         color: white;
+        float: right;
+    }
+
+    #filesTabs .nav-link {
+        color: lightgray;
+        background-color: inherit;
+        border: none;
+    }
+
+    #filesTabs .nav-link.active {
+        color: white;
+        background-color: inherit;
+        /* font-weight: bold; */
+        border-bottom: 2px solid red;
+    }
+
+    #filesTabsContent {
+        height: 400px;
+        overflow-y: scroll;
+        border: 1px solid rgb(129, 129, 129);
+        border-top: none;
     }
 </style>
 <section>
@@ -50,29 +71,22 @@
             <img class="img-fluid" src="{{.movie.PosterPath}}"/>
         </div>
         <div class="col">
-            <div class="row mb-2">
-                <div class="col-12 col-sm-11">
-                    <p class="mb-2">
-                        <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
-                        {{if ne .movie.Title .movie.OriginalTitle}}
-                        <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
-                        {{end}}
-                    </p>
-                    <div class="row row-cols-auto my-3">
-                        <div class="col mb-2"><span class="fw-bold">{{.movie.ReleaseYear}}</span></div>
-                        <div class="col">{{.movie.Runtime}} min</div>
-                        <div class="col">{{if .movie.Classification}}<span class="classif">{{.movie.Classification}}</span>{{end}}</div>
-                        <div class="col">{{if .movie.IMDbRating}}<i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}{{end}}</div>
-                        <div class="col">{{if .movie.LetterboxdRating}}<img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}{{end}}</div>
-                        <div class="col">
-                            {{range $_, $country := .movie.ProdCountries}}
-                            <span class="flag-icon flag-icon-{{lower $country}}"></span>
-                            {{end}}
-                        </div>
-                    </div>
-                </div>
-                <div class="col my-auto fs-3 text-center">
-                    <a href="/movie/{{.movie.TMDBID}}/download/0" download="{{$path := index .movie.Paths 0}}{{basename $path.Path}}"><i class="fa-solid fa-download"></i></a>
+            <p class="mb-2">
+                <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
+                {{if ne .movie.Title .movie.OriginalTitle}}
+                <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
+                {{end}}
+            </p>
+            <div class="row row-cols-auto my-3">
+                <div class="col mb-2"><span class="fw-bold">{{.movie.ReleaseYear}}</span></div>
+                <div class="col">{{.movie.Runtime}} min</div>
+                {{if .movie.Classification}}<div class="col"><span class="classif">{{.movie.Classification}}</span></div>{{end}}
+                {{if .movie.IMDbRating}}<div class="col"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}</div>{{end}}
+                {{if .movie.LetterboxdRating}}<div class="col"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}</div>{{end}}
+                <div class="col">
+                    {{range $_, $country := .movie.ProdCountries}}
+                    <span class="flag-icon flag-icon-{{lower $country}}"></span>
+                    {{end}}
                 </div>
             </div>
             <div>
@@ -95,6 +109,25 @@
                 <p class="fst-italic">{{.movie.Tagline}}</p>
                 <p>{{.movie.Overview}}</p>
             </div>
+        </div>
+    </div>
+    <div>
+        <ul class="nav nav-tabs nav-fill" id="filesTabs" role="tablist">
+            {{range $idx, $path := .movie.Paths}}
+            <li class="nav-item" role="presentation">
+                <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
+                    {{$.movie.Name}} - {{$.movie.Resolution}} - {{$path.Info.FileSize}}
+                    <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}"><i class="fa-solid fa-download"></i></a>
+                </span>
+            </li>
+            {{end}}
+        </ul>
+        <div class="tab-content mb-4 p-2" id="filesTabsContent">
+            {{range $idx, $path := .movie.Paths}}
+            <div class="tab-pane fade show {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}" role="tabpanel" aria-labelledby="files-{{$idx}}-tab">
+            {{$path.Info.FullOutput}}
+            </div>
+            {{end}}
         </div>
     </div>
 </div>

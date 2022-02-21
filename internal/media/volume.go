@@ -85,7 +85,7 @@ func (v Volume) Scan(mediaChan chan Media) {
 			// Search ID on TMDB
 			err = media.FetchMediaID()
 			if err != nil {
-				log.WithField("media", media).Warningln("Unable to fetch movie ID from TMDB")
+				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch movie ID from TMDB")
 				return
 			}
 			log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")

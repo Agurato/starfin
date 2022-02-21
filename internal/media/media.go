@@ -3,6 +3,7 @@ package media
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -63,12 +64,26 @@ func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
 			}
 		}
 	}
-
 	// The movie name should be right before the movie year
 	if movie.ReleaseYear > 0 && i >= 0 {
 		movie.Name = strings.Join(parts[:i], " ")
 	} else {
 		movie.Name = strings.Join(parts, " ")
+	}
+
+	// Get resolution from name
+	resolutionPRegex, _ := regexp.Compile(`^\d\d\d\d?[pP]$`)
+	resolutionKRegex, _ := regexp.Compile(`^\d[kK]$`)
+	for i := len(parts) - 1; i >= 0; i-- {
+		potentialRes := parts[i]
+		if resolutionPRegex.MatchString(potentialRes) || resolutionKRegex.MatchString(potentialRes) {
+			movie.Resolution = potentialRes
+			break
+		}
+	}
+	// If resolution not found, get it from MediaInfo video
+	if movie.Resolution == "" {
+		movie.Resolution = mediaInfo.Resolution
 	}
 
 	return &movie
