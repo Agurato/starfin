@@ -81,8 +81,10 @@ func GetMediaInfo(mediaInfoPath, filePath string) (MediaInfo, error) {
 	}
 	json.Unmarshal(out, &mediaInfoJSONOutput)
 
+	// For every track
 	for _, track := range mediaInfoJSONOutput.Media.Track {
 		switch track["@type"] {
+		// Fill General info
 		case "General":
 			mediaInfo.Format = track["Format"]
 			totalSeconds, _ := strconv.ParseFloat(track["Duration"], 32)
@@ -98,6 +100,7 @@ func GetMediaInfo(mediaInfoPath, filePath string) (MediaInfo, error) {
 			} else if totalSize > 1_000 {
 				mediaInfo.FileSize = fmt.Sprintf("%.2f KB", float64(totalSize)/1_000)
 			}
+		// Fill Video info
 		case "Video":
 			mediaInfo.Video = append(mediaInfo.Video, VideoInfo{
 				CodecID:    track["CodecID"],
@@ -125,6 +128,7 @@ func GetMediaInfo(mediaInfoPath, filePath string) (MediaInfo, error) {
 					mediaInfo.Resolution = "8K"
 				}
 			}
+		// Fill Audio info
 		case "Audio":
 			mediaInfo.Audio = append(mediaInfo.Audio, AudioInfo{
 				CodecID:      track["CodecID"],
@@ -132,6 +136,7 @@ func GetMediaInfo(mediaInfoPath, filePath string) (MediaInfo, error) {
 				Language:     track["Language"],
 				SamplingRate: track["SamplingRate"],
 			})
+		// Fill Text info
 		case "Text":
 			mediaInfo.Subs = append(mediaInfo.Subs, SubsInfo{
 				CodecID:  track["CodecID"],

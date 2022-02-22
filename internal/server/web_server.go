@@ -10,6 +10,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/pariz/gountries"
 )
 
 const (
@@ -40,6 +41,10 @@ func InitServer() *gin.Engine {
 
 	// Load templates
 	router.FuncMap["basename"] = filepath.Base
+	router.FuncMap["countryName"] = func(code string) string {
+		country, _ := gountries.New().FindCountryByAlpha(code)
+		return country.Name.Common
+	}
 	router.FuncMap["join"] = strings.Join
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll

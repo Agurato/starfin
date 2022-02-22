@@ -119,20 +119,8 @@ func HandleGETMovie(c *gin.Context) {
 		volumes = append(volumes, volume.Name)
 	}
 
-	// var files []struct{
-	// 	basename string
-
-	// }
-	// for _, path := range movie.Paths {
-	// 	file := make(map[string]string)
-	// 	file["basename"] = filepath.Base(path.Path)
-	// 	file["fullMediaInfo"] = path.Info.FullOutput
-
-	// 	files = append(files, file)
-	// }
-
 	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
-		"title":   movie.OriginalTitle,
+		"title":   fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
 		"movie":   movie,
 		"volumes": volumes,
 	})
@@ -158,7 +146,7 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		})
 		return
 	}
-	if len(movie.Paths) > fileIndex {
+	if fileIndex >= len(movie.Paths) {
 		fileIndex = len(movie.Paths) - 1
 	}
 	http.ServeFile(c.Writer, c.Request, movie.Paths[fileIndex].Path)

@@ -4,17 +4,17 @@ go 1.17
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
+	github.com/agnivade/levenshtein v1.1.1
 	github.com/alitto/pond v1.7.0
 	github.com/cyruzin/golang-tmdb v1.4.3
 	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.7.7
 	github.com/joho/godotenv v1.4.0
+	github.com/pariz/gountries v0.1.5
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	go.mongodb.org/mongo-driver v1.8.3
 )
-
-require github.com/agnivade/levenshtein v1.1.1 // indirect
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect

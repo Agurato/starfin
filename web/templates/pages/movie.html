@@ -39,16 +39,15 @@
         float: right;
     }
 
-    #filesTabs .nav-link {
-        color: lightgray;
+    .nav-tabs .nav-link {
+        color: rgb(165, 165, 165);
         background-color: inherit;
         border: none;
     }
 
-    #filesTabs .nav-link.active {
+    .nav-tabs .nav-link.active {
         color: white;
         background-color: inherit;
-        /* font-weight: bold; */
         border-bottom: 2px solid red;
     }
 
@@ -57,6 +56,14 @@
         overflow-y: scroll;
         border: 1px solid rgb(129, 129, 129);
         border-top: none;
+    }
+
+    #mediaInfoTabsContent td {
+        color: gray;
+    }
+
+    #mediaInfoTabsContent th {
+        font-weight: normal;
     }
 </style>
 <section>
@@ -67,29 +74,34 @@
 <img class="backdrop" src="{{.movie.BackdropPath}}" ondragstart="return false;" />
 <div class="container">
     <div class="row mt-5">
+        <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
             <img class="img-fluid" src="{{.movie.PosterPath}}"/>
         </div>
+        <!-- Movie info -->
         <div class="col">
+            <!-- Title(s) -->
             <p class="mb-2">
                 <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
                 {{if ne .movie.Title .movie.OriginalTitle}}
                 <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
                 {{end}}
             </p>
+            <!-- General info -->
             <div class="row row-cols-auto my-3">
                 <div class="col mb-2"><span class="fw-bold">{{.movie.ReleaseYear}}</span></div>
                 <div class="col">{{.movie.Runtime}} min</div>
                 {{if .movie.Classification}}<div class="col"><span class="classif">{{.movie.Classification}}</span></div>{{end}}
-                {{if .movie.IMDbRating}}<div class="col"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}</div>{{end}}
-                {{if .movie.LetterboxdRating}}<div class="col"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}</div>{{end}}
+                {{if .movie.IMDbRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="IMDb rating"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}</div>{{end}}
+                {{if .movie.LetterboxdRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Letterboxd rating"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}</div>{{end}}
                 <div class="col">
                     {{range $_, $country := .movie.ProdCountries}}
-                    <span class="flag-icon flag-icon-{{lower $country}}"></span>
+                    <span class="flag-icon flag-icon-{{lower $country}}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{countryName $country}}"></span>
                     {{end}}
                 </div>
             </div>
             <div>
+                <!-- Crew -->
                 <table class="table table-borderless table-sm text-white">
                     <tbody>
                         <tr>
@@ -106,26 +118,184 @@
                         </tr>
                     </tbody>
                 </table>
+                <!-- Tagline & overview -->
                 <p class="fst-italic">{{.movie.Tagline}}</p>
                 <p>{{.movie.Overview}}</p>
             </div>
         </div>
     </div>
+    <!-- File infos -->
     <div>
+        <!-- File selection -->
         <ul class="nav nav-tabs nav-fill" id="filesTabs" role="tablist">
             {{range $idx, $path := .movie.Paths}}
             <li class="nav-item" role="presentation">
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
                     {{$.movie.Name}} - {{$.movie.Resolution}} - {{$path.Info.FileSize}}
+                    <!-- Download button -->
                     <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}"><i class="fa-solid fa-download"></i></a>
                 </span>
             </li>
             {{end}}
         </ul>
+        <!-- MediaInfo display -->
         <div class="tab-content mb-4 p-2" id="filesTabsContent">
             {{range $idx, $path := .movie.Paths}}
             <div class="tab-pane fade show {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}" role="tabpanel" aria-labelledby="files-{{$idx}}-tab">
-            {{$path.Info.FullOutput}}
+                <!-- MediaInfo categories -->
+                <ul class="nav nav-tabs" id="mediaInfoTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link active" id="mediaInfo-{{$idx}}-overview-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-overview" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-overview" aria-selected="true">
+                            Overview
+                        </span>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link" id="mediaInfo-{{$idx}}-video-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-video" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-video" aria-selected="true">
+                            Video
+                        </span>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link" id="mediaInfo-{{$idx}}-audio-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-audio" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-audio" aria-selected="true">
+                            Audio
+                        </span>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link" id="mediaInfo-{{$idx}}-subs-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-subs" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-subs" aria-selected="true">
+                            Subtitles
+                        </span>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link" id="mediaInfo-{{$idx}}-full-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-full" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-full" aria-selected="true">
+                            Full
+                        </span>
+                    </li>
+                </ul>
+                <!-- MediaInfo categories display -->
+                <div class="tab-content mb-4 p-2" id="mediaInfoTabsContent">
+                    <!-- MediaInfo Overview -->
+                    <div class="tab-pane fade show active" id="mediaInfo-{{$idx}}-overview" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-overview-tab">
+                        <table class="table table-borderless table-sm text-white">
+                        <tbody>
+                            <tr>
+                                <td>File name</td>
+                                <th>{{basename $path.Path}}</th>
+                            </tr>
+                            <tr>
+                                <td>File size</td>
+                                <th>{{$path.Info.FileSize}}</th>
+                            </tr>
+                            <tr>
+                                <td>Duration</td>
+                                <th>{{$path.Info.Duration}}</th>
+                            </tr>
+                            <tr>
+                                <td>Format</td>
+                                <th>{{$path.Info.Format}}</th>
+                            </tr>
+                        </tbody>
+                        </table>
+                    </div>
+                    <!-- MediaInfo Video(s) -->
+                    <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-video" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-video-tab">
+                        {{$videosLength := len $path.Info.Video}}
+                        {{range $videoIdx, $video := $path.Info.Video}}
+                            {{if gt $videosLength 1}}
+                            {{if gt $videoIdx 0}}
+                            <hr>
+                            {{end}}
+                            <div class="mb-2">Video #{{$videoIdx}}</div>
+                            {{end}}
+                            <table class="table table-borderless table-sm text-white">
+                            <tbody>
+                                <tr>
+                                    <td>Codec</td>
+                                    <th>{{$video.CodecID}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Profile</td>
+                                    <th>{{$video.Profile}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Resolution</td>
+                                    <th>{{$video.Resolution}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Frame Rate</td>
+                                    <th>{{$video.FrameRate}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Bit Depth</td>
+                                    <th>{{$video.BitDepth}}</th>
+                                </tr>
+                            </tbody>
+                            </table>
+                        {{end}}
+                    </div>
+                    <!-- MediaInfo Audio(s) -->
+                    <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-audio" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-audio-tab">
+                        {{$audiosLength := len $path.Info.Audio}}
+                        {{range $audioIdx, $audio := $path.Info.Audio}}
+                            {{if gt $audiosLength 1}}
+                            {{if gt $audioIdx 0}}
+                            <hr>
+                            {{end}}
+                            <div class="mb-2">Audio #{{$audioIdx}}</div>
+                            {{end}}
+                            <table class="table table-borderless table-sm text-white">
+                            <tbody>
+                                <tr>
+                                    <td>Codec</td>
+                                    <th>{{$audio.CodecID}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Channels</td>
+                                    <th>{{$audio.Channels}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Language</td>
+                                    <th>{{$audio.Language}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Sampling Rate</td>
+                                    <th>{{$audio.SamplingRate}}</th>
+                                </tr>
+                            </tbody>
+                            </table>
+                        {{end}}
+                    </div>
+                    <!-- MediaInfo Sub(s) -->
+                    <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-subs" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-subs-tab">
+                        {{$subsLength := len $path.Info.Subs}}
+                        {{range $subIdx, $sub := $path.Info.Subs}}
+                            {{if gt $subsLength 1}}
+                            {{if gt $subIdx 0}}
+                            <hr>
+                            {{end}}
+                            <div class="mb-2">Subtitle #{{$subIdx}}</div>
+                            {{end}}
+                            <table class="table table-borderless table-sm text-white">
+                            <tbody>
+                                <tr>
+                                    <td>Codec</td>
+                                    <th>{{$sub.CodecID}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Language</td>
+                                    <th>{{$sub.Language}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Forced</td>
+                                    <th>{{$sub.Forced}}</th>
+                                </tr>
+                            </tbody>
+                            </table>
+                        {{end}}
+                    </div>
+                    <!-- MediaInfo Full Output -->
+                    <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-full" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-full-tab">
+                        {{$path.Info.FullOutput}}
+                    </div>
+                </div>
             </div>
             {{end}}
         </div>
