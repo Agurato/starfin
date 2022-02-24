@@ -52,10 +52,17 @@
     }
 
     #filesTabsContent {
-        height: 400px;
-        overflow-y: scroll;
         border: 1px solid rgb(129, 129, 129);
         border-top: none;
+    }
+
+    #mediaInfoTabsContent {
+        height: 400px;
+        overflow-y: auto;
+    }
+
+    #mediaInfoTabsContent ul {
+        border-bottom: 1px solid rgb(129, 129, 129);
     }
 
     #mediaInfoTabsContent td {
@@ -122,6 +129,10 @@
                 <p class="fst-italic">{{.movie.Tagline}}</p>
                 <p>{{.movie.Overview}}</p>
             </div>
+            <!-- Cast -->
+            <div>
+
+            </div>
         </div>
     </div>
     <!-- File infos -->
@@ -171,7 +182,7 @@
                     </li>
                 </ul>
                 <!-- MediaInfo categories display -->
-                <div class="tab-content mb-4 p-2" id="mediaInfoTabsContent">
+                <div class="tab-content mt-2 mb-1 p-2" id="mediaInfoTabsContent">
                     <!-- MediaInfo Overview -->
                     <div class="tab-pane fade show active" id="mediaInfo-{{$idx}}-overview" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-overview-tab">
                         <table class="table table-borderless table-sm text-white">
@@ -203,7 +214,7 @@
                             {{if gt $videoIdx 0}}
                             <hr>
                             {{end}}
-                            <div class="mb-2">Video #{{$videoIdx}}</div>
+                            <div class="mb-2">Video #{{add $videoIdx 1}}</div>
                             {{end}}
                             <table class="table table-borderless table-sm text-white">
                             <tbody>
@@ -239,7 +250,7 @@
                             {{if gt $audioIdx 0}}
                             <hr>
                             {{end}}
-                            <div class="mb-2">Audio #{{$audioIdx}}</div>
+                            <div class="mb-2">Audio #{{add $audioIdx 1}}</div>
                             {{end}}
                             <table class="table table-borderless table-sm text-white">
                             <tbody>
@@ -271,7 +282,7 @@
                             {{if gt $subIdx 0}}
                             <hr>
                             {{end}}
-                            <div class="mb-2">Subtitle #{{$subIdx}}</div>
+                            <div class="mb-2">Subtitle #{{add $subIdx 1}}</div>
                             {{end}}
                             <table class="table table-borderless table-sm text-white">
                             <tbody>

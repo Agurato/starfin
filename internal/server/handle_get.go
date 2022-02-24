@@ -65,36 +65,6 @@ func HandleGETLogout(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-// HandleGETSearch displays the search & results page
-func HandleGETSearch(c *gin.Context) {
-	// session := sessions.Default(c)
-	// user := session.Get(UserKey).(User)
-
-	// searchQuery := c.Query("q")
-
-	// if len(searchQuery) == 0 {
-	// 	RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
-	// 		"title":       "Search",
-	// 		"searchQuery": searchQuery,
-	// 	})
-	// 	return
-	// }
-
-	// searchResults, err := MediaSearchMulti(searchQuery, user)
-	// if err != nil {
-	// 	RenderHTML(c, http.StatusServiceUnavailable, "pages/search.html", gin.H{
-	// 		"title": "Search",
-	// 		"error": "An error occured during the search",
-	// 	})
-	// }
-
-	// RenderHTML(c, http.StatusOK, "pages/search.html", gin.H{
-	// 	"title":         "Search",
-	// 	"searchQuery":   searchQuery,
-	// 	"searchResults": searchResults,
-	// })
-}
-
 // HandleGETMovie displays information about a movie
 func HandleGETMovie(c *gin.Context) {
 	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
@@ -155,6 +125,22 @@ func HandleGETDownloadMovie(c *gin.Context) {
 // HandleGETMovies displays the list of movies
 func HandleGETMovies(c *gin.Context) {
 	movies := GetMovies()
+	var (
+		search string
+		ok     bool
+	)
+
+	// Filter movies from search
+	if search, ok = c.GetQuery("search"); ok {
+		var filteredMovies []media.Movie
+		for _, movie := range movies {
+			if movie.ContainsSearch(search) {
+				filteredMovies = append(filteredMovies, movie)
+			}
+		}
+		movies = filteredMovies
+	}
+
 	sort.Slice(movies, func(i, j int) bool {
 		titleI := utilities.RemoveArticle(movies[i].Title)
 		titleJ := utilities.RemoveArticle(movies[j].Title)
@@ -164,6 +150,7 @@ func HandleGETMovies(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
 		"title":  "Movies",
 		"movies": movies,
+		"search": search,
 	})
 }
 

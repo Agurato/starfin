@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
@@ -134,6 +136,35 @@ func (m *Movie) FetchMediaDetails() {
 
 func (m Movie) GetTMDBID() int {
 	return m.TMDBID
+}
+
+// ContainsSearch returns true is the movie is included in the search
+// Searches in the title (case-insensitive)
+// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
+func (m Movie) ContainsSearch(search string) bool {
+	search = strings.Trim(search, " ")
+	searchSplit := strings.Split(search, " ")
+	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
+	lastSearchIdx := len(searchSplit) - 1
+
+	// If there's a year in last part of search term, return false if the movie is not from that year
+	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
+		year, _ := strconv.Atoi(searchSplit[lastSearchIdx][2:])
+		if m.ReleaseYear != year {
+			return false
+		}
+		searchSplit = searchSplit[:lastSearchIdx]
+	}
+
+	// Search the title on the rest of the string
+	search = strings.Join(searchSplit, "")
+	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()\\s\\\\]")
+
+	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
+	title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
+	originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
+
+	return strings.Contains(title, search) || strings.Contains(originalTitle, search)
 }
 
 // GetIMDbRating fetchs rating from IMDbID

@@ -40,6 +40,9 @@ func InitServer() *gin.Engine {
 	router.Use(sessions.Sessions("user-session", store))
 
 	// Load templates
+	router.FuncMap["add"] = func(a int, b int) int {
+		return a + b
+	}
 	router.FuncMap["basename"] = filepath.Base
 	router.FuncMap["countryName"] = func(code string) string {
 		country, _ := gountries.New().FindCountryByAlpha(code)
@@ -74,7 +77,6 @@ func InitServer() *gin.Engine {
 	{
 		needsLogin.GET("/", HandleGETIndex)
 
-		needsLogin.GET("/search", HandleGETSearch)
 		needsLogin.GET("/movies", HandleGETMovies)
 		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
 		needsLogin.GET("/movie/:tmdbId/download/:idx", HandleGETDownloadMovie)

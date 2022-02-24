@@ -5,9 +5,15 @@
     <p style="color:red">{{ .error }}</p>
     {{ end }}
 </section>
-<section>
-    <!-- TODO: search bar & filter here-->
-</section>
+<!-- Filter bar -->
+<div class="container mt-2 mb-3">
+    <form action="" method="get">
+        <div class="input-group w-25 mx-auto">
+            <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}"/>
+            <button type="submit" class="btn btn-outline-secondary" id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+    </form>
+</div>
 <div class="row row-cols-auto gx-0 justify-content-center">
     {{range $index, $movie := .movies}}
     <div class="col item">
