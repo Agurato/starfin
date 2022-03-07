@@ -1,5 +1,5 @@
-{{ define "pages/movie.html" }}
-{{ template "partials/header.html" . }}
+{{ define "pages/movie.go.html" }}
+{{ template "partials/header.go.html" . }}
 <style>
     header {
         background: rgba(var(--bs-dark-rgb), 0.9);
@@ -355,5 +355,5 @@
         </div>
     </div>
 </div>
-{{ template "partials/footer.html" . }}
+{{ template "partials/footer.go.html" . }}
 {{ end }}

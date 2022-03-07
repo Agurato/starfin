@@ -1,5 +1,5 @@
-{{ define "pages/index.html" }}
-{{ template "partials/header.html" . }}
+{{ define "pages/index.go.html" }}
+{{ template "partials/header.go.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -10,5 +10,5 @@
 </section>
 <div id="container">
 </div>
-{{ template "partials/footer.html" . }}
+{{ template "partials/footer.go.html" . }}
 {{ end }}

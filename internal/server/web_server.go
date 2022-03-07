@@ -155,7 +155,7 @@ func AdminRequired(c *gin.Context) {
 	// Abort request if user is not in cookies
 	if user == nil {
 		c.AbortWithStatus(http.StatusUnauthorized)
-		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/index.go.html", gin.H{
 			"title": "starfin",
 			"error": "You need to be logged in to use this functionality",
 		})
@@ -163,7 +163,7 @@ func AdminRequired(c *gin.Context) {
 	}
 	if !user.(User).IsAdmin {
 		c.AbortWithStatus(http.StatusUnauthorized)
-		RenderHTML(c, http.StatusUnauthorized, "pages/index.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/index.go.html", gin.H{
 			"title": "starfin",
 			"error": "You need to be admin to use this functionality",
 		})

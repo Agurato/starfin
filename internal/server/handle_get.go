@@ -17,7 +17,7 @@ import (
 
 // Handle404 displays the 404 page
 func Handle404(c *gin.Context) {
-	RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+	RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 		"title": "404 - Not Found",
 	})
 }
@@ -29,21 +29,21 @@ func HandleGETStart(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
 	}
-	RenderHTML(c, http.StatusOK, "pages/start.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/start.go.html", gin.H{
 		"title": "Create admin account",
 	})
 }
 
 // HandleGETIndex displays the index page
 func HandleGETIndex(c *gin.Context) {
-	RenderHTML(c, http.StatusOK, "pages/index.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/index.go.html", gin.H{
 		"title": "starfin",
 	})
 }
 
 // HandleGETLogin displays the registration page
 func HandleGETLogin(c *gin.Context) {
-	RenderHTML(c, http.StatusOK, "pages/login.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/login.go.html", gin.H{
 		"title": "Login",
 	})
 }
@@ -70,14 +70,14 @@ func HandleGETLogout(c *gin.Context) {
 func HandleGETMovie(c *gin.Context) {
 	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
 	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
 	movie, err := GetMovieFromID(tmdbID)
 	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
@@ -105,7 +105,7 @@ func HandleGETMovie(c *gin.Context) {
 		volumes = append(volumes, volume.Name)
 	}
 
-	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/movie.go.html", gin.H{
 		"title":   fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
 		"movie":   movie,
 		"cast":    fullCast,
@@ -116,7 +116,7 @@ func HandleGETMovie(c *gin.Context) {
 func HandleGETDownloadMovie(c *gin.Context) {
 	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
 	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
@@ -128,7 +128,7 @@ func HandleGETDownloadMovie(c *gin.Context) {
 
 	movie, err := GetMovieFromID(tmdbID)
 	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.html", gin.H{
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
@@ -160,7 +160,7 @@ func HandleGETMovies(c *gin.Context) {
 		return titleI < titleJ
 	})
 
-	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/movies.go.html", gin.H{
 		"title":      "Movies",
 		"movies":     movies,
 		"search":     inputSearch,
@@ -176,7 +176,7 @@ func HandleGETSettings(c *gin.Context) {
 	if setPassword == "success" {
 		success = "Password changed successfully"
 	}
-	RenderHTML(c, http.StatusOK, "pages/settings.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/settings.go.html", gin.H{
 		"title":   "Settings",
 		"success": success,
 	})
@@ -191,14 +191,14 @@ func HandleGETUser(c *gin.Context) {
 
 	// Check for user existence and fetch all queries
 	if err := GetUserFromID(user.ID, &userDB); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/user.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/user.go.html", gin.H{
 			"title": fmt.Sprintf("%s's profile", c.Param("userId")),
 			"error": "User does not exist!",
 		})
 		return
 	}
 
-	RenderHTML(c, http.StatusOK, "pages/user.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/user.go.html", gin.H{
 		"title": fmt.Sprintf("%s's profile", c.Param("userId")),
 		"user":  c.Param("userId"),
 	})
@@ -222,7 +222,7 @@ func HandleGETAdmin(c *gin.Context) {
 			"obj": user,
 		})
 	}
-	RenderHTML(c, http.StatusOK, "pages/admin.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
 		"title":   "Admin",
 		"volumes": volumesWithStringID,
 		"users":   usersWithStringID,
@@ -234,7 +234,7 @@ func HandleGETAdminVolume(c *gin.Context) {
 
 	// If we're adding a new volume
 	if volumeIdStr == "new" {
-		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 			"title":  "Add new volume",
 			"volume": media.Volume{},
 			"new":    true,
@@ -244,20 +244,20 @@ func HandleGETAdminVolume(c *gin.Context) {
 
 	volumeId, err := primitive.ObjectIDFromHex(volumeIdStr)
 	if err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 			"title": "Edit volume",
 			"error": "Incorrect volume ID!",
 		})
 	}
 	var volume media.Volume
 	if err := GetVolumeFromID(volumeId, &volume); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 			"title": "Edit volume",
 			"error": "Volume does not exist!",
 		})
 		return
 	}
-	RenderHTML(c, http.StatusOK, "pages/admin_volume.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 		"title":  "Edit volume",
 		"volume": volume,
 		"id":     volume.ID.Hex(),
@@ -270,7 +270,7 @@ func HandleGETAdminUser(c *gin.Context) {
 
 	// If we're adding a new user
 	if userIdStr == "new" {
-		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Add new user",
 			"user":  User{},
 			"new":   true,
@@ -280,20 +280,20 @@ func HandleGETAdminUser(c *gin.Context) {
 
 	userId, err := primitive.ObjectIDFromHex(userIdStr)
 	if err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Edit user",
 			"error": "Incorrect user ID!",
 		})
 	}
 	var user User
 	if err := GetUserFromID(userId, &user); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Edit user",
 			"error": "User does not exist!",
 		})
 		return
 	}
-	RenderHTML(c, http.StatusOK, "pages/admin_user.html", gin.H{
+	RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 		"title":    "Edit user",
 		"userEdit": user,
 		"id":       user.ID.Hex(),

@@ -1,5 +1,5 @@
-{{ define "pages/movies.html" }}
-{{ template "partials/header.html" . }}
+{{ define "pages/movies.go.html" }}
+{{ template "partials/header.go.html" . }}
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -31,5 +31,5 @@
     </div>
     {{end}}
 </div>
-{{ template "partials/footer.html" . }}
+{{ template "partials/footer.go.html" . }}
 {{ end }}

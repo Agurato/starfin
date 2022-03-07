@@ -26,7 +26,7 @@ func HandlePOSTStart(c *gin.Context) {
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
 	if err := AddUser(username, password1, password2, true); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/start.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
 			"title":    "Start",
 			"error":    err.Error(),
 			"username": username,
@@ -47,7 +47,7 @@ func HandlePOSTLogin(c *gin.Context) {
 
 	// Check username length
 	if len(username) < 2 || len(username) > 25 {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "Username must be between 2 and 25 characters",
 			"username": username,
@@ -58,7 +58,7 @@ func HandlePOSTLogin(c *gin.Context) {
 	// Fetch encoded password from DB
 	var user User
 	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": username}).Decode(&user); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "Authentication failed",
 			"username": username,
@@ -69,7 +69,7 @@ func HandlePOSTLogin(c *gin.Context) {
 	// Check if the username/password combination is valid
 	ok, err := argon2.VerifyEncoded([]byte(password), []byte(user.Password))
 	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "An error occured while logging you in",
 			"username": username,
@@ -77,7 +77,7 @@ func HandlePOSTLogin(c *gin.Context) {
 		return
 	}
 	if !ok {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "Authentication failed",
 			"username": username,
@@ -89,7 +89,7 @@ func HandlePOSTLogin(c *gin.Context) {
 	user.Password = ""
 	session.Set(UserKey, user)
 	if err := session.Save(); err != nil {
-		RenderHTML(c, http.StatusInternalServerError, "pages/login.html", gin.H{
+		RenderHTML(c, http.StatusInternalServerError, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "Server had trouble to log you in",
 			"username": username,
@@ -112,7 +112,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 
 	// Check new passwords match
 	if password1 != password2 {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "New passwords don't match",
 		})
@@ -121,7 +121,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 
 	// Check password length
 	if len(password1) < 8 {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "Passwords must be at least 8 characters long",
 		})
@@ -130,7 +130,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	// Fetch encoded password from DB
 	var userDB User
 	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": user.Name}).Decode(&userDB); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while checking for your password",
 		})
@@ -140,14 +140,14 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	// Check if the username/password combination is valid
 	ok, err := argon2.VerifyEncoded([]byte(oldPassword), []byte(userDB.Password))
 	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while checking for your password",
 		})
 		return
 	}
 	if !ok {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "Authentication failed",
 		})
@@ -157,7 +157,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	// Hash & encode password
 	encoded, err := argon.HashEncoded([]byte(password1))
 	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while saving your password",
 		})
@@ -166,7 +166,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 
 	change := bson.M{"$set": bson.M{"password": string(encoded)}}
 	if _, err := mongoUsers.UpdateOne(MongoCtx, bson.M{"_id": userDB.ID}, change); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while saving your password",
 		})
@@ -193,7 +193,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 			IsRecursive: volumeIsRecursive,
 			MediaType:   volumeMediaType,
 		}); err != nil {
-			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.html", gin.H{
+			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 				"title":  "Add new volume",
 				"volume": media.Volume{},
 				"new":    true,
@@ -206,7 +206,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 		var volume media.Volume
 		volumeID, _ := primitive.ObjectIDFromHex(volumeIdStr)
 		GetVolumeFromID(volumeID, &volume)
-		RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 			"title":  "Edit volume",
 			"volume": volume,
 			"id":     volume.ID.Hex(),
@@ -239,7 +239,7 @@ func HandlePOSTEditUser(c *gin.Context) {
 
 	if userIdStr == "" {
 		if err := AddUser(username, password1, password2, isAdmin); err != nil {
-			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.html", gin.H{
+			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
 				"userEdit": User{},
 				"new":      true,
@@ -252,7 +252,7 @@ func HandlePOSTEditUser(c *gin.Context) {
 		var user User
 		userID, _ := primitive.ObjectIDFromHex(userIdStr)
 		GetUserFromID(userID, &user)
-		RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.html", gin.H{
+		RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 			"title":    "Edit user",
 			"userEdit": user,
 			"id":       user.ID.Hex(),

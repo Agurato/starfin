@@ -1,5 +1,5 @@
-{{ define "pages/search.html" }}
-{{ template "partials/header.html" . }}
+{{ define "pages/search.go.html" }}
+{{ template "partials/header.go.html" . }}
 <section>
     <form action="" method="get" id="search-form">
         <input type="text" id="q" name="q" size="30" placeholder="Search" {{if .searchQuery}}value="{{.searchQuery}}"{{end}}>
@@ -22,5 +22,5 @@
         </aside>
     {{ end }}
 </section>
-{{ template "partials/footer.html" . }}
+{{ template "partials/footer.go.html" . }}
 {{ end }}
