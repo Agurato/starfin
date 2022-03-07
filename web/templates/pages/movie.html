@@ -72,21 +72,52 @@
     #mediaInfoTabsContent th {
         font-weight: normal;
     }
+
+    .cast {
+        width: calc(100% - 80px);
+        margin: auto;
+    }
+
+    .cast .actor {
+        min-width: 185px;
+        max-width: 185px;
+    }
+
+    .cast .actor a {
+        color: white;
+        text-decoration: none;
+    }
+
+    .cast .actor p:first-child {
+        font-size: 11pt;
+    }
+
+    .cast .actor p:last-child {
+        line-height: 1rem;
+        color: #a0a0a0;
+        font-size: 10pt;
+    }
 </style>
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
     {{ end }}
 </section>
-<img class="backdrop" src="{{.movie.BackdropPath}}" ondragstart="return false;" />
+{{if .movie.BackdropPath}}
+<img class="backdrop" src="{{tmdbGetImageURL .movie.BackdropPath "w1280"}}" ondragstart="return false;" />
+{{end}}
 <div class="container">
     <div class="row mt-5">
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
-            <img class="img-fluid" src="{{.movie.PosterPath}}"/>
+            {{if .movie.PosterPath}}
+            <img class="img-fluid" src="{{tmdbGetImageURL .movie.PosterPath "w342"}}"/>
+            {{else}}
+            <img class="img-fluid" src="/static/images/no_poster.png" width="342"/>
+            {{end}}
         </div>
         <!-- Movie info -->
-        <div class="col">
+        <div class="col-12 col-sm-8">
             <!-- Title(s) -->
             <p class="mb-2">
                 <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
@@ -130,8 +161,20 @@
                 <p>{{.movie.Overview}}</p>
             </div>
             <!-- Cast -->
-            <div>
-
+            <div class="cast">
+                {{range $idx, $actor := .cast}}
+                <div class="actor mx-2 text-center">
+                    <a href="/actor/{{$actor.Id}}">
+                        {{if $actor.Photo}}
+                        <img class="img-fluid" src="{{tmdbGetImageURL $actor.Photo "w185"}}" alt="{{$actor.Name}}"/>
+                        {{else}}
+                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}"/>
+                        {{end}}
+                        <p class="fw-bold mt-2 mb-1">{{$actor.Name}}</p>
+                        <p>as {{$actor.Character}}</p>
+                    </a>
+                </div>
+                {{end}}
             </div>
         </div>
     </div>

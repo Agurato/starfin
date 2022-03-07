@@ -10,7 +10,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
-	tmdb "github.com/cyruzin/golang-tmdb"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -31,7 +30,6 @@ type Movie struct {
 	Runtime          string
 	Tagline          string
 	Overview         string
-	TinyPosterPath   string
 	PosterPath       string
 	BackdropPath     string
 	Classification   string
@@ -40,7 +38,7 @@ type Movie struct {
 	Genres           []string
 	Directors        []string
 	Writers          []string
-	Cast             []string
+	Cast             []Cast
 	ProdCountries    []string
 }
 
@@ -71,7 +69,8 @@ func (m *Movie) FetchMediaID() error {
 	return nil
 }
 
-func (m *Movie) FetchMediaDetails() {
+// FetchMediaDetails fetches media details from TMDB and stores it in the Movie structure
+func (m *Movie) FetchMediaDetails() (actors []Actor) {
 	// Get details
 	details, err := TMDBClient.GetMovieDetails(m.TMDBID, nil)
 	if err != nil {
@@ -84,11 +83,8 @@ func (m *Movie) FetchMediaDetails() {
 	m.Runtime = strconv.Itoa(details.Runtime)
 	m.Tagline = details.Tagline
 	m.Overview = details.Overview
-	if details.PosterPath != "" {
-		m.TinyPosterPath = tmdb.GetImageURL(details.PosterPath, "w154")
-		m.PosterPath = tmdb.GetImageURL(details.PosterPath, "w342")
-	}
-	m.BackdropPath = tmdb.GetImageURL(details.BackdropPath, "w1280")
+	m.PosterPath = details.PosterPath
+	m.BackdropPath = details.BackdropPath
 	m.IMDbRating = GetIMDbRating(m.IMDbID)
 	m.LetterboxdRating = GetLetterboxdRating(m.IMDbID)
 
@@ -110,7 +106,7 @@ func (m *Movie) FetchMediaDetails() {
 		}
 	}
 
-	// Set crew
+	// Set cast and crew
 	credits, err := TMDBClient.GetMovieCredits(m.TMDBID, nil)
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie credits from TMDB")
@@ -124,7 +120,12 @@ func (m *Movie) FetchMediaDetails() {
 			}
 		}
 		for _, cast := range credits.Cast {
-			m.Cast = append(m.Cast, cast.Name)
+			m.Cast = append(m.Cast, Cast{Character: cast.Character, ActorID: cast.ID})
+			actors = append(actors, Actor{
+				TMDBID: cast.ID,
+				Name:   cast.Name,
+				Photo:  cast.ProfilePath,
+			})
 		}
 	}
 
@@ -132,39 +133,12 @@ func (m *Movie) FetchMediaDetails() {
 	for _, country := range details.ProductionCountries {
 		m.ProdCountries = append(m.ProdCountries, country.Iso3166_1)
 	}
+
+	return
 }
 
 func (m Movie) GetTMDBID() int {
 	return m.TMDBID
-}
-
-// ContainsSearch returns true is the movie is included in the search
-// Searches in the title (case-insensitive)
-// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
-func (m Movie) ContainsSearch(search string) bool {
-	search = strings.Trim(search, " ")
-	searchSplit := strings.Split(search, " ")
-	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
-	lastSearchIdx := len(searchSplit) - 1
-
-	// If there's a year in last part of search term, return false if the movie is not from that year
-	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
-		year, _ := strconv.Atoi(searchSplit[lastSearchIdx][2:])
-		if m.ReleaseYear != year {
-			return false
-		}
-		searchSplit = searchSplit[:lastSearchIdx]
-	}
-
-	// Search the title on the rest of the string
-	search = strings.Join(searchSplit, "")
-	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()\\s\\\\]")
-
-	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
-	title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
-	originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
-
-	return strings.Contains(title, search) || strings.Contains(originalTitle, search)
 }
 
 // GetIMDbRating fetchs rating from IMDbID
@@ -229,4 +203,40 @@ func GetLetterboxdRating(imdbId string) string {
 	}
 
 	return doc.Find("a.display-rating").First().Text()
+}
+
+// SearchMovies returns a sublist of movies containing the search terms
+// Searches in the title and original title (case-insensitive)
+// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
+func SearchMovies(search string, movies []Movie) ([]Movie, string, int) {
+	search = strings.Trim(search, " ")
+	searchSplit := strings.Split(search, " ")
+	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
+	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]")
+	lastSearchIdx := len(searchSplit) - 1
+	var (
+		searchYear     int
+		filteredMovies []Movie
+	)
+
+	// If there's a year in last part of search term, return false if the movie is not from that year
+	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
+		searchYear, _ = strconv.Atoi(searchSplit[lastSearchIdx][2:])
+		searchSplit = searchSplit[:lastSearchIdx]
+	}
+
+	search = strings.Join(searchSplit, "")
+	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
+	for _, m := range movies {
+		if searchYear != 0 && m.ReleaseYear != searchYear {
+			continue
+		}
+		title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
+		originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
+		if strings.Contains(title, search) || strings.Contains(originalTitle, search) {
+			filteredMovies = append(filteredMovies, m)
+		}
+	}
+
+	return filteredMovies, strings.Join(searchSplit, " "), searchYear
 }

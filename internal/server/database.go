@@ -31,6 +31,7 @@ var (
 	mongoUsers   *mongo.Collection
 	mongoVolumes *mongo.Collection
 	mongoMovies  *mongo.Collection
+	mongoActors  *mongo.Collection
 )
 
 // InitMongo init mongo db
@@ -51,6 +52,7 @@ func InitMongo() (mongoClient *mongo.Client) {
 	mongoUsers = mongoDb.Collection("users")
 	mongoVolumes = mongoDb.Collection("volumes")
 	mongoMovies = mongoDb.Collection("movies")
+	mongoActors = mongoDb.Collection("actors")
 	return
 }
 
@@ -200,14 +202,22 @@ func AddVolume(volume media.Volume) error {
 		go func() {
 			// Channel to add media to DB as they are fetched from TMDB
 			mediaChan := make(chan media.Media)
+			actorChan := make(chan []media.Actor)
 
-			go volume.Scan(mediaChan)
-			for mediaFile := range mediaChan {
-				// If media is already in DB, add the current Volume to the media's origin
-				if IsMediaInDB(&mediaFile) {
-					AddVolumeSourceToMedia(&mediaFile, &volume)
+			go volume.Scan(mediaChan, actorChan)
+
+			for {
+				mediaFile, more := <-mediaChan
+				actors := <-actorChan
+				if more {
+					if IsMediaInDB(&mediaFile) {
+						AddVolumeSourceToMedia(&mediaFile, &volume)
+					} else {
+						AddMediaToDB(&mediaFile)
+					}
+					AddActorsToDB(actors)
 				} else {
-					AddMediaToDB(&mediaFile)
+					break
 				}
 			}
 		}()
@@ -291,6 +301,32 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 			log.WithField("path", movie.Paths[0].Path).Debugln("Added volume as source of movie to database")
 		}
 	}
+}
+
+// AddActorsToDB upserts the actors of a media to the DB
+func AddActorsToDB(actors []media.Actor) {
+	for _, actor := range actors {
+		res, err := mongoActors.UpdateOne(MongoCtx, bson.M{"tmdbid": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
+		if err != nil {
+			log.WithField("actorName", actor.Name).Warningln("Unable to add actor to database:", err)
+		}
+		if res.MatchedCount > 0 {
+			if res.ModifiedCount > 0 {
+				log.WithField("actorName", actor.Name).Debugln("Actor updated in database")
+			} else if res.UpsertedCount > 0 {
+				log.WithField("actorName", actor.Name).Debugln("Actor added to database")
+			} else {
+				log.WithField("actorName", actor.Name).Debugln("Actor already in database")
+			}
+		} else {
+			log.WithField("actorName", actor.Name).Debugln("Actor added to database")
+		}
+	}
+}
+
+func GetActorFromID(TMDBID int64) (actor media.Actor, err error) {
+	err = mongoActors.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&actor)
+	return actor, err
 }
 
 // GetMovies returns a slice of Movie

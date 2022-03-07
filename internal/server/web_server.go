@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,7 @@ func InitServer() *gin.Engine {
 	router.FuncMap["join"] = strings.Join
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
+	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
 	router.LoadHTMLGlob("web/templates/**/*")
 
 	// Static files
@@ -85,6 +87,7 @@ func InitServer() *gin.Engine {
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
 	}
 
+	// User needs to be admin to access these pages
 	needsAdmin := mainRouter.Group("/")
 	needsAdmin.Use(AdminRequired)
 	{

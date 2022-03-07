@@ -10,6 +10,7 @@ import (
 	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -82,6 +83,21 @@ func HandleGETMovie(c *gin.Context) {
 		return
 	}
 
+	var fullCast []gin.H
+	for _, cast := range movie.Cast {
+		actor, err := GetActorFromID(cast.ActorID)
+		if err != nil {
+			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
+			actor = media.Actor{}
+		}
+		fullCast = append(fullCast, gin.H{
+			"Character": cast.Character,
+			"Id":        cast.ActorID,
+			"Name":      actor.Name,
+			"Photo":     actor.Photo,
+		})
+	}
+
 	var volumes []string
 	for _, path := range movie.Paths {
 		var volume media.Volume
@@ -92,6 +108,7 @@ func HandleGETMovie(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/movie.html", gin.H{
 		"title":   fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
 		"movie":   movie,
+		"cast":    fullCast,
 		"volumes": volumes,
 	})
 }
@@ -126,19 +143,15 @@ func HandleGETDownloadMovie(c *gin.Context) {
 func HandleGETMovies(c *gin.Context) {
 	movies := GetMovies()
 	var (
-		search string
-		ok     bool
+		inputSearch string
+		searchTerm  string
+		searchYear  int
+		ok          bool
 	)
 
 	// Filter movies from search
-	if search, ok = c.GetQuery("search"); ok {
-		var filteredMovies []media.Movie
-		for _, movie := range movies {
-			if movie.ContainsSearch(search) {
-				filteredMovies = append(filteredMovies, movie)
-			}
-		}
-		movies = filteredMovies
+	if inputSearch, ok = c.GetQuery("search"); ok {
+		movies, searchTerm, searchYear = media.SearchMovies(inputSearch, movies)
 	}
 
 	sort.Slice(movies, func(i, j int) bool {
@@ -148,9 +161,11 @@ func HandleGETMovies(c *gin.Context) {
 	})
 
 	RenderHTML(c, http.StatusOK, "pages/movies.html", gin.H{
-		"title":  "Movies",
-		"movies": movies,
-		"search": search,
+		"title":      "Movies",
+		"movies":     movies,
+		"search":     inputSearch,
+		"searchTerm": searchTerm,
+		"searchYear": searchYear,
 	})
 }
 

@@ -13,7 +13,7 @@ import (
 
 type Media interface {
 	FetchMediaID() error
-	FetchMediaDetails()
+	FetchMediaDetails() []Actor
 	GetTMDBID() int
 }
 
