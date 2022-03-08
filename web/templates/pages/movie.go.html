@@ -34,6 +34,11 @@
         width: 10%;
     }
 
+    .extlink {
+        margin-left: 5px;
+        margin-right: 5px;
+    }
+
     a[download] {
         color: white;
         float: right;
@@ -92,7 +97,7 @@
         font-size: 11pt;
     }
 
-    .cast .actor p:last-child {
+    .cast .actor p.character {
         line-height: 1rem;
         color: #a0a0a0;
         font-size: 10pt;
@@ -160,7 +165,7 @@
                             <th>
                                 {{range $idx, $dir := .writers}}
                                 {{$idx := add $idx 1}}
-                                <a href="/director/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
+                                <a href="/writer/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
                                 {{end}}
                             </th>
                         </tr>
@@ -169,6 +174,10 @@
                 <!-- Tagline & overview -->
                 <p class="fst-italic">{{.movie.Tagline}}</p>
                 <p>{{.movie.Overview}}</p>
+            </div>
+            <!-- External links -->
+            <div>
+                <p>View on <a href="https://www.imdb.com/title/{{.movie.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.themoviedb.org/movie/{{.movie.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
             </div>
             <!-- Cast -->
             <div class="cast">
@@ -181,7 +190,7 @@
                         <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}"/>
                         {{end}}
                         <p class="fw-bold mt-2 mb-1">{{$actor.Name}}</p>
-                        <p>as {{$actor.Character}}</p>
+                        {{if $actor.Character}}<p class="character">as {{$actor.Character}}</p>{{end}}
                     </a>
                 </div>
                 {{end}}

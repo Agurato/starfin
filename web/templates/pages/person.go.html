@@ -1,0 +1,72 @@
+{{ define "pages/person.go.html" }}
+{{ template "partials/header.go.html" . }}
+<style>
+    .extlink {
+        margin-left: 5px;
+        margin-right: 5px;
+    }
+</style>
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<div class="container">
+    <div class="row mt-5">
+        <!-- Poster -->
+        <div class="col-12 col-sm-4 mb-3">
+            {{if .person.Photo}}
+            <img class="img-fluid" src="{{tmdbGetImageURL .person.Photo "w342"}}"/>
+            {{else}}
+            <img class="img-fluid" src="/static/images/no_profile.png" width="342"/>
+            {{end}}
+        </div>
+        <!-- Movie info -->
+        <div class="col-12 col-sm-8">
+            <!-- Title(s) -->
+            <p class="mb-2">
+                <span class="fs-1 fw-bold me-3">{{.person.Name}}</span>
+            </p>
+            <!-- General info -->
+            <div class="row row-cols-auto my-3">
+                {{if .person.Birthday}}<div class="col mb-2">👶 {{.person.Birthday}}</div>{{end}}
+                {{if .person.Deathday}}<div class="col">💀 {{.person.Deathday}}</div>{{end}}
+            </div>
+            <!-- Bio -->
+            <div>
+                <p>{{.person.Bio}}</p>
+            </div>
+            <!-- External links -->
+            <div>
+                <p>View on <a href="https://www.imdb.com/name/{{.person.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.themoviedb.org/person/{{.person.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
+            </div>
+        </div>
+    </div>
+    <!-- Linked movies -->
+    <hr>
+    <div class="container text-secondary text-center mb-2">
+        {{if eq .job "actor"}}
+        <span>Movies starring {{.person.Name}}</span>
+        {{else if eq .job "director"}}
+        <span>Movies directed by {{.person.Name}}</span>
+        {{else if eq .job "writer"}}
+        <span>Movies written by {{.person.Name}}</span>
+        {{end}}
+    </div>
+    <div class="row row-cols-auto gx-0 justify-content-center">
+        {{range $index, $movie := .movies}}
+        <div class="col item">
+            <a href="/movie/{{$movie.TMDBID}}">
+                {{if $movie.PosterPath}}
+                <img src="{{tmdbGetImageURL $movie.PosterPath "w154"}}" class="rounded" />
+                {{else}}
+                <img src="/static/images/no_poster.png" class="rounded" />
+                {{end}}
+            </a>
+            <span>{{$movie.Title}}</span>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{ template "partials/footer.go.html" . }}
+{{ end }}

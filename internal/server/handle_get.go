@@ -131,6 +131,7 @@ func HandleGETMovie(c *gin.Context) {
 	})
 }
 
+// HandleGETDownloadMovie downloads a movie file
 func HandleGETDownloadMovie(c *gin.Context) {
 	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
 	if err != nil {
@@ -155,6 +156,84 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		fileIndex = len(movie.Paths) - 1
 	}
 	http.ServeFile(c.Writer, c.Request, movie.Paths[fileIndex].Path)
+}
+
+func HandleGetActor(c *gin.Context) {
+	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	person, err := GetPersonFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+
+	movies := GetMoviesWithActor(person.TMDBID)
+
+	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
+		"title":  person.Name,
+		"job":    "actor",
+		"person": person,
+		"movies": movies,
+	})
+}
+
+func HandleGetDirector(c *gin.Context) {
+	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	person, err := GetPersonFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+
+	movies := GetMoviesWithDirector(person.TMDBID)
+
+	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
+		"title":  person.Name,
+		"job":    "director",
+		"person": person,
+		"movies": movies,
+	})
+}
+
+func HandleGetWriter(c *gin.Context) {
+	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	person, err := GetPersonFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+
+	movies := GetMoviesWithWriter(person.TMDBID)
+
+	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
+		"title":  person.Name,
+		"job":    "writer",
+		"person": person,
+		"movies": movies,
+	})
 }
 
 // HandleGETMovies displays the list of movies

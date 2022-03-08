@@ -84,6 +84,10 @@ func InitServer() *gin.Engine {
 		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
 		needsLogin.GET("/movie/:tmdbId/download/:idx", HandleGETDownloadMovie)
 
+		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
+		needsLogin.GET("/director/:tmdbId", HandleGetDirector)
+		needsLogin.GET("/writer/:tmdbId", HandleGetWriter)
+
 		needsLogin.GET("/settings", HandleGETSettings)
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
 	}

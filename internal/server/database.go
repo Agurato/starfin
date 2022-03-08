@@ -366,3 +366,54 @@ func GetMovieFromID(TMDBID int) (movie media.Movie, err error) {
 	err = mongoMovies.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&movie)
 	return movie, err
 }
+
+func GetMoviesWithActor(actorID int64) (movies []media.Movie) {
+	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"cast": bson.D{{Key: "$elemMatch", Value: bson.M{"actorid": actorID}}}})
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "actorID": actorID}).Errorln("Unable to retrieve movies with actor from database")
+		return
+	}
+	for moviesCur.Next(MongoCtx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
+}
+
+func GetMoviesWithDirector(directorID int64) (movies []media.Movie) {
+	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"directors": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": directorID}}}})
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "actorID": directorID}).Errorln("Unable to retrieve movies with actor from database")
+		return
+	}
+	for moviesCur.Next(MongoCtx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
+}
+
+func GetMoviesWithWriter(writerID int64) (movies []media.Movie) {
+	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"writers": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": writerID}}}})
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "actorID": writerID}).Errorln("Unable to retrieve movies with actor from database")
+		return
+	}
+	for moviesCur.Next(MongoCtx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
+}

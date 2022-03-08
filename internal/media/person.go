@@ -1,6 +1,11 @@
 package media
 
-import log "github.com/sirupsen/logrus"
+import (
+	"html/template"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+)
 
 type Cast struct {
 	Character string
@@ -11,7 +16,7 @@ type Person struct {
 	TMDBID   int64
 	Name     string
 	Photo    string
-	Bio      string
+	Bio      template.HTML
 	Birthday string
 	Deathday string
 	IMDbID   string
@@ -27,7 +32,7 @@ func FetchPersonDetails(personID int64) Person {
 		TMDBID:   personID,
 		Name:     details.Name,
 		Photo:    details.ProfilePath,
-		Bio:      details.Biography,
+		Bio:      template.HTML(strings.ReplaceAll(details.Biography, "\n", "<br>")),
 		Birthday: details.Birthday,
 		Deathday: details.Deathday,
 		IMDbID:   details.IMDbID,
