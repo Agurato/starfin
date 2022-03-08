@@ -104,7 +104,7 @@
     {{ end }}
 </section>
 {{if .movie.BackdropPath}}
-<img class="backdrop" src="{{tmdbGetImageURL .movie.BackdropPath "w1280"}}" ondragstart="return false;" />
+<img class="backdrop" src="{{tmdbGetImageURL .movie.BackdropPath "w1280"}}" ondragstart="retFalse()" />
 {{end}}
 <div class="container">
     <div class="row mt-5">
@@ -148,11 +148,21 @@
                         </tr>
                         <tr>
                             <td>{{$directorsLength := len .movie.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}}</td>
-                            <th>{{join .movie.Directors ", "}}</th>
+                            <th>
+                                {{range $idx, $dir := .directors}}
+                                {{$idx := add $idx 1}}
+                                <a href="/director/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $directorsLength}}, {{end}}
+                                {{end}}
+                            </th>
                         </tr>
                         <tr>
                             <td>{{$writersLength := len .movie.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}}</td>
-                            <th>{{join .movie.Writers ", "}}</th>
+                            <th>
+                                {{range $idx, $dir := .writers}}
+                                {{$idx := add $idx 1}}
+                                <a href="/director/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
+                                {{end}}
+                            </th>
                         </tr>
                     </tbody>
                 </table>

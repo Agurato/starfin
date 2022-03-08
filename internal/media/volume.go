@@ -65,7 +65,7 @@ func (v Volume) ListVideoFiles() ([]string, error) {
 }
 
 // Scan files from volume that have not been added to the db yet
-func (v Volume) Scan(mediaChan chan Media, actorChan chan []Actor) {
+func (v Volume) Scan(mediaChan chan Media) {
 	files, err := v.ListVideoFiles()
 	if err != nil {
 		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
@@ -74,7 +74,7 @@ func (v Volume) Scan(mediaChan chan Media, actorChan chan []Actor) {
 	log.WithField("volumePath", v.Path).Debugln("Scanning volume")
 
 	// Create worker pool of size 10
-	pool := pond.New(10, 0, pond.MinWorkers(10))
+	pool := pond.New(20, 0, pond.MinWorkers(20))
 
 	// For each file
 	for _, file := range files {
@@ -91,17 +91,13 @@ func (v Volume) Scan(mediaChan chan Media, actorChan chan []Actor) {
 			log.WithField("tmdbID", media.GetTMDBID()).Infoln("Found media with TMDB ID")
 
 			// Fill info from TMDB
-			actors := media.FetchMediaDetails()
+			media.FetchMediaDetails()
 
 			// Send media to the channel
 			mediaChan <- media
-
-			// Send actors to the channel
-			actorChan <- actors
 		})
 	}
 
 	pool.StopAndWait()
 	close(mediaChan)
-	close(actorChan)
 }

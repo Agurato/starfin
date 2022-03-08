@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
 	log "github.com/sirupsen/logrus"
@@ -36,8 +37,8 @@ type Movie struct {
 	IMDbRating       string
 	LetterboxdRating string
 	Genres           []string
-	Directors        []string
-	Writers          []string
+	Directors        []int64
+	Writers          []int64
 	Cast             []Cast
 	ProdCountries    []string
 }
@@ -70,7 +71,7 @@ func (m *Movie) FetchMediaID() error {
 }
 
 // FetchMediaDetails fetches media details from TMDB and stores it in the Movie structure
-func (m *Movie) FetchMediaDetails() (actors []Actor) {
+func (m *Movie) FetchMediaDetails() {
 	// Get details
 	details, err := TMDBClient.GetMovieDetails(m.TMDBID, nil)
 	if err != nil {
@@ -113,19 +114,16 @@ func (m *Movie) FetchMediaDetails() (actors []Actor) {
 	} else {
 		for _, crew := range credits.Crew {
 			if crew.Job == "Director" {
-				m.Directors = append(m.Directors, crew.Name)
+				m.Directors = append(m.Directors, crew.ID)
 			}
 			if crew.Department == "Writing" {
-				m.Writers = append(m.Writers, crew.Name)
+				if !utilities.Int64SliceContains(m.Writers, crew.ID) {
+					m.Writers = append(m.Writers, crew.ID)
+				}
 			}
 		}
 		for _, cast := range credits.Cast {
 			m.Cast = append(m.Cast, Cast{Character: cast.Character, ActorID: cast.ID})
-			actors = append(actors, Actor{
-				TMDBID: cast.ID,
-				Name:   cast.Name,
-				Photo:  cast.ProfilePath,
-			})
 		}
 	}
 
@@ -133,12 +131,20 @@ func (m *Movie) FetchMediaDetails() (actors []Actor) {
 	for _, country := range details.ProductionCountries {
 		m.ProdCountries = append(m.ProdCountries, country.Iso3166_1)
 	}
-
-	return
 }
 
 func (m Movie) GetTMDBID() int {
 	return m.TMDBID
+}
+
+func (m Movie) GetCastAndCrewIDs() (ids []int64) {
+	for _, cast := range m.Cast {
+		ids = append(ids, cast.ActorID)
+	}
+	ids = append(ids, m.Directors...)
+	ids = append(ids, m.Writers...)
+
+	return
 }
 
 // GetIMDbRating fetchs rating from IMDbID

@@ -13,8 +13,9 @@ import (
 
 type Media interface {
 	FetchMediaID() error
-	FetchMediaDetails() []Actor
+	FetchMediaDetails()
 	GetTMDBID() int
+	GetCastAndCrewIDs() []int64
 }
 
 type VolumeFile struct {

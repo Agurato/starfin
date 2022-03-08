@@ -82,3 +82,7 @@ function deleteUser(el) {
     }
   });
 }
+
+function retFalse() {
+  return false;
+}

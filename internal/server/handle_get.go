@@ -83,12 +83,16 @@ func HandleGETMovie(c *gin.Context) {
 		return
 	}
 
-	var fullCast []gin.H
+	var (
+		fullCast  []gin.H
+		directors []media.Person
+		writers   []media.Person
+	)
 	for _, cast := range movie.Cast {
-		actor, err := GetActorFromID(cast.ActorID)
+		actor, err := GetPersonFromID(cast.ActorID)
 		if err != nil {
 			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
-			actor = media.Actor{}
+			actor = media.Person{}
 		}
 		fullCast = append(fullCast, gin.H{
 			"Character": cast.Character,
@@ -96,6 +100,18 @@ func HandleGETMovie(c *gin.Context) {
 			"Name":      actor.Name,
 			"Photo":     actor.Photo,
 		})
+	}
+	for _, directorID := range movie.Directors {
+		person, err := GetPersonFromID(directorID)
+		if err == nil {
+			directors = append(directors, person)
+		}
+	}
+	for _, writerID := range movie.Writers {
+		person, err := GetPersonFromID(writerID)
+		if err == nil {
+			writers = append(writers, person)
+		}
 	}
 
 	var volumes []string
@@ -106,10 +122,12 @@ func HandleGETMovie(c *gin.Context) {
 	}
 
 	RenderHTML(c, http.StatusOK, "pages/movie.go.html", gin.H{
-		"title":   fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
-		"movie":   movie,
-		"cast":    fullCast,
-		"volumes": volumes,
+		"title":     fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
+		"movie":     movie,
+		"directors": directors,
+		"writers":   writers,
+		"cast":      fullCast,
+		"volumes":   volumes,
 	})
 }
 

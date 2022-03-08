@@ -40,7 +40,7 @@ func InitServer() *gin.Engine {
 	gob.Register(User{})
 	router.Use(sessions.Sessions("user-session", store))
 
-	// Load templates
+	// Add template functions
 	router.FuncMap["add"] = func(a int, b int) int {
 		return a + b
 	}
@@ -53,6 +53,7 @@ func InitServer() *gin.Engine {
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
+	// Load templates
 	router.LoadHTMLGlob("web/templates/**/*")
 
 	// Static files

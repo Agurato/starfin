@@ -31,7 +31,7 @@ var (
 	mongoUsers   *mongo.Collection
 	mongoVolumes *mongo.Collection
 	mongoMovies  *mongo.Collection
-	mongoActors  *mongo.Collection
+	mongoPersons *mongo.Collection
 )
 
 // InitMongo init mongo db
@@ -52,7 +52,7 @@ func InitMongo() (mongoClient *mongo.Client) {
 	mongoUsers = mongoDb.Collection("users")
 	mongoVolumes = mongoDb.Collection("volumes")
 	mongoMovies = mongoDb.Collection("movies")
-	mongoActors = mongoDb.Collection("actors")
+	mongoPersons = mongoDb.Collection("persons")
 	return
 }
 
@@ -202,20 +202,23 @@ func AddVolume(volume media.Volume) error {
 		go func() {
 			// Channel to add media to DB as they are fetched from TMDB
 			mediaChan := make(chan media.Media)
-			actorChan := make(chan []media.Actor)
 
-			go volume.Scan(mediaChan, actorChan)
+			go volume.Scan(mediaChan)
 
 			for {
 				mediaFile, more := <-mediaChan
-				actors := <-actorChan
 				if more {
 					if IsMediaInDB(&mediaFile) {
 						AddVolumeSourceToMedia(&mediaFile, &volume)
 					} else {
 						AddMediaToDB(&mediaFile)
 					}
-					AddActorsToDB(actors)
+
+					for _, personID := range mediaFile.GetCastAndCrewIDs() {
+						if !IsPersonInDB(personID) {
+							AddPersonToDB(media.FetchPersonDetails(personID))
+						}
+					}
 				} else {
 					break
 				}
@@ -303,10 +306,22 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 	}
 }
 
+func IsPersonInDB(personID int64) bool {
+	res := mongoPersons.FindOne(MongoCtx, bson.M{"tmdbid": personID})
+	return res.Err() != mongo.ErrNoDocuments
+}
+
+func AddPersonToDB(person media.Person) {
+	_, err := mongoPersons.InsertOne(MongoCtx, person)
+	if err != nil {
+		log.WithField("personID", person.TMDBID).Errorln(err)
+	}
+}
+
 // AddActorsToDB upserts the actors of a media to the DB
-func AddActorsToDB(actors []media.Actor) {
+func AddActorsToDB(actors []media.Person) {
 	for _, actor := range actors {
-		res, err := mongoActors.UpdateOne(MongoCtx, bson.M{"tmdbid": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
+		res, err := mongoPersons.UpdateOne(MongoCtx, bson.M{"tmdbid": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
 		if err != nil {
 			log.WithField("actorName", actor.Name).Warningln("Unable to add actor to database:", err)
 		}
@@ -324,9 +339,9 @@ func AddActorsToDB(actors []media.Actor) {
 	}
 }
 
-func GetActorFromID(TMDBID int64) (actor media.Actor, err error) {
-	err = mongoActors.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&actor)
-	return actor, err
+func GetPersonFromID(TMDBID int64) (person media.Person, err error) {
+	err = mongoPersons.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&person)
+	return
 }
 
 // GetMovies returns a slice of Movie
