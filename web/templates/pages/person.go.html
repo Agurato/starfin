@@ -5,6 +5,19 @@
         margin-left: 5px;
         margin-right: 5px;
     }
+
+    .job {
+        color: rgba(var(--bs-secondary-rgb), var(--bs-text-opacity));
+    }
+
+    .job.selected {
+        color: white;
+    }
+
+    .job a {
+        text-decoration: none;
+        color: rgba(var(--bs-secondary-rgb), var(--bs-text-opacity));
+    }
 </style>
 <section>
     {{ if .error }}
@@ -44,13 +57,13 @@
     </div>
     <!-- Linked movies -->
     <hr>
-    <div class="container text-secondary text-center mb-2">
+    <div id="movies" class="container text-center mb-2">
         {{if eq .job "actor"}}
-        <span>Movies starring {{.person.Name}}</span>
+        <span class="job selected">Movies starring {{.person.Name}}</span><span class="job"> | <a href="/director/{{.person.TMDBID}}#movies">Directed by</a> | <a href="/writer/{{.person.TMDBID}}#movies">Written by</a></span>
         {{else if eq .job "director"}}
-        <span>Movies directed by {{.person.Name}}</span>
+        <span class="job"><a href="/actor/{{.person.TMDBID}}#movies">Starring</a> | </span><span class="job selected">Movies directed by {{.person.Name}}</span> | <span class="job"><a href="/writer/{{.person.TMDBID}}#movies">Written by</a></span>
         {{else if eq .job "writer"}}
-        <span>Movies written by {{.person.Name}}</span>
+        <span class="job"><a href="/actor/{{.person.TMDBID}}#movies">Starring</a> | <a href="/director/{{.person.TMDBID}}#movies">Directed by</a> | </span><span>Movies written by {{.person.Name}}</span>
         {{end}}
     </div>
     <div class="row row-cols-auto gx-0 justify-content-center">
