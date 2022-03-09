@@ -39,9 +39,14 @@
         margin-right: 5px;
     }
 
-    a[download] {
+    a.dl-movie {
         color: white;
         float: right;
+    }
+
+    a.dl-sub {
+        color: white;
+        margin-right: 5px;
     }
 
     .nav-tabs .nav-link {
@@ -206,7 +211,7 @@
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
                     {{$.movie.Name}} - {{$.movie.Resolution}} - {{$path.Info.FileSize}}
                     <!-- Download button -->
-                    <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}"><i class="fa-solid fa-download"></i></a>
+                    <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-movie"><i class="fa-solid fa-download"></i></a>
                 </span>
             </li>
             {{end}}
@@ -214,6 +219,7 @@
         <!-- MediaInfo display -->
         <div class="tab-content mb-4 p-2" id="filesTabsContent">
             {{range $idx, $path := .movie.Paths}}
+            {{$extSubLength := len $path.ExtSubtitles}}
             <div class="tab-pane fade show {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}" role="tabpanel" aria-labelledby="files-{{$idx}}-tab">
                 <!-- MediaInfo categories -->
                 <ul class="nav nav-tabs" id="mediaInfoTabs" role="tablist">
@@ -237,6 +243,13 @@
                             Subtitles
                         </span>
                     </li>
+                    {{if gt $extSubLength 0}}
+                    <li class="nav-item" role="presentation">
+                        <span class="nav-link" id="extsub-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#extsub-{{$idx}}" type="button" role="tab" aria-controls="extsub-{{$idx}}" aria-selected="true">
+                            External subtitles
+                        </span>
+                    </li>
+                    {{end}}
                     <li class="nav-item" role="presentation">
                         <span class="nav-link" id="mediaInfo-{{$idx}}-full-tab" data-bs-toggle="tab" data-bs-target="#mediaInfo-{{$idx}}-full" type="button" role="tab" aria-controls="mediaInfo-{{$idx}}-full" aria-selected="true">
                             Full
@@ -359,6 +372,27 @@
                                 <tr>
                                     <td>Forced</td>
                                     <th>{{$sub.Forced}}</th>
+                                </tr>
+                            </tbody>
+                            </table>
+                        {{end}}
+                    </div>
+                    <!-- External subtitles -->
+                    <div class="tab-pane fade show" id="extsub-{{$idx}}" role="tabpanel" aria-labelledby="extsub-{{$idx}}-tab">
+                        {{range $subIdx, $sub := $path.ExtSubtitles}}
+                            {{if gt $subIdx 0}}
+                            <hr>
+                            {{end}}
+                            <div class="mb-2"><a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
+                            <table class="table table-borderless table-sm text-white">
+                            <tbody>
+                                <tr>
+                                    <td>Name</td>
+                                    <th>{{basename $sub.Path}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Language</td>
+                                    <th>{{$sub.Language}}</th>
                                 </tr>
                             </tbody>
                             </table>

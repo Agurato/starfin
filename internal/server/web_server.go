@@ -83,6 +83,7 @@ func InitServer() *gin.Engine {
 		needsLogin.GET("/movies", HandleGETMovies)
 		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
 		needsLogin.GET("/movie/:tmdbId/download/:idx", HandleGETDownloadMovie)
+		needsLogin.GET("/movie/:tmdbId/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
 
 		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
 		needsLogin.GET("/director/:tmdbId", HandleGetDirector)

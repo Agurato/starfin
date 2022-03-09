@@ -158,6 +158,48 @@ func HandleGETDownloadMovie(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, movie.Paths[fileIndex].Path)
 }
 
+// HandleGETDownloadMovie downloads a subtitle file
+func HandleGETDownloadSubtitle(c *gin.Context) {
+	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	movieFileIndex, err := strconv.Atoi(c.Param("idx"))
+	if err != nil {
+		movieFileIndex = 0
+	}
+	subFileIndex, err := strconv.Atoi(c.Param("subIdx"))
+	if err != nil {
+		subFileIndex = 0
+	}
+
+	movie, err := GetMovieFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	if movieFileIndex >= len(movie.Paths) {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	extSubtitles := movie.Paths[movieFileIndex].ExtSubtitles
+	if subFileIndex >= len(extSubtitles) {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	http.ServeFile(c.Writer, c.Request, extSubtitles[subFileIndex].Path)
+}
+
+// HandleGetActor displays the actor's bio and the movies they star in
 func HandleGetActor(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {
@@ -184,6 +226,7 @@ func HandleGetActor(c *gin.Context) {
 	})
 }
 
+// HandleGetDirector displays the directors's bio and the movies they directed
 func HandleGetDirector(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {
@@ -210,6 +253,7 @@ func HandleGetDirector(c *gin.Context) {
 	})
 }
 
+// HandleGetWriter displays the writer's bio and the movies they wrote
 func HandleGetWriter(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {

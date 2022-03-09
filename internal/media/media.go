@@ -19,26 +19,34 @@ type Media interface {
 }
 
 type VolumeFile struct {
-	Path       string
-	FromVolume primitive.ObjectID
-	Info       MediaInfo
+	Path         string
+	FromVolume   primitive.ObjectID
+	Info         MediaInfo
+	ExtSubtitles []Subtitle
+}
+
+type Subtitle struct {
+	Language string
+	Path     string
 }
 
 // CreateMediaFromFilename instantiates a struct implementing the Media interface
 // Currently only handles Movies
 // TODO: TVSeries
-func CreateMediaFromFilename(file string, volumeID primitive.ObjectID) Media {
+func CreateMediaFromFilename(file string, volumeID primitive.ObjectID, subFiles []string) Media {
 	filename := filepath.Base(file)
 	mediaInfo, err := GetMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
 	if err != nil {
 		log.WithField("file", file).Errorln("Could not get media info")
 	}
+	subtitles := GetExternalSubtitles(file, subFiles)
 	movie := Movie{
 		ID: primitive.NewObjectID(),
 		Paths: []VolumeFile{{
-			Path:       file,
-			FromVolume: volumeID,
-			Info:       mediaInfo,
+			Path:         file,
+			FromVolume:   volumeID,
+			Info:         mediaInfo,
+			ExtSubtitles: subtitles,
 		}},
 	}
 	// Split on '.' and ' '
@@ -110,4 +118,64 @@ func IsVideoFileExtension(ext string) bool {
 		return true
 	}
 	return false
+}
+
+// IsSubtitleFileExtension checks if extension is corresponding to a known subtitle file extension
+// See https://en.wikipedia.org/wiki/Category:Subtitle_file_formats
+func IsSubtitleFileExtension(ext string) bool {
+	ext = strings.ToLower(ext)
+
+	if ext == ".srt" ||
+		ext == ".ssa" || ext == ".ass" ||
+		ext == ".sub" || ext == ".idx" ||
+		ext == ".smi" || ext == ".sami" ||
+		ext == ".smil" ||
+		ext == ".usf" ||
+		ext == ".psb" ||
+		ext == ".ssd" ||
+		ext == ".vtt" {
+		return true
+	}
+
+	return false
+}
+
+// Fetches external subtitle files next to the media file.
+// Subtitles file names must start with the media file name without extension. Ex:
+// media: BigBuckBunny.mkv
+// sub:   BigBuckBunny.srt
+// Language can be inferred from the subtitle file name, following ISO 639-1 codes. Ex:
+// sub:   BigBuckBunny.en.srt
+func GetExternalSubtitles(movieFilePath string, subFiles []string) (subs []Subtitle) {
+	dir := filepath.Dir(movieFilePath)
+	movieFileBase := filepath.Base(movieFilePath)
+	movieFileNoExt := movieFileBase[:len(movieFileBase)-len(filepath.Ext(movieFileBase))]
+
+	for _, subFile := range subFiles {
+		// Checks same folder
+		if !strings.HasPrefix(subFile, dir) {
+			continue
+		}
+		subFileBase := filepath.Base(subFile)
+		// Checks sub file start with the same name as movie file
+		if !strings.HasPrefix(subFileBase, movieFileNoExt) {
+			continue
+		}
+
+		subFileEnd := subFileBase[len(movieFileNoExt):] // eg: .en.srt
+		subFileExt := filepath.Ext(subFileBase)
+		// If no language info
+		if len(subFileEnd) == len(subFileExt) {
+			subs = append(subs, Subtitle{
+				Path: subFile,
+			})
+		} else {
+			subs = append(subs, Subtitle{
+				Path:     subFile,
+				Language: subFileEnd[1 : len(subFileEnd)-len(subFileExt)],
+			})
+		}
+	}
+
+	return
 }

@@ -23,7 +23,7 @@ func TestCreateMediaFromFilename(t *testing.T) {
 	}
 
 	for _, exp := range expected {
-		movie := CreateMediaFromFilename(exp.fileName, primitive.NewObjectID()).(*Movie)
+		movie := CreateMediaFromFilename(exp.fileName, primitive.NewObjectID(), nil).(*Movie)
 		assert.Equal(t, exp.movieName, movie.Name)
 		assert.Equal(t, exp.year, movie.ReleaseYear)
 	}
