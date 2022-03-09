@@ -1,2 +1,2 @@
-web/static/libs/* linguist-vendored
+web/static/libs/** linguist-vendored
 web/static/js/jquery-3.6.0.min.js linguist-vendored
