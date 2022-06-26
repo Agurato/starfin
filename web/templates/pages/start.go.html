@@ -5,16 +5,22 @@
     <p style="color:red">{{ .error }}</p>
     {{ end }}
 </section>
-<section>
+<div class="container py-5 w-50">
     <form action="/start" method="post">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" size="25" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
-        <label for="password1">Password:</label>
-        <input type="password" id="password1" name="password1" size="25" placeholder="Password">
-        <label for="password2">Re-enter password:</label>
-        <input type="password" id="password2" name="password2" size="25" placeholder="Password">
-        <button type="submit">Submit</button>
+        <div class="mb-3">
+            <label for="username">Username:</label>
+            <input class="form-control" type="text" id="username" name="username" size="20" placeholder="Username" {{if .username}}value="{{.username}}"{{end}}>
+        </div>
+        <div class="mb-3">
+            <label for="password1">Password:</label>
+            <input class="form-control" type="password" id="password1" name="password1" placeholder="Password">
+        </div>
+        <div class="mb-3">
+            <label for="password2">Re-enter password:</label>
+            <input class="form-control" type="password" id="password2" name="password2" placeholder="Password">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
     </form>
-</section>
+</div>
 {{ template "partials/footer.go.html" . }}
 {{ end }}
