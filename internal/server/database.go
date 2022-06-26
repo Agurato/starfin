@@ -198,32 +198,11 @@ func AddVolume(volume media.Volume) error {
 
 	_, err = mongoVolumes.InsertOne(MongoCtx, volume)
 	if err == nil {
-		// Separate goroutine to return the page asap
-		go func() {
-			// Channel to add media to DB as they are fetched from TMDB
-			mediaChan := make(chan media.Media)
+		// Search for media files in a separate goroutine to return the page asap
+		go SearchMediaFilesInVolume(volume)
 
-			go volume.Scan(mediaChan)
-
-			for {
-				mediaFile, more := <-mediaChan
-				if more {
-					if IsMediaInDB(&mediaFile) {
-						AddVolumeSourceToMedia(&mediaFile, &volume)
-					} else {
-						AddMediaToDB(&mediaFile)
-					}
-
-					for _, personID := range mediaFile.GetCastAndCrewIDs() {
-						if !IsPersonInDB(personID) {
-							AddPersonToDB(media.FetchPersonDetails(personID))
-						}
-					}
-				} else {
-					break
-				}
-			}
-		}()
+		// Add file watch to the volume
+		AddFileWatch(volume)
 	}
 	return err
 }
@@ -306,11 +285,13 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 	}
 }
 
+// IsPersonInDB checks if a person is already registered in the DB
 func IsPersonInDB(personID int64) bool {
 	res := mongoPersons.FindOne(MongoCtx, bson.M{"tmdbid": personID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
+// AddPersonToDB adds a person to the DB
 func AddPersonToDB(person media.Person) {
 	_, err := mongoPersons.InsertOne(MongoCtx, person)
 	if err != nil {
@@ -339,6 +320,7 @@ func AddActorsToDB(actors []media.Person) {
 	}
 }
 
+// GetPersonFromID returns the Person struct
 func GetPersonFromID(TMDBID int64) (person media.Person, err error) {
 	err = mongoPersons.FindOne(MongoCtx, bson.M{"tmdbid": TMDBID}).Decode(&person)
 	return
@@ -367,6 +349,7 @@ func GetMovieFromID(TMDBID int) (movie media.Movie, err error) {
 	return movie, err
 }
 
+// GetMoviesWithActor returns a list of movies starring desired actor ID
 func GetMoviesWithActor(actorID int64) (movies []media.Movie) {
 	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"cast": bson.D{{Key: "$elemMatch", Value: bson.M{"actorid": actorID}}}})
 	if err != nil {
@@ -384,6 +367,7 @@ func GetMoviesWithActor(actorID int64) (movies []media.Movie) {
 	return
 }
 
+// GetMoviesWithDirector returns a list of movies directed by desired director ID
 func GetMoviesWithDirector(directorID int64) (movies []media.Movie) {
 	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"directors": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": directorID}}}})
 	if err != nil {
@@ -401,6 +385,7 @@ func GetMoviesWithDirector(directorID int64) (movies []media.Movie) {
 	return
 }
 
+// GetMoviesWithWriter returns a list of movies written by desired writer ID
 func GetMoviesWithWriter(writerID int64) (movies []media.Movie) {
 	moviesCur, err := mongoMovies.Find(MongoCtx, bson.M{"writers": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": writerID}}}})
 	if err != nil {

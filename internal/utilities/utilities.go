@@ -13,14 +13,3 @@ func RemoveArticle(input string) string {
 	}
 	return input
 }
-
-// Int64SliceContains returns true if the slice contains the element
-// TODO: use generics when available
-func Int64SliceContains(slice []int64, elt int64) bool {
-	for _, a := range slice {
-		if a == elt {
-			return true
-		}
-	}
-	return false
-}

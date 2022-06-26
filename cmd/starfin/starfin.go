@@ -19,6 +19,9 @@ func main() {
 	mongoClient := server.InitMongo()
 	defer mongoClient.Disconnect(server.MongoCtx)
 
+	go server.InitFileWatching()
+	defer server.CloseFileWatching()
+
 	media.InitTMDB()
 
 	server := server.InitServer()

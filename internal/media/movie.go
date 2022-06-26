@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/exp/slices"
 )
 
 type Movie struct {
@@ -117,7 +117,7 @@ func (m *Movie) FetchMediaDetails() {
 				m.Directors = append(m.Directors, crew.ID)
 			}
 			if crew.Department == "Writing" {
-				if !utilities.Int64SliceContains(m.Writers, crew.ID) {
+				if !slices.Contains(m.Writers, crew.ID) {
 					m.Writers = append(m.Writers, crew.ID)
 				}
 			}

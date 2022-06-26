@@ -370,6 +370,7 @@ func HandleGETAdmin(c *gin.Context) {
 	})
 }
 
+// HandleGETAdminVolume displays the volume edit page
 func HandleGETAdminVolume(c *gin.Context) {
 	volumeIdStr := c.Param("volumeId")
 
@@ -406,6 +407,7 @@ func HandleGETAdminVolume(c *gin.Context) {
 	})
 }
 
+// HandleGETAdminUser displays the user edit page
 func HandleGETAdminUser(c *gin.Context) {
 	userIdStr := c.Param("userId")
 
