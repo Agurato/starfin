@@ -285,6 +285,27 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 	}
 }
 
+func AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error {
+	var movie media.Movie
+	err := mongoMovies.FindOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}).Decode(&movie)
+	if err != nil {
+		return err
+	}
+	for i, volumeFile := range movie.Paths {
+		if volumeFile.Path == movieFilePath {
+			movie.Paths[i].ExtSubtitles = append(movie.Paths[i].ExtSubtitles, sub)
+		}
+	}
+	updateRes, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}, bson.M{"$set": bson.D{{Key: "paths", Value: movie.Paths}}})
+	if err != nil {
+		return err
+	}
+	if updateRes.ModifiedCount == 0 {
+		return errors.New("cannot add subtitle to media")
+	}
+	return nil
+}
+
 // IsPersonInDB checks if a person is already registered in the DB
 func IsPersonInDB(personID int64) bool {
 	res := mongoPersons.FindOne(MongoCtx, bson.M{"tmdbid": personID})

@@ -82,7 +82,7 @@ func fileWatchEventHandler() {
 
 					log.Debugf("File %s from volume %s", path, volume.Path)
 
-					if media.IsVideoFileExtension(ext) {
+					if media.IsVideoFileExtension(ext) { // If we're adding a video
 						// Get subtitle files in same directory
 						subs, err := GetRelatedSubFiles(path)
 						if err != nil {
@@ -91,7 +91,7 @@ func fileWatchEventHandler() {
 						mediaFile := media.CreateMediaFromFilename(path, volume.ID, subs)
 						// Search ID on TMDB
 						if mediaFile.FetchMediaID() != nil {
-							log.WithFields(log.Fields{"file": path, "err": err}).Warningln("Unable to fetch movie ID from TMDB")
+							log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch movie ID from TMDB")
 							continue
 						}
 						log.WithField("tmdbID", mediaFile.GetTMDBID()).Infoln("Found media with TMDB ID")
@@ -106,9 +106,16 @@ func fileWatchEventHandler() {
 								AddPersonToDB(media.FetchPersonDetails(personID))
 							}
 						}
-					} else if media.IsSubtitleFileExtension(ext) {
-						// TODO: Add subtitle to database
-						log.WithField("path", path).Debugln("Should add subtitle file to an existing movie here")
+					} else if media.IsSubtitleFileExtension(ext) { // If we're adding a subtitle
+						// Get related media file and subtitle struct
+						mediaPath, subtitle, ok := GetRelatedMediaFile(path)
+						if ok {
+							// Add it to the database
+							err := AddSubtitleToMoviePath(mediaPath, *subtitle)
+							if err != nil {
+								log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
+							}
+						}
 					}
 					continue
 				} else {
@@ -183,4 +190,24 @@ func GetRelatedSubFiles(movieFilePath string) (subs []string, err error) {
 		}
 	}
 	return subs, nil
+}
+
+func GetRelatedMediaFile(subFilePath string) (mediaPath string, sub *media.Subtitle, ok bool) {
+	dir := filepath.Dir(subFilePath)
+	subFileBase := filepath.Base(subFilePath)
+	subFileBase = subFileBase[:strings.IndexRune(subFileBase, '.')]
+	matches, err := filepath.Glob(filepath.Join(dir, subFileBase+"*"))
+	if err != nil {
+		return "", nil, false
+	}
+	for _, m := range matches {
+		if media.IsVideoFileExtension(filepath.Ext(m)) {
+			subtitles := media.GetExternalSubtitles(m, []string{subFilePath})
+			if len(subtitles) > 0 {
+				return m, &subtitles[0], true
+			}
+		}
+	}
+
+	return "", nil, false
 }
