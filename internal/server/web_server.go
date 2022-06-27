@@ -12,6 +12,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
+	"github.com/samber/lo"
 )
 
 const (
@@ -50,6 +51,11 @@ func InitServer() *gin.Engine {
 		return country.Name.Common
 	}
 	router.FuncMap["join"] = strings.Join
+	router.FuncMap["joinStrings"] = func(sep string, elems ...string) string {
+		return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
+			return len(elem) > 0
+		}), sep)
+	}
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL

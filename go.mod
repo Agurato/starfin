@@ -17,6 +17,8 @@ require (
 	go.mongodb.org/mongo-driver v1.9.1
 )
 
+require github.com/samber/lo v1.21.0 // indirect
+
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

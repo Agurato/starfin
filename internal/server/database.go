@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/exp/slices"
 )
 
 // User is a user
@@ -291,11 +292,16 @@ func AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error {
 	if err != nil {
 		return err
 	}
-	for i, volumeFile := range movie.Paths {
-		if volumeFile.Path == movieFilePath {
-			movie.Paths[i].ExtSubtitles = append(movie.Paths[i].ExtSubtitles, sub)
-		}
+	i := slices.IndexFunc(movie.Paths, func(vFile media.VolumeFile) bool {
+		return vFile.Path == movieFilePath
+	})
+	if i == -1 {
+		return errors.New("cannot add subtitle to media (no matching volume file")
 	}
+	if slices.Contains(movie.Paths[i].ExtSubtitles, sub) {
+		return errors.New("subtitle is already added to media")
+	}
+	movie.Paths[i].ExtSubtitles = append(movie.Paths[i].ExtSubtitles, sub)
 	updateRes, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}, bson.M{"$set": bson.D{{Key: "paths", Value: movie.Paths}}})
 	if err != nil {
 		return err

@@ -209,7 +209,7 @@
             {{range $idx, $path := .movie.Paths}}
             <li class="nav-item" role="presentation">
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
-                    {{$.movie.Name}} - {{$.movie.Resolution}} - {{$path.Info.FileSize}}
+                    {{joinStrings " - " $.movie.Name $.movie.Resolution $path.Info.FileSize}}
                     <!-- Download button -->
                     <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-movie"><i class="fa-solid fa-download"></i></a>
                 </span>
