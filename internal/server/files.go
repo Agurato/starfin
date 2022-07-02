@@ -77,10 +77,9 @@ func fileWatchEventHandler() {
 					for _, v := range watchedVolumes {
 						if strings.HasPrefix(path, v.Path) {
 							volume = v
+							break
 						}
 					}
-
-					log.Debugf("File %s from volume %s", path, volume.Path)
 
 					if media.IsVideoFileExtension(ext) { // If we're adding a video
 						// Get subtitle files in same directory
@@ -137,7 +136,16 @@ func fileWatchEventHandler() {
 			} else if event.Op == watcher.Rename {
 				// TODO: If rename, get movie and release year and see if it changed compared to the one in DB
 			} else if event.Op == watcher.Remove {
-				// TODO
+				ext := filepath.Ext(event.Path)
+				if media.IsVideoFileExtension(ext) { // If we're deleting a video
+					RemoveMediaFileFromDB(event.Path)
+				} else if media.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
+					// Get related media file
+					mediaPath, _, ok := GetRelatedMediaFile(event.Path)
+					if ok {
+						RemoveSubtitleFileFromDB(mediaPath, event.Path)
+					}
+				}
 			}
 		// Error in file watching
 		case err := <-fileWatcher.Error:

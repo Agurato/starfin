@@ -286,6 +286,7 @@ func AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume) {
 	}
 }
 
+// AddSubtitleToMoviePath adds the subtitle to a movie given the movie path
 func AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error {
 	var movie media.Movie
 	err := mongoMovies.FindOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}).Decode(&movie)
@@ -428,4 +429,49 @@ func GetMoviesWithWriter(writerID int64) (movies []media.Movie) {
 		movies = append(movies, movie)
 	}
 	return
+}
+
+// RemoveMediaFileFromDB removes a media from the database
+// TODO: case TVSeries
+func RemoveMediaFileFromDB(path string) error {
+	deleteRes, err := mongoMovies.DeleteOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}})
+	if err != nil {
+		return err
+	}
+	if deleteRes.DeletedCount == 0 {
+		log.WithFields(log.Fields{"mediaPath": path}).Warningln("No media was deleted")
+	}
+	return nil
+}
+
+// RemoveSubtitleFileFromDB removes a media subtitle from the database
+func RemoveSubtitleFileFromDB(mediaPath, subtitlePath string) error {
+	var movie media.Movie
+	err := mongoMovies.FindOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}).Decode(&movie)
+	if err != nil {
+		return err
+	}
+	volumeIndex := slices.IndexFunc(movie.Paths, func(vFile media.VolumeFile) bool {
+		return vFile.Path == mediaPath
+	})
+	if volumeIndex == -1 {
+		return errors.New("cannot remove subtitle from media (no matching volume file")
+	}
+
+	subtitleIndex := slices.IndexFunc(movie.Paths[volumeIndex].ExtSubtitles, func(sub media.Subtitle) bool {
+		return sub.Path == subtitlePath
+	})
+	if subtitleIndex == -1 {
+		return errors.New("cannot remove subtitle from media (no matching subtitle file")
+	}
+	movie.Paths[volumeIndex].ExtSubtitles = slices.Delete(movie.Paths[volumeIndex].ExtSubtitles, subtitleIndex, subtitleIndex+1)
+
+	updateRes, err := mongoMovies.UpdateOne(MongoCtx, bson.M{"paths": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}, bson.M{"$set": bson.D{{Key: "paths", Value: movie.Paths}}})
+	if err != nil {
+		return err
+	}
+	if updateRes.ModifiedCount == 0 {
+		return errors.New("cannot remove subtitle from media")
+	}
+	return nil
 }

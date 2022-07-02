@@ -12,12 +12,11 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/pariz/gountries v0.1.5
 	github.com/radovskyb/watcher v1.0.7
+	github.com/samber/lo v1.21.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.5
 	go.mongodb.org/mongo-driver v1.9.1
 )
-
-require github.com/samber/lo v1.21.0 // indirect
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
