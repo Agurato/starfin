@@ -42,7 +42,7 @@ func CreateMediaFromFilename(file string, volumeID primitive.ObjectID, subFiles 
 	subtitles := GetExternalSubtitles(file, subFiles)
 	movie := Movie{
 		ID: primitive.NewObjectID(),
-		Paths: []VolumeFile{{
+		VolumeFiles: []VolumeFile{{
 			Path:         file,
 			FromVolume:   volumeID,
 			Info:         mediaInfo,

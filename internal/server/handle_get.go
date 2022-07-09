@@ -115,7 +115,7 @@ func HandleGETMovie(c *gin.Context) {
 	}
 
 	var volumes []string
-	for _, path := range movie.Paths {
+	for _, path := range movie.VolumeFiles {
 		var volume media.Volume
 		GetVolumeFromID(path.FromVolume, &volume)
 		volumes = append(volumes, volume.Name)
@@ -152,10 +152,10 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		})
 		return
 	}
-	if fileIndex >= len(movie.Paths) {
-		fileIndex = len(movie.Paths) - 1
+	if fileIndex >= len(movie.VolumeFiles) {
+		fileIndex = len(movie.VolumeFiles) - 1
 	}
-	http.ServeFile(c.Writer, c.Request, movie.Paths[fileIndex].Path)
+	http.ServeFile(c.Writer, c.Request, movie.VolumeFiles[fileIndex].Path)
 }
 
 // HandleGETDownloadMovie downloads a subtitle file
@@ -183,13 +183,13 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 		})
 		return
 	}
-	if movieFileIndex >= len(movie.Paths) {
+	if movieFileIndex >= len(movie.VolumeFiles) {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	extSubtitles := movie.Paths[movieFileIndex].ExtSubtitles
+	extSubtitles := movie.VolumeFiles[movieFileIndex].ExtSubtitles
 	if subFileIndex >= len(extSubtitles) {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",

@@ -134,41 +134,37 @@ func fileWatchEventHandler() {
 					}
 				}
 			} else if event.Op == watcher.Rename {
-				/*
-					ext := filepath.Ext(event.Path)
-					// Add it to watch list if video or subtitle
-					if media.IsVideoFileExtension(ext) {
-						// Retrieve volume
-						var volume *media.Volume
-						for _, v := range watchedVolumes {
-							if strings.HasPrefix(event.Path, v.Path) {
-								volume = v
-								break
-							}
+				ext := filepath.Ext(event.Path)
+				// Add it to watch list if video or subtitle
+				if media.IsVideoFileExtension(ext) {
+					// Retrieve volume
+					var volume *media.Volume
+					for _, v := range watchedVolumes {
+						if strings.HasPrefix(event.Path, v.Path) {
+							volume = v
+							break
 						}
-						// Get related subtitles
-						subFiles, err := GetRelatedSubFiles(event.Path)
-						if err != nil {
-							log.WithField("path", event.Path).Errorln("Error with file rename: could not get related subtitles")
-						}
-						// Create media
-						media := media.CreateMediaFromFilename(event.Path, volume.ID, subFiles)
-						err = media.FetchMediaID()
-						if err != nil {
-							log.WithField("path", event.Path).Errorln("Error with file rename: could not get TMDB ID")
-							// TODO
-						}
-						// Get old media from database
-						oldMedia, err := GetMediaFromPath(event.OldPath)
-						if err != nil {
-							log.WithField("path", event.OldPath).Errorln("Error with file rename: could not retrieve old media")
-						}
-						if media.GetTMDBID() == oldMedia.GetTMDBID() {
-
-						}
-					} else if media.IsSubtitleFileExtension(ext) {
 					}
-				*/
+					// Get related subtitles
+					subFiles, err := GetRelatedSubFiles(event.Path)
+					if err != nil {
+						log.WithField("path", event.Path).Errorln("Error with file rename: could not get related subtitles")
+					}
+					// Create media
+					newMedia := media.CreateMediaFromFilename(event.Path, volume.ID, subFiles)
+					err = newMedia.FetchMediaID()
+					if err != nil {
+						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
+						// TODO
+					}
+					err = ReplaceMediaPath(event.OldPath, event.Path, &newMedia)
+					if err != nil {
+						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not replace media path")
+						// TODO
+					}
+				} else if media.IsSubtitleFileExtension(ext) {
+					// TODO
+				}
 			} else if event.Op == watcher.Remove {
 				ext := filepath.Ext(event.Path)
 				if media.IsVideoFileExtension(ext) { // If we're deleting a video

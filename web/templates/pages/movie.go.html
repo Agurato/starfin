@@ -206,7 +206,7 @@
     <div>
         <!-- File selection -->
         <ul class="nav nav-tabs nav-fill" id="filesTabs" role="tablist">
-            {{range $idx, $path := .movie.Paths}}
+            {{range $idx, $path := .movie.VolumeFiles}}
             <li class="nav-item" role="presentation">
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
                     {{joinStrings " - " $.movie.Name $.movie.Resolution $path.Info.FileSize}}
@@ -218,7 +218,7 @@
         </ul>
         <!-- MediaInfo display -->
         <div class="tab-content mb-4 p-2" id="filesTabsContent">
-            {{range $idx, $path := .movie.Paths}}
+            {{range $idx, $path := .movie.VolumeFiles}}
             {{$extSubLength := len $path.ExtSubtitles}}
             <div class="tab-pane fade show {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}" role="tabpanel" aria-labelledby="files-{{$idx}}-tab">
                 <!-- MediaInfo categories -->
