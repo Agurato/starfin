@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/matthewhartstonge/argon2"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-contrib/sessions"
@@ -16,7 +16,7 @@ import (
 
 // HandlePOSTStart handles registration (only available for first account)
 func HandlePOSTStart(c *gin.Context) {
-	if GetUserNb() != 0 {
+	if db.GetUserNb() != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Admin user has already been created"})
 		return
 	}
@@ -25,7 +25,7 @@ func HandlePOSTStart(c *gin.Context) {
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	if err := AddUser(username, password1, password2, true); err != nil {
+	if err := db.AddUser(username, password1, password2, true); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
 			"title":    "Start",
 			"error":    err.Error(),
@@ -56,8 +56,8 @@ func HandlePOSTLogin(c *gin.Context) {
 	}
 
 	// Fetch encoded password from DB
-	var user User
-	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": username}).Decode(&user); err != nil {
+	var user database.User
+	if err := db.GetUserFromName(username, &user); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    "Authentication failed",
@@ -103,7 +103,7 @@ func HandlePOSTLogin(c *gin.Context) {
 // HandlePOSTSetPassword handles changing password from POST request
 func HandlePOSTSetPassword(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserKey).(User)
+	user := session.Get(UserKey).(database.User)
 	argon := argon2.DefaultConfig()
 	// Fetch username and password from POST data
 	oldPassword := strings.Trim(c.PostForm("old-password"), " ")
@@ -128,8 +128,8 @@ func HandlePOSTSetPassword(c *gin.Context) {
 	}
 
 	// Fetch encoded password from DB
-	var userDB User
-	if err := mongoUsers.FindOne(MongoCtx, bson.M{"name": user.Name}).Decode(&userDB); err != nil {
+	var userDB database.User
+	if err := db.GetUserFromName(user.Name, &userDB); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while checking for your password",
@@ -164,8 +164,7 @@ func HandlePOSTSetPassword(c *gin.Context) {
 		return
 	}
 
-	change := bson.M{"$set": bson.M{"password": string(encoded)}}
-	if _, err := mongoUsers.UpdateOne(MongoCtx, bson.M{"_id": userDB.ID}, change); err != nil {
+	if err := db.SetUserPassword(userDB.ID, string(encoded)); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": "An error occured while saving your password",
@@ -185,14 +184,22 @@ func HandlePOSTEditVolume(c *gin.Context) {
 	volumeMediaType := c.PostForm("mediatype") // "Movie" or "TV"
 
 	if volumeIdStr == "" {
-		// Adding a volume
-		if err := AddVolume(media.Volume{
+		volume := media.Volume{
 			ID:          primitive.NewObjectID(),
 			Name:        volumeName,
 			Path:        volumePath,
 			IsRecursive: volumeIsRecursive,
 			MediaType:   volumeMediaType,
-		}); err != nil {
+		}
+		// Adding a volume
+		if err := db.AddVolume(volume); err != nil {
+
+			// Search for media files in a separate goroutine to return the page asap
+			go SearchMediaFilesInVolume(volume)
+
+			// Add file watch to the volume
+			AddFileWatch(volume)
+
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 				"title":  "Add new volume",
 				"volume": media.Volume{},
@@ -205,7 +212,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 		// TODO: editing a volume
 		var volume media.Volume
 		volumeID, _ := primitive.ObjectIDFromHex(volumeIdStr)
-		GetVolumeFromID(volumeID, &volume)
+		db.GetVolumeFromID(volumeID, &volume)
 		RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 			"title":  "Edit volume",
 			"volume": volume,
@@ -222,7 +229,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 func HandlePOSTDeleteVolume(c *gin.Context) {
 	volumeID := c.PostForm("volumeId")
 
-	err := DeleteVolume(volumeID)
+	err := db.DeleteVolume(volumeID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": err})
 	}
@@ -238,10 +245,10 @@ func HandlePOSTEditUser(c *gin.Context) {
 	isAdmin := c.PostForm("isadmin") == "isadmin"
 
 	if userIdStr == "" {
-		if err := AddUser(username, password1, password2, isAdmin); err != nil {
+		if err := db.AddUser(username, password1, password2, isAdmin); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
-				"userEdit": User{},
+				"userEdit": database.User{},
 				"new":      true,
 				"error":    err.Error(),
 			})
@@ -249,9 +256,9 @@ func HandlePOSTEditUser(c *gin.Context) {
 		}
 	} else {
 		// TODO: editing a user
-		var user User
+		var user database.User
 		userID, _ := primitive.ObjectIDFromHex(userIdStr)
-		GetUserFromID(userID, &user)
+		db.GetUserFromID(userID, &user)
 		RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 			"title":    "Edit user",
 			"userEdit": user,
@@ -268,7 +275,7 @@ func HandlePOSTEditUser(c *gin.Context) {
 func HandlePOSTDeleteUser(c *gin.Context) {
 	userID := c.PostForm("userId")
 
-	err := DeleteUser(userID)
+	err := db.DeleteUser(userID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": err})
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/server"
 	"github.com/joho/godotenv"
@@ -16,14 +17,14 @@ func main() {
 	// TODO: Set level via environment variable
 	log.SetLevel(log.DebugLevel)
 
-	mongoClient := server.InitMongo()
-	defer mongoClient.Disconnect(server.MongoCtx)
+	db := database.InitMongo()
+	defer db.Close()
 
 	go server.InitFileWatching()
 	defer server.CloseFileWatching()
 
 	media.InitTMDB()
 
-	server := server.InitServer()
+	server := server.InitServer(db)
 	server.Run() // default port is :8080
 }

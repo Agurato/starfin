@@ -23,7 +23,7 @@ func InitFileWatching() (err error) {
 
 	go fileWatchEventHandler()
 
-	for _, v := range GetVolumes() {
+	for _, v := range db.GetVolumes() {
 		AddFileWatch(v)
 	}
 
@@ -99,10 +99,10 @@ func fileWatchEventHandler() {
 						mediaFile.FetchMediaDetails()
 
 						// Add media to DB
-						AddMediaToDB(&mediaFile)
+						db.AddMedia(&mediaFile)
 						for _, personID := range mediaFile.GetCastAndCrewIDs() {
-							if !IsPersonInDB(personID) {
-								AddPersonToDB(media.FetchPersonDetails(personID))
+							if !db.IsPersonPresent(personID) {
+								db.AddPerson(media.FetchPersonDetails(personID))
 							}
 						}
 					} else if media.IsSubtitleFileExtension(ext) { // If we're adding a subtitle
@@ -110,7 +110,7 @@ func fileWatchEventHandler() {
 						mediaPath, subtitle, ok := GetRelatedMediaFile(path)
 						if ok {
 							// Add it to the database
-							err := AddSubtitleToMoviePath(mediaPath, *subtitle)
+							err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
 							if err != nil {
 								log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
 							}
@@ -157,7 +157,7 @@ func fileWatchEventHandler() {
 						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
 						// TODO
 					}
-					err = ReplaceMediaPath(event.OldPath, event.Path, &newMedia)
+					err = db.ReplaceMediaPath(event.OldPath, event.Path, &newMedia)
 					if err != nil {
 						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not replace media path")
 						// TODO
@@ -168,12 +168,12 @@ func fileWatchEventHandler() {
 			} else if event.Op == watcher.Remove {
 				ext := filepath.Ext(event.Path)
 				if media.IsVideoFileExtension(ext) { // If we're deleting a video
-					RemoveMediaFileFromDB(event.Path)
+					db.RemoveMediaFile(event.Path)
 				} else if media.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
 					// Get related media file
 					mediaPath, _, ok := GetRelatedMediaFile(event.Path)
 					if ok {
-						RemoveSubtitleFileFromDB(mediaPath, event.Path)
+						db.RemoveSubtitleFile(mediaPath, event.Path)
 					}
 				}
 			}
@@ -197,15 +197,15 @@ func SearchMediaFilesInVolume(volume media.Volume) {
 	for {
 		mediaFile, more := <-mediaChan
 		if more {
-			if IsMediaInDB(&mediaFile) {
-				AddVolumeSourceToMedia(&mediaFile, &volume)
+			if db.IsMediaPresent(&mediaFile) {
+				db.AddVolumeSourceToMedia(&mediaFile, &volume)
 			} else {
-				AddMediaToDB(&mediaFile)
+				db.AddMedia(&mediaFile)
 			}
 
 			for _, personID := range mediaFile.GetCastAndCrewIDs() {
-				if !IsPersonInDB(personID) {
-					AddPersonToDB(media.FetchPersonDetails(personID))
+				if !db.IsPersonPresent(personID) {
+					db.AddPerson(media.FetchPersonDetails(personID))
 				}
 			}
 		} else {

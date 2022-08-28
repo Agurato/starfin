@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/gin-contrib/sessions"
@@ -24,7 +25,7 @@ func Handle404(c *gin.Context) {
 
 // HandleGETStart allows regsitration of first user (admin)
 func HandleGETStart(c *gin.Context) {
-	if GetUserNb() > 0 {
+	if db.GetUserNb() > 0 {
 		// TODO: log
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
@@ -75,7 +76,7 @@ func HandleGETMovie(c *gin.Context) {
 		})
 		return
 	}
-	movie, err := GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -89,7 +90,7 @@ func HandleGETMovie(c *gin.Context) {
 		writers   []media.Person
 	)
 	for _, cast := range movie.Cast {
-		actor, err := GetPersonFromID(cast.ActorID)
+		actor, err := db.GetPersonFromID(cast.ActorID)
 		if err != nil {
 			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
 			actor = media.Person{}
@@ -102,13 +103,13 @@ func HandleGETMovie(c *gin.Context) {
 		})
 	}
 	for _, directorID := range movie.Directors {
-		person, err := GetPersonFromID(directorID)
+		person, err := db.GetPersonFromID(directorID)
 		if err == nil {
 			directors = append(directors, person)
 		}
 	}
 	for _, writerID := range movie.Writers {
-		person, err := GetPersonFromID(writerID)
+		person, err := db.GetPersonFromID(writerID)
 		if err == nil {
 			writers = append(writers, person)
 		}
@@ -117,7 +118,7 @@ func HandleGETMovie(c *gin.Context) {
 	var volumes []string
 	for _, path := range movie.VolumeFiles {
 		var volume media.Volume
-		GetVolumeFromID(path.FromVolume, &volume)
+		db.GetVolumeFromID(path.FromVolume, &volume)
 		volumes = append(volumes, volume.Name)
 	}
 
@@ -145,7 +146,7 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		fileIndex = 0
 	}
 
-	movie, err := GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -176,7 +177,7 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 		subFileIndex = 0
 	}
 
-	movie, err := GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -208,7 +209,7 @@ func HandleGetActor(c *gin.Context) {
 		})
 		return
 	}
-	person, err := GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -216,7 +217,7 @@ func HandleGetActor(c *gin.Context) {
 		return
 	}
 
-	movies := GetMoviesWithActor(person.TMDBID)
+	movies := db.GetMoviesWithActor(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
@@ -235,7 +236,7 @@ func HandleGetDirector(c *gin.Context) {
 		})
 		return
 	}
-	person, err := GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -243,7 +244,7 @@ func HandleGetDirector(c *gin.Context) {
 		return
 	}
 
-	movies := GetMoviesWithDirector(person.TMDBID)
+	movies := db.GetMoviesWithDirector(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
@@ -262,7 +263,7 @@ func HandleGetWriter(c *gin.Context) {
 		})
 		return
 	}
-	person, err := GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(tmdbID)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -270,7 +271,7 @@ func HandleGetWriter(c *gin.Context) {
 		return
 	}
 
-	movies := GetMoviesWithWriter(person.TMDBID)
+	movies := db.GetMoviesWithWriter(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
@@ -282,7 +283,7 @@ func HandleGetWriter(c *gin.Context) {
 
 // HandleGETMovies displays the list of movies
 func HandleGETMovies(c *gin.Context) {
-	movies := GetMovies()
+	movies := db.GetMovies()
 	var (
 		inputSearch string
 		searchTerm  string
@@ -326,12 +327,12 @@ func HandleGETSettings(c *gin.Context) {
 // HandleGETUser displays the page of a user
 func HandleGETUser(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserKey).(User)
+	user := session.Get(UserKey).(database.User)
 
-	var userDB User
+	var userDB database.User
 
 	// Check for user existence and fetch all queries
-	if err := GetUserFromID(user.ID, &userDB); err != nil {
+	if err := db.GetUserFromID(user.ID, &userDB); err != nil {
 		RenderHTML(c, http.StatusOK, "pages/user.go.html", gin.H{
 			"title": fmt.Sprintf("%s's profile", c.Param("userId")),
 			"error": "User does not exist!",
@@ -347,7 +348,7 @@ func HandleGETUser(c *gin.Context) {
 
 // HandleGETAdmin displays the admin page
 func HandleGETAdmin(c *gin.Context) {
-	volumes := GetVolumes()
+	volumes := db.GetVolumes()
 	var volumesWithStringID []gin.H
 	for _, vol := range volumes {
 		volumesWithStringID = append(volumesWithStringID, gin.H{
@@ -355,7 +356,7 @@ func HandleGETAdmin(c *gin.Context) {
 			"obj": vol,
 		})
 	}
-	users := GetUsers()
+	users := db.GetUsers()
 	var usersWithStringID []gin.H
 	for _, user := range users {
 		usersWithStringID = append(usersWithStringID, gin.H{
@@ -392,7 +393,7 @@ func HandleGETAdminVolume(c *gin.Context) {
 		})
 	}
 	var volume media.Volume
-	if err := GetVolumeFromID(volumeId, &volume); err != nil {
+	if err := db.GetVolumeFromID(volumeId, &volume); err != nil {
 		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 			"title": "Edit volume",
 			"error": "Volume does not exist!",
@@ -415,7 +416,7 @@ func HandleGETAdminUser(c *gin.Context) {
 	if userIdStr == "new" {
 		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Add new user",
-			"user":  User{},
+			"user":  database.User{},
 			"new":   true,
 		})
 		return
@@ -428,8 +429,8 @@ func HandleGETAdminUser(c *gin.Context) {
 			"error": "Incorrect user ID!",
 		})
 	}
-	var user User
-	if err := GetUserFromID(userId, &user); err != nil {
+	var user database.User
+	if err := db.GetUserFromID(userId, &user); err != nil {
 		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Edit user",
 			"error": "User does not exist!",

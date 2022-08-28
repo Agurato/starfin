@@ -1,4 +1,4 @@
-package server
+package context
 
 // Environment variables names
 const (

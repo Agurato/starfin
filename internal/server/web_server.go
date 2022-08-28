@@ -13,6 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
 	"github.com/samber/lo"
+
+	"github.com/Agurato/starfin/internal/context"
+	"github.com/Agurato/starfin/internal/database"
 )
 
 const (
@@ -22,12 +25,14 @@ const (
 
 var (
 	setupDone = false
+
+	db database.DB
 )
 
 // InitServer initializes the server
-func InitServer() *gin.Engine {
-
-	setupDone = IsOwnerInDatabase()
+func InitServer(datab database.DB) *gin.Engine {
+	db = datab
+	setupDone = db.IsOwnerPresent()
 
 	// Set Gin to production mode
 	// TODO: change to release for deployment
@@ -37,8 +42,8 @@ func InitServer() *gin.Engine {
 	router.SetTrustedProxies(nil)
 
 	// Cookies
-	store := cookie.NewStore([]byte(os.Getenv(EnvCookieSecret)))
-	gob.Register(User{})
+	store := cookie.NewStore([]byte(os.Getenv(context.EnvCookieSecret)))
+	gob.Register(database.User{})
 	router.Use(sessions.Sessions("user-session", store))
 
 	// Add template functions
@@ -127,7 +132,7 @@ func RenderHTML(c *gin.Context, code int, name string, obj gin.H) {
 			"name":       "",
 		}
 	} else {
-		realUser := user.(User)
+		realUser := user.(database.User)
 		obj["user"] = gin.H{
 			"isLoggedIn": true,
 			"isAdmin":    realUser.IsAdmin,
@@ -173,7 +178,7 @@ func AdminRequired(c *gin.Context) {
 		})
 		return
 	}
-	if !user.(User).IsAdmin {
+	if !user.(database.User).IsAdmin {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		RenderHTML(c, http.StatusUnauthorized, "pages/index.go.html", gin.H{
 			"title": "starfin",
