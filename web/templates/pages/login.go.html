@@ -1,11 +1,11 @@
 {{ define "pages/login.go.html" }}
 {{ template "partials/header.go.html" . }}
-<section>
-    {{ if .error }}
-    <p style="color:red">{{ .error }}</p>
-    {{ end }}
-</section>
 <div class="container py-5 w-50">
+    {{ if .error }}
+    <div class="error">
+        <p style="color:red">{{ .error }}</p>
+    </div>
+    {{ end }}
     <form action="/login" method="post">
         <div class="mb-3">
             <label for="username">Username:</label>

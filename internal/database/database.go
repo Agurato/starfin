@@ -10,17 +10,18 @@ type DB interface {
 
 	IsOwnerPresent() bool
 
-	AddUser(username, password1, password2 string, isAdmin bool) error
+	AddUser(user *User) error
 	DeleteUser(hexId string) error
+	IsUsernameAvailable(username string) (bool, error)
 	GetUserFromID(id primitive.ObjectID, user *User) error
 	GetUserFromName(username string, user *User) error
-	GetUserNb() int64
-	GetUsers() (users []User)
+	GetUserNb() (int64, error)
+	GetUsers() (users []User, err error)
 	SetUserPassword(userID primitive.ObjectID, newPassword string) error
 
 	GetVolumeFromID(id primitive.ObjectID, volume *media.Volume) error
-	GetVolumes() (volumes []media.Volume)
-	AddVolume(volume media.Volume) error
+	GetVolumes() (volumes []media.Volume, err error)
+	AddVolume(volume *media.Volume) error
 	DeleteVolume(hexId string) error
 
 	IsMediaPresent(mediaFile *media.Media) bool

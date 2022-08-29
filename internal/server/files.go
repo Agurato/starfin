@@ -23,8 +23,12 @@ func InitFileWatching() (err error) {
 
 	go fileWatchEventHandler()
 
-	for _, v := range db.GetVolumes() {
-		AddFileWatch(v)
+	volumes, err := db.GetVolumes()
+	if err != nil {
+		return err
+	}
+	for _, v := range volumes {
+		AddFileWatch(&v)
 	}
 
 	if err := fileWatcher.Start(1 * time.Second); err != nil {
@@ -38,7 +42,7 @@ func CloseFileWatching() {
 	fileWatcher.Close()
 }
 
-func AddFileWatch(v media.Volume) {
+func AddFileWatch(v *media.Volume) {
 	if v.IsRecursive {
 		if err := fileWatcher.AddRecursive(v.Path); err != nil {
 			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
@@ -50,7 +54,7 @@ func AddFileWatch(v media.Volume) {
 			return
 		}
 	}
-	watchedVolumes = append(watchedVolumes, &v)
+	watchedVolumes = append(watchedVolumes, v)
 }
 
 func fileWatchEventHandler() {
@@ -188,7 +192,7 @@ func fileWatchEventHandler() {
 	}
 }
 
-func SearchMediaFilesInVolume(volume media.Volume) {
+func SearchMediaFilesInVolume(volume *media.Volume) {
 	// Channel to add media to DB as they are fetched from TMDB
 	mediaChan := make(chan media.Media)
 
@@ -198,7 +202,7 @@ func SearchMediaFilesInVolume(volume media.Volume) {
 		mediaFile, more := <-mediaChan
 		if more {
 			if db.IsMediaPresent(&mediaFile) {
-				db.AddVolumeSourceToMedia(&mediaFile, &volume)
+				db.AddVolumeSourceToMedia(&mediaFile, volume)
 			} else {
 				db.AddMedia(&mediaFile)
 			}

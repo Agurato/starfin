@@ -8,7 +8,6 @@ import (
 
 	ctx "github.com/Agurato/starfin/internal/context"
 	"github.com/Agurato/starfin/internal/media"
-	"github.com/matthewhartstonge/argon2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -28,8 +27,8 @@ type MongoDB struct {
 	personsColl *mongo.Collection
 }
 
-// InitMongo init mongo db
-func InitMongo() *MongoDB {
+// InitMongoDB init mongo db
+func InitMongoDB() *MongoDB {
 	mongoCtx := context.Background()
 	// defer cancel()
 	mongoClient, err := mongo.Connect(mongoCtx,
@@ -66,48 +65,8 @@ func (m MongoDB) IsOwnerPresent() bool {
 }
 
 // AddUser adds a user to the database after checking parameter
-func (m MongoDB) AddUser(username, password1, password2 string, isAdmin bool) error {
-	argon := argon2.DefaultConfig()
-
-	// Check username length
-	if len(username) < 2 || len(username) > 25 {
-		return errors.New("username must be between 2 and 25 characters")
-	}
-
-	// Check if username is not already taken
-	count, err := m.usersColl.CountDocuments(m.ctx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
-	if err != nil {
-		log.WithFields(log.Fields{"name": username, "error": err}).Errorln("Unable to check if user exists")
-	}
-	if count > 0 {
-		return errors.New("this username is already taken")
-	}
-
-	// Check if both passwords are equal
-	if password1 != password2 {
-		return errors.New("passwords don't match")
-	}
-
-	// Check if password is at least 8 characters
-	if len(password1) < 8 {
-		return errors.New("passwords must be at least 8 characters long")
-	}
-
-	// Hash & encode password
-	encoded, err := argon.HashEncoded([]byte(password1))
-	if err != nil {
-		return errors.New("an error occured while creating your account")
-	}
-
-	// Add user to DB
-	user := &User{
-		ID:       primitive.NewObjectID(),
-		Name:     username,
-		Password: string(encoded),
-		IsOwner:  !m.IsOwnerPresent(),
-		IsAdmin:  isAdmin,
-	}
-	_, err = m.usersColl.InsertOne(m.ctx, user)
+func (m MongoDB) AddUser(user *User) error {
+	_, err := m.usersColl.InsertOne(m.ctx, user)
 	return err
 }
 
@@ -128,39 +87,45 @@ func (m MongoDB) DeleteUser(hexId string) error {
 	return nil
 }
 
+// IsUsernameAvailable returns true if the username (case insensitive) is not in use yet
+func (m MongoDB) IsUsernameAvailable(username string) (bool, error) {
+	count, err := m.usersColl.CountDocuments(m.ctx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
 // GetUserFromID gets user from its ID
 func (m MongoDB) GetUserFromID(id primitive.ObjectID, user *User) error {
 	return m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(user)
 }
 
+// GetUserFromName gets user from it name
 func (m MongoDB) GetUserFromName(username string, user *User) error {
 	return m.usersColl.FindOne(m.ctx, bson.M{"name": username}).Decode(user)
 }
 
 // GetUserNb returns the number of users from the DB
-func (m MongoDB) GetUserNb() int64 {
-	count, err := m.usersColl.CountDocuments(m.ctx, bson.M{})
-	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve number of users")
-	}
-	return count
+func (m MongoDB) GetUserNb() (int64, error) {
+	return m.usersColl.CountDocuments(m.ctx, bson.M{})
 }
 
 // GetUsers returns the list of users in the DB
-func (m MongoDB) GetUsers() (users []User) {
+func (m MongoDB) GetUsers() (users []User, err error) {
 	usersCur, err := m.usersColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve users from database")
+		return
 	}
 	for usersCur.Next(m.ctx) {
 		var user User
-		err := usersCur.Decode(&user)
+		err = usersCur.Decode(&user)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch user from database")
+			return
 		}
 		users = append(users, user)
 	}
-	return
+	return users, nil
 }
 
 func (m MongoDB) SetUserPassword(userID primitive.ObjectID, newPassword string) error {
@@ -174,40 +139,25 @@ func (m MongoDB) GetVolumeFromID(id primitive.ObjectID, volume *media.Volume) er
 }
 
 // GetVolumes returns the list of volumes in the DB
-func (m MongoDB) GetVolumes() (volumes []media.Volume) {
+func (m MongoDB) GetVolumes() (volumes []media.Volume, err error) {
 	volumeCur, err := m.volumesColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve volumes from database")
+		return
 	}
 	for volumeCur.Next(m.ctx) {
 		var vol media.Volume
-		err := volumeCur.Decode(&vol)
+		err = volumeCur.Decode(&vol)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch volume from database")
+			return
 		}
 		volumes = append(volumes, vol)
 	}
-	return
+	return volumes, nil
 }
 
 // AddVolume adds a volume to the DB and start scanning the volume
-func (m MongoDB) AddVolume(volume media.Volume) error {
-	// Check volume name length
-	if len(volume.Name) < 3 {
-		return errors.New("volume name must be between 3")
-	}
-
-	// Check path is a directory
-	fileInfo, err := os.Stat(volume.Path)
-	if err != nil {
-		return errors.New("volume path does not exist")
-	}
-	if !fileInfo.IsDir() {
-		return errors.New("volume path is not a directory")
-	}
-
-	_, err = m.volumesColl.InsertOne(m.ctx, volume)
-
+func (m MongoDB) AddVolume(volume *media.Volume) error {
+	_, err := m.volumesColl.InsertOne(m.ctx, *volume)
 	return err
 }
 

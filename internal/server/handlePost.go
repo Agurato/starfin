@@ -7,7 +7,7 @@ import (
 
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
-	"github.com/matthewhartstonge/argon2"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-contrib/sessions"
@@ -16,7 +16,11 @@ import (
 
 // HandlePOSTStart handles registration (only available for first account)
 func HandlePOSTStart(c *gin.Context) {
-	if db.GetUserNb() != 0 {
+	if userNb, err := db.GetUserNb(); err != nil {
+		log.Errorln(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "An error occured …"})
+		return
+	} else if userNb != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Admin user has already been created"})
 		return
 	}
@@ -25,7 +29,7 @@ func HandlePOSTStart(c *gin.Context) {
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	if err := db.AddUser(username, password1, password2, true); err != nil {
+	if err := AddUser(username, password1, password2, true); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
 			"title":    "Start",
 			"error":    err.Error(),
@@ -45,41 +49,14 @@ func HandlePOSTLogin(c *gin.Context) {
 	username := strings.Trim(c.PostForm("username"), " ")
 	password := strings.Trim(c.PostForm("password"), " ")
 
-	// Check username length
-	if len(username) < 2 || len(username) > 25 {
+	var (
+		user *database.User
+		err  error
+	)
+	if user, err = CheckLogin(username, password); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
-			"error":    "Username must be between 2 and 25 characters",
-			"username": username,
-		})
-		return
-	}
-
-	// Fetch encoded password from DB
-	var user database.User
-	if err := db.GetUserFromName(username, &user); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
-			"title":    "Login",
-			"error":    "Authentication failed",
-			"username": username,
-		})
-		return
-	}
-
-	// Check if the username/password combination is valid
-	ok, err := argon2.VerifyEncoded([]byte(password), []byte(user.Password))
-	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
-			"title":    "Login",
-			"error":    "An error occured while logging you in",
-			"username": username,
-		})
-		return
-	}
-	if !ok {
-		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
-			"title":    "Login",
-			"error":    "Authentication failed",
+			"error":    err.Error(),
 			"username": username,
 		})
 		return
@@ -104,70 +81,15 @@ func HandlePOSTLogin(c *gin.Context) {
 func HandlePOSTSetPassword(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey).(database.User)
-	argon := argon2.DefaultConfig()
 	// Fetch username and password from POST data
 	oldPassword := strings.Trim(c.PostForm("old-password"), " ")
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	// Check new passwords match
-	if password1 != password2 {
+	if err := SetUserPassword(user.Name, oldPassword, password1, password2); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
-			"error": "New passwords don't match",
-		})
-		return
-	}
-
-	// Check password length
-	if len(password1) < 8 {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "Passwords must be at least 8 characters long",
-		})
-	}
-
-	// Fetch encoded password from DB
-	var userDB database.User
-	if err := db.GetUserFromName(user.Name, &userDB); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "An error occured while checking for your password",
-		})
-		return
-	}
-
-	// Check if the username/password combination is valid
-	ok, err := argon2.VerifyEncoded([]byte(oldPassword), []byte(userDB.Password))
-	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "An error occured while checking for your password",
-		})
-		return
-	}
-	if !ok {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "Authentication failed",
-		})
-		return
-	}
-
-	// Hash & encode password
-	encoded, err := argon.HashEncoded([]byte(password1))
-	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "An error occured while saving your password",
-		})
-		return
-	}
-
-	if err := db.SetUserPassword(userDB.ID, string(encoded)); err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
-			"title": "Settings",
-			"error": "An error occured while saving your password",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -184,7 +106,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 	volumeMediaType := c.PostForm("mediatype") // "Movie" or "TV"
 
 	if volumeIdStr == "" {
-		volume := media.Volume{
+		volume := &media.Volume{
 			ID:          primitive.NewObjectID(),
 			Name:        volumeName,
 			Path:        volumePath,
@@ -192,14 +114,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 			MediaType:   volumeMediaType,
 		}
 		// Adding a volume
-		if err := db.AddVolume(volume); err != nil {
-
-			// Search for media files in a separate goroutine to return the page asap
-			go SearchMediaFilesInVolume(volume)
-
-			// Add file watch to the volume
-			AddFileWatch(volume)
-
+		if err := AddVolume(volume); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 				"title":  "Add new volume",
 				"volume": media.Volume{},
@@ -245,7 +160,7 @@ func HandlePOSTEditUser(c *gin.Context) {
 	isAdmin := c.PostForm("isadmin") == "isadmin"
 
 	if userIdStr == "" {
-		if err := db.AddUser(username, password1, password2, isAdmin); err != nil {
+		if err := AddUser(username, password1, password2, isAdmin); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
 				"userEdit": database.User{},

@@ -23,10 +23,13 @@ func Handle404(c *gin.Context) {
 	})
 }
 
-// HandleGETStart allows regsitration of first user (admin)
+// HandleGETStart allows regsitration of first user (admin & owner)
 func HandleGETStart(c *gin.Context) {
-	if db.GetUserNb() > 0 {
-		// TODO: log
+	if userNb, err := db.GetUserNb(); err != nil {
+		log.Errorln(err)
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	} else if userNb != 0 {
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
 	}
@@ -348,16 +351,38 @@ func HandleGETUser(c *gin.Context) {
 
 // HandleGETAdmin displays the admin page
 func HandleGETAdmin(c *gin.Context) {
-	volumes := db.GetVolumes()
-	var volumesWithStringID []gin.H
+	var (
+		volumesWithStringID []gin.H
+		usersWithStringID   []gin.H
+	)
+
+	volumes, err := db.GetVolumes()
+	if err != nil {
+		log.Errorln(err)
+		RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
+			"title":   "Admin",
+			"volumes": volumesWithStringID,
+			"users":   usersWithStringID,
+			"error":   "An error occured …",
+		})
+	}
 	for _, vol := range volumes {
 		volumesWithStringID = append(volumesWithStringID, gin.H{
 			"id":  vol.ID.Hex(),
 			"obj": vol,
 		})
 	}
-	users := db.GetUsers()
-	var usersWithStringID []gin.H
+
+	users, err := db.GetUsers()
+	if err != nil {
+		log.Errorln(err)
+		RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
+			"title":   "Admin",
+			"volumes": volumesWithStringID,
+			"users":   usersWithStringID,
+			"error":   "An error occured …",
+		})
+	}
 	for _, user := range users {
 		usersWithStringID = append(usersWithStringID, gin.H{
 			"id":  user.ID.Hex(),

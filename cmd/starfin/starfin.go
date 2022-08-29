@@ -16,8 +16,9 @@ func main() {
 	log.SetOutput(os.Stdout)
 	// TODO: Set level via environment variable
 	log.SetLevel(log.DebugLevel)
+	log.SetReportCaller(true)
 
-	db := database.InitMongo()
+	db := database.InitMongoDB()
 	defer db.Close()
 
 	go server.InitFileWatching()
