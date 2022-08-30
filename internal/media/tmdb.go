@@ -3,6 +3,7 @@ package media
 import (
 	"os"
 
+	"github.com/Agurato/starfin/internal/context"
 	tmdb "github.com/cyruzin/golang-tmdb"
 )
 
@@ -14,7 +15,7 @@ var (
 // InitTMDB initializes a tmdb client
 func InitTMDB() {
 	var err error
-	TMDBClient, err = tmdb.Init(os.Getenv("TMDB_API_KEY"))
+	TMDBClient, err = tmdb.Init(os.Getenv(context.EnvTMDBAPIKey))
 	if err != nil {
 		panic(err)
 	}

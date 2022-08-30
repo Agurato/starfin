@@ -2,13 +2,12 @@ package media
 
 import (
 	"errors"
-	"fmt"
-	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -43,8 +42,74 @@ type Movie struct {
 	ProdCountries    []string
 }
 
+// NewMovie instantiates a Movie struct implementing
+func NewMovie(file string, volumeID primitive.ObjectID, subFiles []string) *Movie {
+	filename := filepath.Base(file)
+	mediaInfo, err := GetMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
+	if err != nil {
+		log.WithField("file", file).Errorln("Could not get media info")
+	}
+	subtitles := GetExternalSubtitles(file, subFiles)
+	movie := Movie{
+		ID: primitive.NewObjectID(),
+		VolumeFiles: []VolumeFile{{
+			Path:         file,
+			FromVolume:   volumeID,
+			Info:         mediaInfo,
+			ExtSubtitles: subtitles,
+		}},
+	}
+	// Split on '.' and ' '
+	parts := strings.FieldsFunc(filename, func(r rune) bool {
+		return r == '.' || r == ' '
+	})
+	i := len(parts) - 1
+
+	// Iterate in reverse and stop at first year info
+	for ; i >= 0; i-- {
+		potentialYear := parts[i]
+		if len(potentialYear) == 4 {
+			year, err := strconv.Atoi(potentialYear)
+			if err == nil {
+				movie.ReleaseYear = year
+				break
+			}
+		}
+		if len(potentialYear) == 6 && potentialYear[0] == '(' && potentialYear[5] == ')' {
+			year, err := strconv.Atoi(potentialYear[1:5])
+			if err == nil {
+				movie.ReleaseYear = year
+				break
+			}
+		}
+	}
+	// The movie name should be right before the movie year
+	if movie.ReleaseYear > 0 && i >= 0 {
+		movie.Name = strings.Join(parts[:i], " ")
+	} else {
+		movie.Name = strings.Join(parts, " ")
+	}
+
+	// Get resolution from name
+	resolutionPRegex, _ := regexp.Compile(`^\d\d\d\d?[pP]$`)
+	resolutionKRegex, _ := regexp.Compile(`^\d[kK]$`)
+	for i := len(parts) - 1; i >= 0; i-- {
+		potentialRes := parts[i]
+		if resolutionPRegex.MatchString(potentialRes) || resolutionKRegex.MatchString(potentialRes) {
+			movie.Resolution = potentialRes
+			break
+		}
+	}
+	// If resolution not found, get it from MediaInfo video
+	if movie.Resolution == "" {
+		movie.Resolution = mediaInfo.Resolution
+	}
+
+	return &movie
+}
+
 // FetchMediaID fetches media ID from TMDB and stores it
-func (m *Movie) FetchMediaID() error {
+func (m *Movie) FetchTMDBID() error {
 	urlOptions := make(map[string]string)
 	if m.ReleaseYear != 0 {
 		urlOptions["year"] = strconv.Itoa(m.ReleaseYear)
@@ -70,8 +135,8 @@ func (m *Movie) FetchMediaID() error {
 	return nil
 }
 
-// FetchMediaDetails fetches media details from TMDB and stores it in the Movie structure
-func (m *Movie) FetchMediaDetails() {
+// FetchDetails fetches media details from TMDB and stores it
+func (m *Movie) FetchDetails() {
 	// Get details
 	details, err := TMDBClient.GetMovieDetails(m.TMDBID, nil)
 	if err != nil {
@@ -133,10 +198,6 @@ func (m *Movie) FetchMediaDetails() {
 	}
 }
 
-func (m Movie) GetTMDBID() int {
-	return m.TMDBID
-}
-
 func (m Movie) GetCastAndCrewIDs() (ids []int64) {
 	for _, cast := range m.Cast {
 		ids = append(ids, cast.ActorID)
@@ -145,104 +206,4 @@ func (m Movie) GetCastAndCrewIDs() (ids []int64) {
 	ids = append(ids, m.Writers...)
 
 	return
-}
-
-// GetIMDbRating fetchs rating from IMDbID
-func GetIMDbRating(imdbId string) string {
-	res, err := http.Get(fmt.Sprintf("https://www.imdb.com/title/%s/", imdbId))
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
-		return ""
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
-		return ""
-	}
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
-		return ""
-	}
-
-	return doc.Find("#__next > main > div > section > section > div:nth-child(4) > section > section > div > div > div > div:nth-child(1) > a > div > div > div > div > span").First().Text()
-}
-
-// GetLetterboxdRating fetchs rating from letterboxd using IMDbID
-func GetLetterboxdRating(imdbId string) string {
-	res, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/films/%s/", imdbId))
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-
-	movieUrl, exists := doc.Find("#content > div > div > section > ul > li:nth-child(1) > div").First().Attr("data-target-link")
-	if !exists {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-
-	res, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", movieUrl))
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-	doc, err = goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
-		return ""
-	}
-
-	return doc.Find("a.display-rating").First().Text()
-}
-
-// SearchMovies returns a sublist of movies containing the search terms
-// Searches in the title and original title (case-insensitive)
-// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
-func SearchMovies(search string, movies []Movie) ([]Movie, string, int) {
-	search = strings.Trim(search, " ")
-	searchSplit := strings.Split(search, " ")
-	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
-	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]")
-	lastSearchIdx := len(searchSplit) - 1
-	var (
-		searchYear     int
-		filteredMovies []Movie
-	)
-
-	// If there's a year in last part of search term, return false if the movie is not from that year
-	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
-		searchYear, _ = strconv.Atoi(searchSplit[lastSearchIdx][2:])
-		searchSplit = searchSplit[:lastSearchIdx]
-	}
-
-	search = strings.Join(searchSplit, "")
-	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
-	for _, m := range movies {
-		if searchYear != 0 && m.ReleaseYear != searchYear {
-			continue
-		}
-		title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
-		originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
-		if strings.Contains(title, search) || strings.Contains(originalTitle, search) {
-			filteredMovies = append(filteredMovies, m)
-		}
-	}
-
-	return filteredMovies, strings.Join(searchSplit, " "), searchYear
 }

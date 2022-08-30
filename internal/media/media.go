@@ -1,22 +1,22 @@
 package media
 
 import (
-	"os"
+	"fmt"
+	"net/http"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Media interface {
-	FetchMediaID() error
-	FetchMediaDetails()
-	GetTMDBID() int
-	GetCastAndCrewIDs() []int64
-}
+// type Media interface {
+// 	FetchMediaID() error
+// 	FetchMediaDetails()
+// 	GetTMDBID() int
+// 	GetCastAndCrewIDs() []int64
+// }
 
 type VolumeFile struct {
 	Path         string
@@ -28,74 +28,6 @@ type VolumeFile struct {
 type Subtitle struct {
 	Language string
 	Path     string
-}
-
-// CreateMediaFromFilename instantiates a struct implementing the Media interface
-// Currently only handles Movies
-// TODO: TVSeries
-func CreateMediaFromFilename(file string, volumeID primitive.ObjectID, subFiles []string) Media {
-	filename := filepath.Base(file)
-	mediaInfo, err := GetMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
-	if err != nil {
-		log.WithField("file", file).Errorln("Could not get media info")
-	}
-	subtitles := GetExternalSubtitles(file, subFiles)
-	movie := Movie{
-		ID: primitive.NewObjectID(),
-		VolumeFiles: []VolumeFile{{
-			Path:         file,
-			FromVolume:   volumeID,
-			Info:         mediaInfo,
-			ExtSubtitles: subtitles,
-		}},
-	}
-	// Split on '.' and ' '
-	parts := strings.FieldsFunc(filename, func(r rune) bool {
-		return r == '.' || r == ' '
-	})
-	i := len(parts) - 1
-
-	// Iterate in reverse and stop at first year info
-	for ; i >= 0; i-- {
-		potentialYear := parts[i]
-		if len(potentialYear) == 4 {
-			year, err := strconv.Atoi(potentialYear)
-			if err == nil {
-				movie.ReleaseYear = year
-				break
-			}
-		}
-		if len(potentialYear) == 6 && potentialYear[0] == '(' && potentialYear[5] == ')' {
-			year, err := strconv.Atoi(potentialYear[1:5])
-			if err == nil {
-				movie.ReleaseYear = year
-				break
-			}
-		}
-	}
-	// The movie name should be right before the movie year
-	if movie.ReleaseYear > 0 && i >= 0 {
-		movie.Name = strings.Join(parts[:i], " ")
-	} else {
-		movie.Name = strings.Join(parts, " ")
-	}
-
-	// Get resolution from name
-	resolutionPRegex, _ := regexp.Compile(`^\d\d\d\d?[pP]$`)
-	resolutionKRegex, _ := regexp.Compile(`^\d[kK]$`)
-	for i := len(parts) - 1; i >= 0; i-- {
-		potentialRes := parts[i]
-		if resolutionPRegex.MatchString(potentialRes) || resolutionKRegex.MatchString(potentialRes) {
-			movie.Resolution = potentialRes
-			break
-		}
-	}
-	// If resolution not found, get it from MediaInfo video
-	if movie.Resolution == "" {
-		movie.Resolution = mediaInfo.Resolution
-	}
-
-	return &movie
 }
 
 // IsVideoFileExtension checks if extension is corresponding to a known video file extension
@@ -178,4 +110,68 @@ func GetExternalSubtitles(movieFilePath string, subFiles []string) (subs []Subti
 	}
 
 	return
+}
+
+// GetIMDbRating fetchs rating from IMDbID
+func GetIMDbRating(imdbId string) string {
+	res, err := http.Get(fmt.Sprintf("https://www.imdb.com/title/%s/", imdbId))
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		return ""
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		return ""
+	}
+
+	return doc.Find("#__next > main > div > section > section > div:nth-child(4) > section > section > div > div > div > div:nth-child(1) > a > div > div > div > div > span").First().Text()
+}
+
+// GetLetterboxdRating fetchs rating from letterboxd using IMDbID
+func GetLetterboxdRating(imdbId string) string {
+	res, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/films/%s/", imdbId))
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+
+	movieUrl, exists := doc.Find("#content > div > div > section > ul > li:nth-child(1) > div").First().Attr("data-target-link")
+	if !exists {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+
+	res, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", movieUrl))
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+	doc, err = goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		return ""
+	}
+
+	return doc.Find("a.display-rating").First().Text()
 }

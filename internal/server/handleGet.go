@@ -296,7 +296,7 @@ func HandleGETMovies(c *gin.Context) {
 
 	// Filter movies from search
 	if inputSearch, ok = c.GetQuery("search"); ok {
-		movies, searchTerm, searchYear = media.SearchMovies(inputSearch, movies)
+		movies, searchTerm, searchYear = SearchMovies(inputSearch, movies)
 	}
 
 	sort.Slice(movies, func(i, j int) bool {

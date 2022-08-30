@@ -91,20 +91,20 @@ func fileWatchEventHandler() {
 						if err != nil {
 							log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
 						}
-						mediaFile := media.CreateMediaFromFilename(path, volume.ID, subs)
+						movie := media.NewMovie(path, volume.ID, subs)
 						// Search ID on TMDB
-						if mediaFile.FetchMediaID() != nil {
+						if movie.FetchTMDBID() != nil {
 							log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch movie ID from TMDB")
 							continue
 						}
-						log.WithField("tmdbID", mediaFile.GetTMDBID()).Infoln("Found media with TMDB ID")
+						log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
 
 						// Fill info from TMDB
-						mediaFile.FetchMediaDetails()
+						movie.FetchDetails()
 
 						// Add media to DB
-						db.AddMedia(&mediaFile)
-						for _, personID := range mediaFile.GetCastAndCrewIDs() {
+						db.AddMovie(movie)
+						for _, personID := range movie.GetCastAndCrewIDs() {
 							if !db.IsPersonPresent(personID) {
 								db.AddPerson(media.FetchPersonDetails(personID))
 							}
@@ -155,24 +155,31 @@ func fileWatchEventHandler() {
 						log.WithField("path", event.Path).Errorln("Error with file rename: could not get related subtitles")
 					}
 					// Create media
-					newMedia := media.CreateMediaFromFilename(event.Path, volume.ID, subFiles)
-					err = newMedia.FetchMediaID()
+					newMovie := media.NewMovie(event.Path, volume.ID, subFiles)
+					err = newMovie.FetchTMDBID()
 					if err != nil {
 						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
 						// TODO
 					}
-					err = db.ReplaceMediaPath(event.OldPath, event.Path, &newMedia)
+					err = db.ReplaceMoviePath(event.OldPath, event.Path, newMovie)
 					if err != nil {
 						log.WithFields(log.Fields{"path": event.Path, "error": err}).Errorln("Error with file rename: could not replace media path")
 						// TODO
 					}
 				} else if media.IsSubtitleFileExtension(ext) {
 					// TODO
+					// Get media this subtitle was attached to
+					// movie, err := db.GetMovieFromExternalSubtitle(event.OldPath)
+					// if err != nil {
+
+					// }
 				}
 			} else if event.Op == watcher.Remove {
 				ext := filepath.Ext(event.Path)
 				if media.IsVideoFileExtension(ext) { // If we're deleting a video
-					db.RemoveMediaFile(event.Path)
+					if err := db.RemoveMovieFile(event.Path); err != nil {
+						log.Errorln(err)
+					}
 				} else if media.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
 					// Get related media file
 					mediaPath, _, ok := GetRelatedMediaFile(event.Path)
@@ -194,20 +201,20 @@ func fileWatchEventHandler() {
 
 func SearchMediaFilesInVolume(volume *media.Volume) {
 	// Channel to add media to DB as they are fetched from TMDB
-	mediaChan := make(chan media.Media)
+	movieChan := make(chan *media.Movie)
 
-	go volume.Scan(mediaChan)
+	go volume.Scan(movieChan)
 
 	for {
-		mediaFile, more := <-mediaChan
+		movie, more := <-movieChan
 		if more {
-			if db.IsMediaPresent(&mediaFile) {
-				db.AddVolumeSourceToMedia(&mediaFile, volume)
+			if db.IsMoviePresent(movie) {
+				db.AddVolumeSourceToMovie(movie, volume)
 			} else {
-				db.AddMedia(&mediaFile)
+				db.AddMovie(movie)
 			}
 
-			for _, personID := range mediaFile.GetCastAndCrewIDs() {
+			for _, personID := range movie.GetCastAndCrewIDs() {
 				if !db.IsPersonPresent(personID) {
 					db.AddPerson(media.FetchPersonDetails(personID))
 				}

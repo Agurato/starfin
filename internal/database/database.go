@@ -24,14 +24,13 @@ type DB interface {
 	AddVolume(volume *media.Volume) error
 	DeleteVolume(hexId string) error
 
-	IsMediaPresent(mediaFile *media.Media) bool
-	AddMedia(mediaFile *media.Media)
-	AddVolumeSourceToMedia(mediaFile *media.Media, volume *media.Volume)
-	GetMediaFromPath(mediaPath string) (media.Media, error)
-	ReplaceMediaPath(oldMediaPath, newMediaPath string, newMedia *media.Media) error
-	AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error
-	RemoveMediaFile(path string) error
-	RemoveSubtitleFile(mediaPath, subtitlePath string) error
+	IsMoviePresent(MovieFile *media.Movie) bool
+	AddMovie(MovieFile *media.Movie)
+	AddVolumeSourceToMovie(MovieFile *media.Movie, volume *media.Volume)
+	GetMovieFromPath(moviePath string) (movie *media.Movie, err error)
+	ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *media.Movie) error
+	RemoveMovieFile(path string) error
+	RemoveSubtitleFile(MoviePath, subtitlePath string) error
 
 	IsPersonPresent(personID int64) bool
 	AddPerson(person media.Person)
@@ -43,6 +42,8 @@ type DB interface {
 	GetMoviesWithActor(actorID int64) (movies []media.Movie)
 	GetMoviesWithDirector(directorID int64) (movies []media.Movie)
 	GetMoviesWithWriter(writerID int64) (movies []media.Movie)
+	AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error
+	GetMovieFromExternalSubtitle(subtitlePath string) (media.Movie, error)
 }
 
 // User is a user
