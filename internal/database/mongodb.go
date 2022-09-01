@@ -164,15 +164,14 @@ func (m MongoDB) AddVolume(volume *media.Volume) error {
 	return err
 }
 
-// DeleteVolume deletes the volume from the DB and all the media which originated only from this volume
+// DeleteVolume deletes the volume from the DB and all the movie which originated only from this volume
 func (m MongoDB) DeleteVolume(hexId string) error {
 	volumeId, err := primitive.ObjectIDFromHex(hexId)
 	if err != nil {
 		return errors.New("invalid volume id")
 	}
 
-	// Remove specified volume from all media source
-	// TODO: TV Series
+	// Remove specified volume from all movie source
 	update, err := m.moviesColl.UpdateMany(m.ctx,
 		bson.M{},
 		bson.D{
@@ -201,27 +200,26 @@ func (m MongoDB) DeleteVolume(hexId string) error {
 	return nil
 }
 
-// IsMovieInDB checks if a given media is already present in DB
+// IsMovieInDB checks if a given movie is already present in DB
 func (m MongoDB) IsMoviePresent(movie *media.Movie) bool {
 	res := m.moviesColl.FindOne(m.ctx, bson.M{"tmdbid": movie.TMDBID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
-// AddMovieToDB adds a given media to the DB
+// AddMovieToDB adds a given movie to the DB
 func (m MongoDB) AddMovie(movie *media.Movie) {
 	result := m.moviesColl.FindOne(m.ctx, bson.M{"tmdbid": movie.TMDBID})
-	if result.Err() == mongo.ErrNoDocuments { // If media does not exist yet, add it
+	if result.Err() == mongo.ErrNoDocuments { // If movie does not exist yet, add it
 		_, err := m.moviesColl.InsertOne(m.ctx, movie)
 		if err != nil {
 			log.WithField("path", movie.VolumeFiles[0].Path).Errorln("Unable to add movie to database")
 		}
-	} else { // If media already exists, add volumeFile
+	} else { // If movie already exists, add volumeFile
 		m.moviesColl.UpdateOne(m.ctx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": movie.VolumeFiles[0]}})
 	}
 }
 
 // AddVolumeSourceToMovie adds the volume as a source to the given media
-// TODO: case TVSeries
 func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie, volume *media.Volume) {
 	res, err := m.moviesColl.UpdateOne(m.ctx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": movie.VolumeFiles[0]}})
 	if err != nil || res.ModifiedCount == 0 {
@@ -231,16 +229,16 @@ func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie, volume *media.Volume
 	}
 }
 
-// GetMovieFromPath retrieve a media from a path
+// GetMovieFromPath retrieves a movie from a path
 func (m MongoDB) GetMovieFromPath(mediaPath string) (movie *media.Movie, err error) {
 	err = m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}).Decode(movie)
 	if err != nil {
-		return nil, errors.New("could not get media from path")
+		return nil, errors.New("could not get movie from path")
 	}
 	return movie, nil
 }
 
-// ReplaceMoviePath replaces a media path if needed
+// ReplaceMoviePath replaces a movie path if needed
 func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *media.Movie) error {
 	var (
 		oldMovie media.Movie
@@ -248,7 +246,7 @@ func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *m
 	// Get the current movie struct from mongo
 	err := m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": oldMoviePath}}}}).Decode(&oldMovie)
 	if err != nil {
-		return errors.New("could not get media from path")
+		return errors.New("could not get movie from path")
 	}
 	oldPathIndex := slices.IndexFunc(oldMovie.VolumeFiles, func(vf media.VolumeFile) bool {
 		return vf.Path == oldMoviePath
@@ -264,7 +262,7 @@ func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *m
 				return err
 			}
 			if delete.DeletedCount == 0 {
-				return errors.New("could not delete media when replacing with a new one")
+				return errors.New("could not delete movie when replacing with a new one")
 			}
 		} else {
 			update, err := m.moviesColl.UpdateOne(m.ctx,
@@ -274,11 +272,11 @@ func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *m
 				return err
 			}
 			if update.ModifiedCount == 0 {
-				return errors.New("could not update media when replacing with a new one")
+				return errors.New("could not update movie when replacing with a new one")
 			}
 		}
 
-		// Fetch media details
+		// Fetch movie details
 		newMovie.FetchDetails()
 		m.AddMovie(newMovie)
 	}
@@ -286,19 +284,19 @@ func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *m
 	return nil
 }
 
-// RemoveMovieFile removes a media from the database
+// RemoveMovieFile removes a movie from the database
 func (m MongoDB) RemoveMovieFile(path string) error {
 	deleteRes, err := m.moviesColl.DeleteOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}})
 	if err != nil {
 		return err
 	}
 	if deleteRes.DeletedCount == 0 {
-		log.WithFields(log.Fields{"mediaPath": path}).Warningln("No media was deleted")
+		log.WithFields(log.Fields{"mediaPath": path}).Warningln("No movie was deleted")
 	}
 	return nil
 }
 
-// RemoveSubtitleFile removes a media subtitle from the database
+// RemoveSubtitleFile removes a movie subtitle from the database
 func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 	var movie media.Movie
 	err := m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}).Decode(&movie)
@@ -309,14 +307,14 @@ func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 		return vFile.Path == mediaPath
 	})
 	if volumeIndex == -1 {
-		return errors.New("cannot remove subtitle from media (no matching volume file")
+		return errors.New("cannot remove subtitle from movie (no matching volume file")
 	}
 
 	subtitleIndex := slices.IndexFunc(movie.VolumeFiles[volumeIndex].ExtSubtitles, func(sub media.Subtitle) bool {
 		return sub.Path == subtitlePath
 	})
 	if subtitleIndex == -1 {
-		return errors.New("cannot remove subtitle from media (no matching subtitle file")
+		return errors.New("cannot remove subtitle from movie (no matching subtitle file")
 	}
 	movie.VolumeFiles[volumeIndex].ExtSubtitles = slices.Delete(movie.VolumeFiles[volumeIndex].ExtSubtitles, subtitleIndex, subtitleIndex+1)
 
@@ -344,7 +342,7 @@ func (m MongoDB) AddPerson(person media.Person) {
 	}
 }
 
-// AddActors upserts the actors of a media to the DB
+// AddActors upserts the actors of a movie to the DB
 func (m MongoDB) AddActors(actors []media.Person) {
 	for _, actor := range actors {
 		res, err := m.personsColl.UpdateOne(m.ctx, bson.M{"tmdbid": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
@@ -459,7 +457,7 @@ func (m MongoDB) AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle
 		return vFile.Path == movieFilePath
 	})
 	if i == -1 {
-		return errors.New("cannot add subtitle to media (no matching volume file")
+		return errors.New("cannot add subtitle to movie (no matching volume file")
 	}
 	if slices.Contains(movie.VolumeFiles[i].ExtSubtitles, sub) {
 		return errors.New("subtitle is already added to media")
