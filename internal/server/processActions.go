@@ -154,7 +154,7 @@ func AddVolume(volume *media.Volume) error {
 	}
 
 	// Search for media files in a separate goroutine to return the page asap
-	go SearchMediaFilesInVolume(volume)
+	go searchMediaFilesInVolume(volume)
 
 	// Add file watch to the volume
 	AddFileWatch(volume)

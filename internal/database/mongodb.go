@@ -52,6 +52,10 @@ func InitMongoDB() *MongoDB {
 	}
 }
 
+func getMoviePathFilter(path string) primitive.M {
+	return bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}}
+}
+
 // Close closes the MongoDB connection
 func (m MongoDB) Close() {
 	m.client.Disconnect(m.ctx)
@@ -213,78 +217,76 @@ func (m MongoDB) AddMovie(movie *media.Movie) error {
 }
 
 // AddVolumeSourceToMovie adds the volume as a source to the given media
-func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie) {
+func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie) error {
 	res, err := m.moviesColl.UpdateOne(m.ctx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": movie.VolumeFiles[0]}})
-	if err != nil || res.ModifiedCount == 0 {
-		log.WithField("path", movie.VolumeFiles[0].Path).Warningln("Unable to add volume as source of movie to database")
-	} else {
-		log.WithField("path", movie.VolumeFiles[0].Path).Debugln("Added volume as source of movie to database")
+	if err != nil {
+		return err
+	} else if res.ModifiedCount == 0 {
+		return errors.New("unable to add volume as source of movie to database")
 	}
+	log.WithField("path", movie.VolumeFiles[0].Path).Debugln("Added volume as source of movie to database")
+	return nil
 }
 
 // GetMovieFromPath retrieves a movie from a path
 func (m MongoDB) GetMovieFromPath(mediaPath string) (movie *media.Movie, err error) {
-	err = m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}).Decode(movie)
+	movie = &media.Movie{}
+	err = m.moviesColl.FindOne(m.ctx, getMoviePathFilter(mediaPath)).Decode(movie)
 	if err != nil {
 		return nil, errors.New("could not get movie from path")
 	}
 	return movie, nil
 }
 
-// ReplaceMoviePath replaces a movie path if needed
-func (m MongoDB) ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *media.Movie) error {
-	var (
-		oldMovie media.Movie
-	)
-	// Get the current movie struct from mongo
-	err := m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": oldMoviePath}}}}).Decode(&oldMovie)
-	if err != nil {
-		return errors.New("could not get movie from path")
-	}
-	oldPathIndex := slices.IndexFunc(oldMovie.VolumeFiles, func(vf media.VolumeFile) bool {
-		return vf.Path == oldMoviePath
+// UpdateMovieVolumeFile updates the path to a movie
+// movie: Movie struct that has its path changed
+// oldPath: file path of the volumefile that will be changed
+// newVolumeFile: VolumeFile struct that replaces the previous one
+func (m MongoDB) UpdateMovieVolumeFile(movie *media.Movie, oldPath string, newVolumeFile media.VolumeFile) error {
+	oldPathIndex := slices.IndexFunc(movie.VolumeFiles, func(vf media.VolumeFile) bool {
+		return vf.Path == oldPath
 	})
-
-	if oldMovie.TMDBID == newMovie.TMDBID { // If they have the same TMDB ID, replace the correct volumeFile
-		m.moviesColl.UpdateOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": oldMoviePath}}}}, bson.M{"$set": bson.M{fmt.Sprintf("volumefiles.%d", oldPathIndex): newMovie.VolumeFiles[0]}})
-	} else { // If they don't have the same TMDB ID, remove the path from the previous movie
-		// If it only had 1 volumeFile, remove the movie entirely
-		if len(oldMovie.VolumeFiles) == 1 {
-			delete, err := m.moviesColl.DeleteOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": oldMoviePath}}}})
-			if err != nil {
-				return err
-			}
-			if delete.DeletedCount == 0 {
-				return errors.New("could not delete movie when replacing with a new one")
-			}
-		} else {
-			update, err := m.moviesColl.UpdateOne(m.ctx,
-				bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": oldMoviePath}}}},
-				bson.D{{Key: "$pull", Value: bson.D{{Key: "volumefiles", Value: bson.D{{Key: "path", Value: oldMoviePath}}}}}})
-			if err != nil {
-				return err
-			}
-			if update.ModifiedCount == 0 {
-				return errors.New("could not update movie when replacing with a new one")
-			}
-		}
-
-		// Fetch movie details
-		newMovie.FetchDetails()
-		m.AddMovie(newMovie)
-	}
-
-	return nil
-}
-
-// RemoveMovieFile removes a movie from the database
-func (m MongoDB) RemoveMovieFile(path string) error {
-	deleteRes, err := m.moviesColl.DeleteOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}})
+	update, err := m.moviesColl.UpdateOne(m.ctx, getMoviePathFilter(oldPath), bson.M{"$set": bson.M{fmt.Sprintf("volumefiles.%d", oldPathIndex): newVolumeFile}})
 	if err != nil {
 		return err
 	}
-	if deleteRes.DeletedCount == 0 {
-		log.WithFields(log.Fields{"mediaPath": path}).Warningln("No movie was deleted")
+	if update.ModifiedCount == 0 {
+		return errors.New("could not update the volume file")
+	}
+	return nil
+}
+
+func (m MongoDB) DeleteMovie(ID primitive.ObjectID) error {
+	del, err := m.moviesColl.DeleteOne(m.ctx, bson.M{"_id": ID})
+	if err != nil {
+		return err
+	}
+	if del.DeletedCount == 0 {
+		return errors.New("could not delete movie")
+	}
+	return nil
+}
+
+// DeleteMovieFromPath removes a movie from the database
+// If the movie has only 1 volume file, then the movie is entirely deleted
+func (m MongoDB) DeleteMovieVolumeFile(path string) error {
+	movie, err := m.GetMovieFromPath(path)
+	if err != nil {
+		return err
+	}
+	// If it only had 1 volumeFile, remove the movie entirely
+	if len(movie.VolumeFiles) == 1 {
+		m.DeleteMovie(movie.ID)
+	} else {
+		update, err := m.moviesColl.UpdateOne(m.ctx,
+			getMoviePathFilter(path),
+			bson.D{{Key: "$pull", Value: bson.D{{Key: "volumefiles", Value: bson.D{{Key: "path", Value: path}}}}}})
+		if err != nil {
+			return err
+		}
+		if update.ModifiedCount == 0 {
+			return errors.New("could not update movie when replacing with a new one")
+		}
 	}
 	return nil
 }
@@ -292,7 +294,7 @@ func (m MongoDB) RemoveMovieFile(path string) error {
 // RemoveSubtitleFile removes a movie subtitle from the database
 func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 	var movie media.Movie
-	err := m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}).Decode(&movie)
+	err := m.moviesColl.FindOne(m.ctx, getMoviePathFilter(mediaPath)).Decode(&movie)
 	if err != nil {
 		return err
 	}
@@ -311,7 +313,7 @@ func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 	}
 	movie.VolumeFiles[volumeIndex].ExtSubtitles = slices.Delete(movie.VolumeFiles[volumeIndex].ExtSubtitles, subtitleIndex, subtitleIndex+1)
 
-	updateRes, err := m.moviesColl.UpdateOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": mediaPath}}}}, bson.M{"$set": bson.D{{Key: "volumefiles", Value: movie.VolumeFiles}}})
+	updateRes, err := m.moviesColl.UpdateOne(m.ctx, getMoviePathFilter(mediaPath), bson.M{"$set": bson.D{{Key: "volumefiles", Value: movie.VolumeFiles}}})
 	if err != nil {
 		return err
 	}
@@ -443,7 +445,7 @@ func (m MongoDB) GetMoviesWithWriter(writerID int64) (movies []media.Movie) {
 // AddSubtitleToMoviePath adds the subtitle to a movie given the movie path
 func (m MongoDB) AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error {
 	var movie media.Movie
-	err := m.moviesColl.FindOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}).Decode(&movie)
+	err := m.moviesColl.FindOne(m.ctx, getMoviePathFilter(movieFilePath)).Decode(&movie)
 	if err != nil {
 		return err
 	}
@@ -457,7 +459,7 @@ func (m MongoDB) AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle
 		return errors.New("subtitle is already added to media")
 	}
 	movie.VolumeFiles[i].ExtSubtitles = append(movie.VolumeFiles[i].ExtSubtitles, sub)
-	updateRes, err := m.moviesColl.UpdateOne(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": movieFilePath}}}}, bson.M{"$set": bson.D{{Key: "volumefiles", Value: movie.VolumeFiles}}})
+	updateRes, err := m.moviesColl.UpdateOne(m.ctx, getMoviePathFilter(movieFilePath), bson.M{"$set": bson.D{{Key: "volumefiles", Value: movie.VolumeFiles}}})
 	if err != nil {
 		return err
 	}
