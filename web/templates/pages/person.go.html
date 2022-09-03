@@ -69,7 +69,7 @@
     <div class="row row-cols-auto gx-0 justify-content-center">
         {{range $index, $movie := .movies}}
         <div class="col item">
-            <a href="/movie/{{$movie.TMDBID}}">
+            <a href="/movie/{{movieID $movie}}">
                 {{if $movie.PosterPath}}
                 <img src="{{tmdbGetImageURL $movie.PosterPath "w154"}}" class="rounded" />
                 {{else}}

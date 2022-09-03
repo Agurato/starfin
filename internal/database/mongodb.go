@@ -207,23 +207,16 @@ func (m MongoDB) IsMoviePresent(movie *media.Movie) bool {
 }
 
 // AddMovieToDB adds a given movie to the DB
-func (m MongoDB) AddMovie(movie *media.Movie) {
-	result := m.moviesColl.FindOne(m.ctx, bson.M{"tmdbid": movie.TMDBID})
-	if result.Err() == mongo.ErrNoDocuments { // If movie does not exist yet, add it
-		_, err := m.moviesColl.InsertOne(m.ctx, movie)
-		if err != nil {
-			log.WithField("path", movie.VolumeFiles[0].Path).Errorln("Unable to add movie to database")
-		}
-	} else { // If movie already exists, add volumeFile
-		m.moviesColl.UpdateOne(m.ctx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": movie.VolumeFiles[0]}})
-	}
+func (m MongoDB) AddMovie(movie *media.Movie) error {
+	_, err := m.moviesColl.InsertOne(m.ctx, movie)
+	return err
 }
 
 // AddVolumeSourceToMovie adds the volume as a source to the given media
-func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie, volume *media.Volume) {
+func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie) {
 	res, err := m.moviesColl.UpdateOne(m.ctx, bson.M{"tmdbid": movie.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": movie.VolumeFiles[0]}})
 	if err != nil || res.ModifiedCount == 0 {
-		log.WithField("path", movie.VolumeFiles[0].Path).Warningln("Unable to volume as source of movie to database")
+		log.WithField("path", movie.VolumeFiles[0].Path).Warningln("Unable to add volume as source of movie to database")
 	} else {
 		log.WithField("path", movie.VolumeFiles[0].Path).Debugln("Added volume as source of movie to database")
 	}
@@ -335,6 +328,7 @@ func (m MongoDB) IsPersonPresent(personID int64) bool {
 }
 
 // AddPerson adds a person to the DB
+// TODO: upsert
 func (m MongoDB) AddPerson(person media.Person) {
 	_, err := m.personsColl.InsertOne(m.ctx, person)
 	if err != nil {
@@ -387,8 +381,8 @@ func (m MongoDB) GetMovies() (movies []media.Movie) {
 }
 
 // GetMovieFromID returns a movie from its TMDB ID
-func (m MongoDB) GetMovieFromID(TMDBID int) (movie media.Movie, err error) {
-	err = m.moviesColl.FindOne(m.ctx, bson.M{"tmdbid": TMDBID}).Decode(&movie)
+func (m MongoDB) GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error) {
+	err = m.moviesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&movie)
 	return movie, err
 }
 
@@ -473,6 +467,7 @@ func (m MongoDB) AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle
 	return nil
 }
 
+// GetMovieFromExternalSubtitle returns a movie from its external subtitle path
 func (m MongoDB) GetMovieFromExternalSubtitle(subtitlePath string) (media.Movie, error) {
 	var movie media.Movie
 	err := m.moviesColl.FindOne(

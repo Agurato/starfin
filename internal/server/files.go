@@ -9,6 +9,7 @@ import (
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/radovskyb/watcher"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -71,58 +72,35 @@ func fileWatchEventHandler() {
 					delete(fileWrites, path)
 					continue
 				}
-				if info.ModTime().Unix() == modTime {
-					log.Debugln("File has stopped writing", path)
-					delete(fileWrites, path)
-					ext := filepath.Ext(path)
-
-					// Retrieve volume
-					var volume *media.Volume
-					for _, v := range watchedVolumes {
-						if strings.HasPrefix(path, v.Path) {
-							volume = v
-							break
-						}
-					}
-
-					if media.IsVideoFileExtension(ext) { // If we're adding a video
-						// Get subtitle files in same directory
-						subs, err := GetRelatedSubFiles(path)
-						if err != nil {
-							log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
-						}
-						movie := media.NewMovie(path, volume.ID, subs)
-						// Search ID on TMDB
-						if movie.FetchTMDBID() != nil {
-							log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch movie ID from TMDB")
-							continue
-						}
-						log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
-
-						// Fill info from TMDB
-						movie.FetchDetails()
-
-						// Add media to DB
-						db.AddMovie(movie)
-						for _, personID := range movie.GetCastAndCrewIDs() {
-							if !db.IsPersonPresent(personID) {
-								db.AddPerson(media.FetchPersonDetails(personID))
-							}
-						}
-					} else if media.IsSubtitleFileExtension(ext) { // If we're adding a subtitle
-						// Get related media file and subtitle struct
-						mediaPath, subtitle, ok := GetRelatedMediaFile(path)
-						if ok {
-							// Add it to the database
-							err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
-							if err != nil {
-								log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
-							}
-						}
-					}
-					continue
-				} else {
+				// File is still being written
+				if info.ModTime().Unix() != modTime {
 					fileWrites[path] = info.ModTime().Unix()
+					continue
+				}
+
+				// File is not being written anymore
+				log.Debugln("File has stopped writing", path)
+				delete(fileWrites, path)
+				ext := filepath.Ext(path)
+
+				// Retrieve volume
+				volume := getVolumeFromFilePath(path)
+
+				if media.IsVideoFileExtension(ext) { // If we're adding a video
+					if err := AddMovieFromPath(path, volume.ID); err != nil {
+						log.Errorln(err)
+						continue
+					}
+				} else if media.IsSubtitleFileExtension(ext) { // If we're adding a subtitle
+					// Get related media file and subtitle struct
+					mediaPath, subtitle, ok := GetRelatedMediaFile(path)
+					if ok {
+						// Add it to the database
+						err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
+						if err != nil {
+							log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
+						}
+					}
 				}
 			}
 		// There is a new file event
@@ -141,14 +119,8 @@ func fileWatchEventHandler() {
 				ext := filepath.Ext(event.Path)
 				// Add it to watch list if video or subtitle
 				if media.IsVideoFileExtension(ext) {
-					// Retrieve volume
-					var volume *media.Volume
-					for _, v := range watchedVolumes {
-						if strings.HasPrefix(event.Path, v.Path) {
-							volume = v
-							break
-						}
-					}
+					volume := getVolumeFromFilePath(event.Path)
+
 					// Get related subtitles
 					subFiles, err := GetRelatedSubFiles(event.Path)
 					if err != nil {
@@ -199,6 +171,58 @@ func fileWatchEventHandler() {
 	}
 }
 
+func getVolumeFromFilePath(path string) *media.Volume {
+	for _, v := range watchedVolumes {
+		if strings.HasPrefix(path, v.Path) {
+			return v
+		}
+	}
+	return nil
+}
+
+// AddMovieFromPath adds a movie from its path and the volume
+func AddMovieFromPath(path string, volumeID primitive.ObjectID) error {
+	// Get subtitle files in same directory
+	subs, err := GetRelatedSubFiles(path)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
+	}
+	movie := media.NewMovie(path, volumeID, subs)
+	// Search ID on TMDB
+	if err := movie.FetchTMDBID(); err != nil {
+		log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch movie ID from TMDB")
+	} else {
+		log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
+		// Fill info from TMDB
+		movie.FetchDetails()
+	}
+
+	// Add media to DB
+	TryAddMovieToDB(movie)
+
+	return nil
+}
+
+// TryAddMovieToDB checks if the movie already exists in database before adding it
+// Also adds persons to the database if they don't exist
+func TryAddMovieToDB(movie *media.Movie) {
+	if movie.TMDBID == 0 {
+		if err := db.AddMovie(movie); err != nil {
+			log.WithField("path", movie.VolumeFiles[0].Path).Warningln("Cannot add movie to database")
+		}
+	} else if !db.IsMoviePresent(movie) {
+		db.AddMovie(movie)
+	} else {
+		db.AddVolumeSourceToMovie(movie)
+	}
+
+	for _, personID := range movie.GetCastAndCrewIDs() {
+		if !db.IsPersonPresent(personID) {
+			db.AddPerson(media.FetchPersonDetails(personID))
+		}
+	}
+}
+
 func SearchMediaFilesInVolume(volume *media.Volume) {
 	// Channel to add media to DB as they are fetched from TMDB
 	movieChan := make(chan *media.Movie)
@@ -208,17 +232,7 @@ func SearchMediaFilesInVolume(volume *media.Volume) {
 	for {
 		movie, more := <-movieChan
 		if more {
-			if db.IsMoviePresent(movie) {
-				db.AddVolumeSourceToMovie(movie, volume)
-			} else {
-				db.AddMovie(movie)
-			}
-
-			for _, personID := range movie.GetCastAndCrewIDs() {
-				if !db.IsPersonPresent(personID) {
-					db.AddPerson(media.FetchPersonDetails(personID))
-				}
-			}
+			TryAddMovieToDB(movie)
 		} else {
 			break
 		}

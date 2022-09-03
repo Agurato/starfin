@@ -130,7 +130,7 @@
         <div class="col-12 col-sm-8">
             <!-- Title(s) -->
             <p class="mb-2">
-                <span class="fs-1 fw-bold me-3">{{.movie.Title}}</span>
+                <span class="fs-1 fw-bold me-3">{{movieName .movie}}</span>
                 {{if ne .movie.Title .movie.OriginalTitle}}
                 <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
                 {{end}}
@@ -211,7 +211,7 @@
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
                     {{joinStrings " - " $.movie.Name $.movie.Resolution $path.Info.FileSize}}
                     <!-- Download button -->
-                    <a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-movie"><i class="fa-solid fa-download"></i></a>
+                    <a href="/movie/{{movieID $.movie}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-movie"><i class="fa-solid fa-download"></i></a>
                 </span>
             </li>
             {{end}}
@@ -383,7 +383,7 @@
                             {{if gt $subIdx 0}}
                             <hr>
                             {{end}}
-                            <div class="mb-2"><a href="/movie/{{$.movie.TMDBID}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
+                            <div class="mb-2"><a href="/movie/{{movieID $.movie}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
                             <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>

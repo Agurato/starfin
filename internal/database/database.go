@@ -25,8 +25,8 @@ type DB interface {
 	DeleteVolume(hexId string) error
 
 	IsMoviePresent(MovieFile *media.Movie) bool
-	AddMovie(MovieFile *media.Movie)
-	AddVolumeSourceToMovie(MovieFile *media.Movie, volume *media.Volume)
+	AddMovie(MovieFile *media.Movie) error
+	AddVolumeSourceToMovie(MovieFile *media.Movie)
 	GetMovieFromPath(moviePath string) (movie *media.Movie, err error)
 	ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *media.Movie) error
 	RemoveMovieFile(path string) error
@@ -38,7 +38,7 @@ type DB interface {
 	GetPersonFromID(TMDBID int64) (person media.Person, err error)
 
 	GetMovies() (movies []media.Movie)
-	GetMovieFromID(TMDBID int) (movie media.Movie, err error)
+	GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error)
 	GetMoviesWithActor(actorID int64) (movies []media.Movie)
 	GetMoviesWithDirector(directorID int64) (movies []media.Movie)
 	GetMoviesWithWriter(writerID int64) (movies []media.Movie)

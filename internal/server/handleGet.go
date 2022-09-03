@@ -72,14 +72,14 @@ func HandleGETLogout(c *gin.Context) {
 
 // HandleGETMovie displays information about a movie
 func HandleGETMovie(c *gin.Context) {
-	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	movie, err := db.GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -137,7 +137,7 @@ func HandleGETMovie(c *gin.Context) {
 
 // HandleGETDownloadMovie downloads a movie file
 func HandleGETDownloadMovie(c *gin.Context) {
-	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -149,7 +149,7 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		fileIndex = 0
 	}
 
-	movie, err := db.GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -164,7 +164,7 @@ func HandleGETDownloadMovie(c *gin.Context) {
 
 // HandleGETDownloadMovie downloads a subtitle file
 func HandleGETDownloadSubtitle(c *gin.Context) {
-	tmdbID, err := strconv.Atoi(c.Param("tmdbId"))
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -180,7 +180,7 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 		subFileIndex = 0
 	}
 
-	movie, err := db.GetMovieFromID(tmdbID)
+	movie, err := db.GetMovieFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",

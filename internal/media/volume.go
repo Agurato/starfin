@@ -87,15 +87,13 @@ func (v Volume) Scan(mediaChan chan *Movie) {
 			movie := NewMovie(file, v.ID, subFiles)
 
 			// Search ID on TMDB
-			err = movie.FetchTMDBID()
-			if err != nil {
+			if err = movie.FetchTMDBID(); err != nil {
 				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch movie ID from TMDB")
-				return
+			} else {
+				log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
+				// Fill info from TMDB
+				movie.FetchDetails()
 			}
-			log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
-
-			// Fill info from TMDB
-			movie.FetchDetails()
 
 			// Send media to the channel
 			mediaChan <- movie

@@ -16,6 +16,7 @@ import (
 
 	"github.com/Agurato/starfin/internal/context"
 	"github.com/Agurato/starfin/internal/database"
+	"github.com/Agurato/starfin/internal/media"
 )
 
 const (
@@ -61,6 +62,15 @@ func InitServer(datab database.DB) *gin.Engine {
 			return len(elem) > 0
 		}), sep)
 	}
+	router.FuncMap["movieID"] = func(movie media.Movie) string {
+		return movie.ID.Hex()
+	}
+	router.FuncMap["movieName"] = func(movie media.Movie) string {
+		if movie.Title == "" {
+			return movie.Name
+		}
+		return movie.Title
+	}
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
@@ -92,9 +102,9 @@ func InitServer(datab database.DB) *gin.Engine {
 		needsLogin.GET("/", HandleGETIndex)
 
 		needsLogin.GET("/movies", HandleGETMovies)
-		needsLogin.GET("/movie/:tmdbId", HandleGETMovie)
-		needsLogin.GET("/movie/:tmdbId/download/:idx", HandleGETDownloadMovie)
-		needsLogin.GET("/movie/:tmdbId/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
+		needsLogin.GET("/movie/:id", HandleGETMovie)
+		needsLogin.GET("/movie/:id/download/:idx", HandleGETDownloadMovie)
+		needsLogin.GET("/movie/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
 
 		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
 		needsLogin.GET("/director/:tmdbId", HandleGetDirector)
