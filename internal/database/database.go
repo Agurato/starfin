@@ -26,10 +26,11 @@ type DB interface {
 
 	IsMoviePresent(MovieFile *media.Movie) bool
 	AddMovie(MovieFile *media.Movie) error
-	AddVolumeSourceToMovie(MovieFile *media.Movie)
+	AddVolumeSourceToMovie(MovieFile *media.Movie) error
 	GetMovieFromPath(moviePath string) (movie *media.Movie, err error)
-	ReplaceMoviePath(oldMoviePath, newMoviePath string, newMovie *media.Movie) error
-	RemoveMovieFile(path string) error
+	UpdateMovieVolumeFile(movie *media.Movie, oldPath string, newVolumeFile media.VolumeFile) error
+	DeleteMovie(id primitive.ObjectID) error
+	DeleteMovieVolumeFile(path string) error
 	RemoveSubtitleFile(MoviePath, subtitlePath string) error
 
 	IsPersonPresent(personID int64) bool
