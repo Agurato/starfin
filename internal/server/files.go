@@ -163,7 +163,7 @@ func TryAddMovieToDB(movie *media.Movie) error {
 			if err != nil {
 				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache poster")
 			}
-			err = media.CacheBackdrop(movie.PosterPath)
+			err = media.CacheBackdrop(movie.BackdropPath)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache backdrop")
 			}

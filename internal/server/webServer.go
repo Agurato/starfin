@@ -75,7 +75,7 @@ func InitServer(datab database.DB) *gin.Engine {
 	router.FuncMap["replace"] = strings.ReplaceAll
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
 	router.FuncMap["getImageURL"] = func(imageType, key string) string {
-		return "/cache/" + imageType + "/" + key
+		return "/cache/" + imageType + key
 	}
 
 	// Load templates
@@ -117,7 +117,7 @@ func InitServer(datab database.DB) *gin.Engine {
 		needsLogin.GET("/settings", HandleGETSettings)
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
 
-		needsLogin.GET("/cache/:path", HandleGetCache)
+		needsLogin.GET("/cache/*path", HandleGetCache)
 	}
 
 	// User needs to be admin to access these pages

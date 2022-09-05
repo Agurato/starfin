@@ -114,14 +114,14 @@
     {{ end }}
 </section>
 {{if .movie.BackdropPath}}
-<img class="backdrop" src="{{getImageURL "backdrop" .movie.BackdropPath}}" ondragstart="retFalse()" />
+<img class="backdrop" src="{{getImageURL "backdrop" .movie.BackdropPath}}" ondragstart="retFalse()" width="1280"/>
 {{end}}
 <div class="container">
     <div class="row mt-5">
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
             {{if .movie.PosterPath}}
-            <img class="img-fluid" src="{{getImageURL "poster" .movie.PosterPath}}"/>
+            <img class="img-fluid" src="{{getImageURL "poster" .movie.PosterPath}}" width="342"/>
             {{else}}
             <img class="img-fluid" src="/static/images/no_poster.png" width="342"/>
             {{end}}
@@ -190,9 +190,9 @@
                 <div class="actor mx-2 text-center">
                     <a href="/actor/{{$actor.Id}}">
                         {{if $actor.Photo}}
-                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}"/>
+                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}" width="185"/>
                         {{else}}
-                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}"/>
+                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}" width="185"/>
                         {{end}}
                         <p class="fw-bold mt-2 mb-1">{{$actor.Name}}</p>
                         {{if $actor.Character}}<p class="character">as {{$actor.Character}}</p>{{end}}

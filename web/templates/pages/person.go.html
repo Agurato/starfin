@@ -29,7 +29,7 @@
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
             {{if .person.Photo}}
-            <img class="img-fluid" src="{{getImageURL "photo" .person.Photo}}"/>
+            <img class="img-fluid" src="{{getImageURL "photo" .person.Photo}}" width="342"/>
             {{else}}
             <img class="img-fluid" src="/static/images/no_profile.png" width="342"/>
             {{end}}
@@ -71,9 +71,9 @@
         <div class="col item">
             <a href="/movie/{{movieID $movie}}">
                 {{if $movie.PosterPath}}
-                <img src="{{getImageURL "poster" $movie.PosterPath}}" class="rounded" />
+                <img src="{{getImageURL "poster" $movie.PosterPath}}" class="rounded" width="154" />
                 {{else}}
-                <img src="/static/images/no_poster.png" class="rounded" />
+                <img src="/static/images/no_poster.png" class="rounded" width="154" />
                 {{end}}
             </a>
             <span>{{$movie.Title}}</span>

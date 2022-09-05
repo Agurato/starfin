@@ -23,9 +23,9 @@ func InitTMDB() {
 }
 
 const (
-	poster       = "poster/"
-	backdrop     = "backdrop/"
-	photo        = "photo/"
+	poster       = "poster"
+	backdrop     = "backdrop"
+	photo        = "photo"
 	tmdbImageURL = "https://image.tmdb.org/t/p/"
 )
 
@@ -45,7 +45,7 @@ func CacheBackdrop(key string) error {
 
 func CachePhoto(key string) error {
 	if key != "" {
-		return cache.CacheFile(tmdbImageURL+tmdb.W185+key, photo+key)
+		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, photo+key)
 	}
 	return nil
 }

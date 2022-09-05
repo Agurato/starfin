@@ -2,12 +2,12 @@ package cache
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/Agurato/starfin/internal/context"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,33 +34,34 @@ func GetCachedPath(filePath string) string {
 }
 
 func CacheFile(sourceUrl string, filePath string) error {
-	// Get file as buffer
-	res, err := http.Get(sourceUrl)
-	if err != nil {
-		return err
-	}
-	if res.StatusCode != http.StatusOK {
-		return errors.New("could not fetch source file")
-	}
-	var buffer []byte
-	_, err = res.Body.Read(buffer)
-	if err != nil {
-		return err
-	}
 	// Create directories in the requested path if needed
 	parent := GetCachedPath(filepath.Dir(filePath))
-	if _, err := os.Stat((parent)); err != nil {
+	if _, err := os.Stat(parent); errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(parent, os.ModeDir)
 		if err != nil {
 			return err
 		}
 	}
-	// Write file
-	err = os.WriteFile(GetCachedPath(filePath), buffer, 0644)
+	// Get file as buffer
+	resp, err := http.Get(sourceUrl)
 	if err != nil {
 		return err
 	}
-	logrus.WithField("url", sourceUrl).Debugln("Cached file")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("could not fetch source file")
+	}
+	// Write file
+	out, err := os.Create(GetCachedPath(filePath))
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	n, err := io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{"url": sourceUrl, "size": n}).Debugln("Cached file")
 
 	return nil
 }
