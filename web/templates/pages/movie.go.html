@@ -114,14 +114,14 @@
     {{ end }}
 </section>
 {{if .movie.BackdropPath}}
-<img class="backdrop" src="{{tmdbGetImageURL .movie.BackdropPath "w1280"}}" ondragstart="retFalse()" />
+<img class="backdrop" src="{{getImageURL "backdrop" .movie.BackdropPath}}" ondragstart="retFalse()" />
 {{end}}
 <div class="container">
     <div class="row mt-5">
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
             {{if .movie.PosterPath}}
-            <img class="img-fluid" src="{{tmdbGetImageURL .movie.PosterPath "w342"}}"/>
+            <img class="img-fluid" src="{{getImageURL "poster" .movie.PosterPath}}"/>
             {{else}}
             <img class="img-fluid" src="/static/images/no_poster.png" width="342"/>
             {{end}}
@@ -190,7 +190,7 @@
                 <div class="actor mx-2 text-center">
                     <a href="/actor/{{$actor.Id}}">
                         {{if $actor.Photo}}
-                        <img class="img-fluid" src="{{tmdbGetImageURL $actor.Photo "w185"}}" alt="{{$actor.Name}}"/>
+                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}"/>
                         {{else}}
                         <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}"/>
                         {{end}}

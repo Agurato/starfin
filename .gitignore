@@ -3,3 +3,4 @@ vendor/
 *.exe
 *.code-workspace
 mediaInfo_test.go
+/cache/
