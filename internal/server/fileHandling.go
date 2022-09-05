@@ -20,10 +20,9 @@ func handleFileCreate(path string) error {
 			return err
 		}
 	} else if media.IsSubtitleFileExtension(ext) { // Adding a subtitle
-
 		// Get related media file and subtitle struct
-		mediaPath, subtitle := getRelatedMediaFile(path)
-		if mediaPath != "" {
+		mediaPaths, subtitle := getRelatedMediaFiles(path)
+		for _, mediaPath := range mediaPaths {
 			// Add it to the database
 			err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
 			if err != nil {
@@ -67,7 +66,9 @@ func handleFileRenamed(oldPath, newPath string) error {
 			}
 		} else {
 			// If they don't have the same TMDB ID, remove the path from the previous movie
-			db.DeleteMovieVolumeFile(oldPath)
+			if err := db.DeleteMovieVolumeFile(oldPath); err != nil {
+				return err
+			}
 
 			// Fetch movie details and add it to the database
 			if err := AddMovieFromPath(newPath, volume.ID); err != nil {
@@ -75,12 +76,21 @@ func handleFileRenamed(oldPath, newPath string) error {
 			}
 		}
 	} else if media.IsSubtitleFileExtension(ext) {
-		// TODO
-		// Get media this subtitle was attached to
-		// movie, err := db.GetMovieFromExternalSubtitle(oldPath)
-		// if err != nil {
+		// Remove old subtitle
+		mediaPaths, _ := getRelatedMediaFiles(oldPath)
+		for _, mediaPath := range mediaPaths {
+			db.RemoveSubtitleFile(mediaPath, oldPath)
+		}
 
-		// }
+		// Add new subtitle
+		mediaPaths, subtitle := getRelatedMediaFiles(newPath)
+		for _, mediaPath := range mediaPaths {
+			// Add it to the database
+			err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
+			if err != nil {
+				log.WithFields(log.Fields{"subtitle": newPath, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
+			}
+		}
 	}
 	return nil
 }
@@ -94,8 +104,8 @@ func handleFileRemoved(path string) {
 		}
 	} else if media.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
 		// Get related media file
-		mediaPath, _ := getRelatedMediaFile(path)
-		if mediaPath != "" {
+		mediaPaths, _ := getRelatedMediaFiles(path)
+		for _, mediaPath := range mediaPaths {
 			db.RemoveSubtitleFile(mediaPath, path)
 		}
 	}
@@ -118,15 +128,15 @@ func getRelatedSubFiles(movieFilePath string) (subs []string, err error) {
 	return subs, nil
 }
 
-// getRelatedMediaFile returns a related media file, and the subtitle struct for a given subtitle file path
-func getRelatedMediaFile(subFilePath string) (mediaPath string, sub *media.Subtitle) {
+// getRelatedMediaFiles returns a related media file, and the subtitle struct for a given subtitle file path
+func getRelatedMediaFiles(subFilePath string) (mediaPath []string, sub *media.Subtitle) {
 	dir := filepath.Dir(subFilePath)
 	subFileBase := filepath.Base(subFilePath)
 	subFileBase = subFileBase[:strings.IndexRune(subFileBase, '.')]
 	// Get all files which have the same filename beginning
 	matches, err := filepath.Glob(filepath.Join(dir, subFileBase+"*"))
 	if err != nil {
-		return "", nil
+		return nil, nil
 	}
 	subFilesFilter := []string{subFilePath}
 	for _, m := range matches {
@@ -135,10 +145,11 @@ func getRelatedMediaFile(subFilePath string) (mediaPath string, sub *media.Subti
 			subtitles := media.GetExternalSubtitles(m, subFilesFilter)
 			// If the media has a subtitle, then it's related
 			if len(subtitles) > 0 {
-				return m, &subtitles[0]
+				mediaPath = append(mediaPath, m)
+				sub = &subtitles[0]
 			}
 		}
 	}
 
-	return "", nil
+	return
 }
