@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/Agurato/starfin/internal/cache"
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/utilities"
@@ -468,4 +469,14 @@ func HandleGETAdminUser(c *gin.Context) {
 		"id":       user.ID.Hex(),
 		"new":      false,
 	})
+}
+
+// HandleGetCache serves the cached file
+func HandleGetCache(c *gin.Context) {
+	cachedFilePath := c.Param("path")
+	if cachedFilePath == "" {
+		c.AbortWithStatus(404)
+		return
+	}
+	http.ServeFile(c.Writer, c.Request, cache.GetCachedPath(cachedFilePath))
 }

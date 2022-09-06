@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/Agurato/starfin/internal/cache"
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/server"
@@ -20,6 +21,8 @@ func main() {
 
 	db := database.InitMongoDB()
 	defer db.Close()
+
+	cache.InitCache()
 
 	go server.InitFileWatching()
 	defer server.CloseFileWatching()

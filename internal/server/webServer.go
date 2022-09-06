@@ -37,7 +37,7 @@ func InitServer(datab database.DB) *gin.Engine {
 
 	// Set Gin to production mode
 	// TODO: change to release for deployment
-	gin.SetMode(gin.DebugMode)
+	// gin.SetMode(gin.DebugMode)
 
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
@@ -74,6 +74,10 @@ func InitServer(datab database.DB) *gin.Engine {
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
+	router.FuncMap["getImageURL"] = func(imageType, key string) string {
+		return "/cache/" + imageType + key
+	}
+
 	// Load templates
 	router.LoadHTMLGlob("web/templates/**/*")
 
@@ -112,6 +116,8 @@ func InitServer(datab database.DB) *gin.Engine {
 
 		needsLogin.GET("/settings", HandleGETSettings)
 		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
+
+		needsLogin.GET("/cache/*path", HandleGetCache)
 	}
 
 	// User needs to be admin to access these pages

@@ -22,9 +22,9 @@
     <div class="col item">
         <a href="/movie/{{movieID $movie}}">
             {{if $movie.PosterPath}}
-            <img src="{{tmdbGetImageURL $movie.PosterPath "w154"}}" class="rounded" />
+            <img src="{{getImageURL "poster" $movie.PosterPath}}" class="rounded" width="154"/>
             {{else}}
-            <img src="/static/images/no_poster.png" class="rounded" />
+            <img src="/static/images/no_poster.png" class="rounded" width="154"/>
             {{end}}
         </a>
         <span>{{movieName $movie}}</span>

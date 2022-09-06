@@ -9,4 +9,5 @@ const (
 	EnvDBUser       = "DB_USER"
 	EnvDBPassword   = "DB_PASSWORD"
 	EnvTMDBAPIKey   = "TMDB_API_KEY" // This may be configurable via admin panel in the future
+	EnvCachePath    = "CACHE_PATH"
 )
