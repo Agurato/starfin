@@ -30,9 +30,15 @@ func TestGetCachedPath(t *testing.T) {
 
 func TestCacheFile(t *testing.T) {
 	outputFile := "test/image.jpg"
-	err := cache.CacheFile("https://image.tmdb.org/t/p/w342/zwzWCmH72OSC9NA0ipoqw5Zjya8.jpg", outputFile)
+	_, err := cache.CacheFile("https://image.tmdb.org/t/p/w342/zwzWCmH72OSC9NA0ipoqw5Zjya8.jpg", outputFile)
 	assert.NoError(t, err)
 	info, err := os.Stat(cache.GetCachedPath(outputFile))
 	assert.NoError(t, err)
 	assert.Greater(t, info.Size(), int64(0))
+}
+
+func TestTooManyRequests(t *testing.T) {
+	hasToWait, err := cache.CacheFile("https://starfin.free.beeceptor.com", "")
+	assert.NoError(t, err)
+	assert.True(t, hasToWait)
 }

@@ -159,13 +159,19 @@ func TryAddMovieToDB(movie *media.Movie) error {
 		}
 		// Cache poster, backdrop
 		go func() {
-			err := media.CachePoster(movie.PosterPath)
+			hasToWait, err := media.CachePoster(movie.PosterPath)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache poster")
 			}
-			err = media.CacheBackdrop(movie.BackdropPath)
+			if hasToWait {
+				log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache poster later")
+			}
+			hasToWait, err = media.CacheBackdrop(movie.BackdropPath)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache backdrop")
+			}
+			if hasToWait {
+				log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache backdrop later")
 			}
 		}()
 	} else {
@@ -180,9 +186,12 @@ func TryAddMovieToDB(movie *media.Movie) error {
 			db.AddPerson(person)
 			// Cache photos
 			go func() {
-				err := media.CachePhoto(person.Photo)
+				hasToWait, err := media.CachePhoto(person.Photo)
 				if err != nil {
 					log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
+				}
+				if hasToWait {
+					log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache photo later")
 				}
 			}()
 		}

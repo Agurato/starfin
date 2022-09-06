@@ -29,25 +29,25 @@ const (
 	tmdbImageURL = "https://image.tmdb.org/t/p/"
 )
 
-func CachePoster(key string) error {
+func CachePoster(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, poster+key)
 	}
-	return nil
+	return false, nil
 }
 
-func CacheBackdrop(key string) error {
+func CacheBackdrop(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W1280+key, backdrop+key)
 	}
-	return nil
+	return false, nil
 }
 
-func CachePhoto(key string) error {
+func CachePhoto(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, photo+key)
 	}
-	return nil
+	return false, nil
 }
 
 func GetPoster(key string) ([]byte, error) {
