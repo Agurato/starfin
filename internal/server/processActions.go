@@ -157,7 +157,7 @@ func AddVolume(volume *media.Volume) error {
 	go searchMediaFilesInVolume(volume)
 
 	// Add file watch to the volume
-	AddFileWatch(volume)
+	addFileWatch(volume)
 
 	return nil
 }

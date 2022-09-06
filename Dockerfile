@@ -29,4 +29,5 @@ ENV GIN_MODE=release
 ENV PORT=8080
 ENV CACHE_PATH=/cache
 
+EXPOSE ${PORT}
 CMD [ "./starfin" ]
