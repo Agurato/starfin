@@ -16,7 +16,7 @@ func handleFileCreate(path string) error {
 	volume := getVolumeFromFilePath(path)
 
 	if media.IsVideoFileExtension(ext) { // Adding a video
-		if err := AddMovieFromPath(path, volume.ID); err != nil {
+		if err := addMovieFromPath(path, volume.ID); err != nil {
 			return err
 		}
 	} else if media.IsSubtitleFileExtension(ext) { // Adding a subtitle
@@ -71,7 +71,7 @@ func handleFileRenamed(oldPath, newPath string) error {
 			}
 
 			// Fetch movie details and add it to the database
-			if err := AddMovieFromPath(newPath, volume.ID); err != nil {
+			if err := addMovieFromPath(newPath, volume.ID); err != nil {
 				return err
 			}
 		}

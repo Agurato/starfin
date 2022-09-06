@@ -204,6 +204,18 @@ func (m MongoDB) DeleteVolume(hexId string) error {
 	return nil
 }
 
+// IsMoviePathPresent checks if a movie path is present in the database
+func (m MongoDB) IsMoviePathPresent(moviePath string) bool {
+	movie := media.Movie{}
+	return m.moviesColl.FindOne(m.ctx, getMoviePathFilter(moviePath)).Decode(&movie) == nil
+}
+
+// IsSubtitlePathPresent checks if a subtitle path is present in the database
+func (m MongoDB) IsSubtitlePathPresent(subPath string) bool {
+	_, err := m.GetMovieFromExternalSubtitle(subPath)
+	return err == nil
+}
+
 // IsMovieInDB checks if a given movie is already present in DB
 func (m MongoDB) IsMoviePresent(movie *media.Movie) bool {
 	res := m.moviesColl.FindOne(m.ctx, bson.M{"tmdbid": movie.TMDBID})
@@ -229,9 +241,9 @@ func (m MongoDB) AddVolumeSourceToMovie(movie *media.Movie) error {
 }
 
 // GetMovieFromPath retrieves a movie from a path
-func (m MongoDB) GetMovieFromPath(mediaPath string) (movie *media.Movie, err error) {
+func (m MongoDB) GetMovieFromPath(moviePath string) (movie *media.Movie, err error) {
 	movie = &media.Movie{}
-	err = m.moviesColl.FindOne(m.ctx, getMoviePathFilter(mediaPath)).Decode(movie)
+	err = m.moviesColl.FindOne(m.ctx, getMoviePathFilter(moviePath)).Decode(movie)
 	if err != nil {
 		return nil, errors.New("could not get movie from path")
 	}
@@ -256,6 +268,7 @@ func (m MongoDB) UpdateMovieVolumeFile(movie *media.Movie, oldPath string, newVo
 	return nil
 }
 
+// DeleteMovie deletes a movie
 func (m MongoDB) DeleteMovie(ID primitive.ObjectID) error {
 	del, err := m.moviesColl.DeleteOne(m.ctx, bson.M{"_id": ID})
 	if err != nil {
@@ -365,6 +378,12 @@ func (m MongoDB) GetPersonFromID(TMDBID int64) (person media.Person, err error) 
 	return
 }
 
+// GetMovieFromID returns a movie from its TMDB ID
+func (m MongoDB) GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error) {
+	err = m.moviesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&movie)
+	return movie, err
+}
+
 // GetMovies returns a slice of Movie
 func (m MongoDB) GetMovies() (movies []media.Movie) {
 	moviesCur, err := m.moviesColl.Find(m.ctx, bson.M{})
@@ -382,10 +401,21 @@ func (m MongoDB) GetMovies() (movies []media.Movie) {
 	return
 }
 
-// GetMovieFromID returns a movie from its TMDB ID
-func (m MongoDB) GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error) {
-	err = m.moviesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&movie)
-	return movie, err
+// GetMoviesFromVolume retrieves all movies from a specific volume ID
+func (m MongoDB) GetMoviesFromVolume(id primitive.ObjectID) (movies []media.Movie) {
+	moviesCur, err := m.moviesColl.Find(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"fromvolume": id}}}})
+	if err != nil {
+		log.WithField("error", err).Errorln("Unable to retrieve movies from database")
+	}
+	for moviesCur.Next(m.ctx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
 }
 
 // GetMoviesWithActor returns a list of movies starring desired actor ID

@@ -11,6 +11,7 @@ import (
 	"github.com/radovskyb/watcher"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -19,6 +20,7 @@ var (
 	watchedVolumes []*media.Volume
 )
 
+// InitFileWatching starts watching for changes in files
 func InitFileWatching() (err error) {
 	fileWatcher = watcher.New()
 	// fileWatcher.FilterOps(watcher.Create, watcher.Rename)
@@ -30,7 +32,8 @@ func InitFileWatching() (err error) {
 		return err
 	}
 	for _, v := range volumes {
-		AddFileWatch(&v)
+		addFileWatch(&v)
+		SynchronizeFilesAndDB(&v)
 	}
 
 	if err := fileWatcher.Start(1 * time.Second); err != nil {
@@ -40,11 +43,13 @@ func InitFileWatching() (err error) {
 	return nil
 }
 
+// CloseFileWatching stops watching for changes in files
 func CloseFileWatching() {
 	fileWatcher.Close()
 }
 
-func AddFileWatch(v *media.Volume) {
+// addFileWatch adds a file watching on a specified volume
+func addFileWatch(v *media.Volume) {
 	if v.IsRecursive {
 		if err := fileWatcher.AddRecursive(v.Path); err != nil {
 			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
@@ -59,6 +64,7 @@ func AddFileWatch(v *media.Volume) {
 	watchedVolumes = append(watchedVolumes, v)
 }
 
+// fileWatchEventHandler handles file creation, renaming and deletion
 func fileWatchEventHandler() {
 	fileWrites := make(map[string]int64)
 
@@ -125,8 +131,8 @@ func getVolumeFromFilePath(path string) *media.Volume {
 	return nil
 }
 
-// AddMovieFromPath adds a movie from its path and the volume
-func AddMovieFromPath(path string, volumeID primitive.ObjectID) error {
+// addMovieFromPath adds a movie from its path and the volume
+func addMovieFromPath(path string, volumeID primitive.ObjectID) error {
 	// Get subtitle files in same directory
 	subs, err := getRelatedSubFiles(path)
 	if err != nil {
@@ -143,16 +149,16 @@ func AddMovieFromPath(path string, volumeID primitive.ObjectID) error {
 	}
 
 	// Add media to DB
-	if err = TryAddMovieToDB(movie); err != nil {
+	if err = tryAddMovieToDB(movie); err != nil {
 		log.WithField("path", movie.VolumeFiles[0].Path).Errorln(err)
 	}
 
 	return nil
 }
 
-// TryAddMovieToDB checks if the movie already exists in database before adding it
+// tryAddMovieToDB checks if the movie already exists in database before adding it
 // Also adds persons to the database if they don't exist
-func TryAddMovieToDB(movie *media.Movie) error {
+func tryAddMovieToDB(movie *media.Movie) error {
 	if movie.TMDBID == 0 || !db.IsMoviePresent(movie) {
 		if err := db.AddMovie(movie); err != nil {
 			return errors.New("cannot add movie to database")
@@ -200,6 +206,7 @@ func TryAddMovieToDB(movie *media.Movie) error {
 	return nil
 }
 
+// searchMediaFilesInVolume scans a volume and add all movies to the database
 func searchMediaFilesInVolume(volume *media.Volume) {
 	// Channel to add media to DB as they are fetched from TMDB
 	movieChan := make(chan *media.Movie)
@@ -209,9 +216,52 @@ func searchMediaFilesInVolume(volume *media.Volume) {
 	for {
 		movie, more := <-movieChan
 		if more {
-			TryAddMovieToDB(movie)
+			tryAddMovieToDB(movie)
 		} else {
 			break
+		}
+	}
+}
+
+// SynchronizeFilesAndDB synchronizes the database to the current files in the volume
+// It adds the missing movies and subtitles from the database, and removes the movies and subtitles
+// that are not currently in the volume
+func SynchronizeFilesAndDB(volume *media.Volume) {
+	videoFiles, subFiles, err := volume.ListVideoFiles()
+	if err != nil {
+		log.WithField("volume", volume.Path).Errorln("Could not synchronize volume with database")
+	}
+
+	// Add to database all new video files
+	for _, videoFile := range videoFiles {
+		// If movie is not in database
+		if !db.IsMoviePathPresent(videoFile) {
+			handleFileCreate(videoFile)
+		}
+	}
+
+	// Add to database all new subtitle files
+	for _, subFile := range subFiles {
+		// If movie is not in database
+		if !db.IsSubtitlePathPresent(subFile) {
+			handleFileCreate(subFile)
+		}
+	}
+
+	// Get all movies from volume
+	movies := db.GetMoviesFromVolume(volume.ID)
+	for _, movie := range movies {
+		for _, volumeFile := range movie.VolumeFiles {
+			// If the movie is not in the volume files, remove this movie
+			if !slices.Contains(videoFiles, volumeFile.Path) {
+				handleFileRemoved(volumeFile.Path)
+			}
+			// If the subtitle is not in the volume files, remove this subtitle
+			for _, sub := range volumeFile.ExtSubtitles {
+				if !slices.Contains(subFiles, sub.Path) {
+					handleFileRemoved(sub.Path)
+				}
+			}
 		}
 	}
 }

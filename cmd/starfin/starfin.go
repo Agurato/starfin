@@ -30,5 +30,5 @@ func main() {
 	media.InitTMDB()
 
 	server := server.InitServer(db)
-	server.Run() // default port is :8080
+	server.Run()
 }
