@@ -15,36 +15,36 @@ import (
 )
 
 // AddUser checks that the user and password follow specific rules and adds it to the database
-func AddUser(username, password1, password2 string, isAdmin bool) error {
+func AddUser(username, password1, password2 string, isAdmin bool) (*database.User, error) {
 	argon := argon2.DefaultConfig()
 
 	// Check username length
 	if len(username) < 2 || len(username) > 25 {
-		return errors.New("username must be between 2 and 25 characters")
+		return nil, errors.New("username must be between 2 and 25 characters")
 	}
 
 	// Check if username is not already taken
 	if available, err := db.IsUsernameAvailable(username); err != nil {
 		log.Errorln(err)
-		return errors.New("an error occured …")
+		return nil, errors.New("an error occured …")
 	} else if !available {
-		return errors.New("this username is already taken")
+		return nil, errors.New("this username is already taken")
 	}
 
 	// Check if both passwords are equal
 	if password1 != password2 {
-		return errors.New("passwords don't match")
+		return nil, errors.New("passwords don't match")
 	}
 
 	// Check if password is at least 8 characters
 	if len(password1) < 8 {
-		return errors.New("passwords must be at least 8 characters long")
+		return nil, errors.New("passwords must be at least 8 characters long")
 	}
 
 	// Hash & encode password
 	encoded, err := argon.HashEncoded([]byte(password1))
 	if err != nil {
-		return errors.New("an error occured while creating your account")
+		return nil, errors.New("an error occured while creating your account")
 	}
 
 	// Add user to DB
@@ -59,10 +59,10 @@ func AddUser(username, password1, password2 string, isAdmin bool) error {
 	err = db.AddUser(user)
 	if err != nil {
 		log.Errorln(err)
-		return errors.New("user could not be added")
+		return nil, errors.New("user could not be added")
 	}
 
-	return nil
+	return user, nil
 }
 
 // CheckLogin checks that the login is correct and returns the user it corresponds to

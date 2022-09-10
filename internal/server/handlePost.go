@@ -16,6 +16,7 @@ import (
 
 // HandlePOSTStart handles registration (only available for first account)
 func HandlePOSTStart(c *gin.Context) {
+	session := sessions.Default(c)
 	if userNb, err := db.GetUserNb(); err != nil {
 		log.Errorln(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "An error occured …"})
@@ -29,7 +30,8 @@ func HandlePOSTStart(c *gin.Context) {
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	if err := AddUser(username, password1, password2, true); err != nil {
+	user, err := AddUser(username, password1, password2, true)
+	if err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
 			"title":    "Start",
 			"error":    err.Error(),
@@ -39,6 +41,17 @@ func HandlePOSTStart(c *gin.Context) {
 	}
 
 	setupDone = true
+	// Save cookie
+	user.Password = ""
+	session.Set(UserKey, user)
+	if err := session.Save(); err != nil {
+		RenderHTML(c, http.StatusInternalServerError, "pages/login.go.html", gin.H{
+			"title":    "Start",
+			"error":    "Server had trouble to log you in",
+			"username": username,
+		})
+		return
+	}
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
@@ -160,7 +173,7 @@ func HandlePOSTEditUser(c *gin.Context) {
 	isAdmin := c.PostForm("isadmin") == "isadmin"
 
 	if userIdStr == "" {
-		if err := AddUser(username, password1, password2, isAdmin); err != nil {
+		if _, err := AddUser(username, password1, password2, isAdmin); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
 				"userEdit": database.User{},
