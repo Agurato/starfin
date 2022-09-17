@@ -241,10 +241,12 @@ func getPagination(currentPage int64) []Pagination {
 			Dots: true,
 		})
 	}
-	pages = append(pages, Pagination{
-		Number: pageMax,
-		Active: currentPage == pageMax,
-	})
+	if pageMax != 1 {
+		pages = append(pages, Pagination{
+			Number: pageMax,
+			Active: currentPage == pageMax,
+		})
+	}
 
 	return pages
 }
