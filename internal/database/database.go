@@ -41,7 +41,9 @@ type DB interface {
 	GetPersonFromID(TMDBID int64) (person media.Person, err error)
 
 	GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error)
+	GetMovieCount() int64
 	GetMovies() (movies []media.Movie)
+	GetMoviesRange(start, number int) (movies []media.Movie)
 	GetMoviesFromVolume(id primitive.ObjectID) (movies []media.Movie)
 	GetMoviesWithActor(actorID int64) (movies []media.Movie)
 	GetMoviesWithDirector(directorID int64) (movies []media.Movie)

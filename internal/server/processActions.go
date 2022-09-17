@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -196,4 +197,54 @@ func SearchMovies(search string, movies []media.Movie) ([]media.Movie, string, i
 	}
 
 	return filteredMovies, strings.Join(searchSplit, " "), searchYear
+}
+
+type Pagination struct {
+	Number int64
+	Active bool
+	Dots   bool
+}
+
+// getPagination creates a Pagination slice
+func getPagination(currentPage int64) []Pagination {
+	var pages []Pagination
+	pageMax := int64(math.Ceil(float64(db.GetMovieCount()) / float64(nbMoviesPerPage)))
+
+	pages = append(pages, Pagination{
+		Number: 1,
+		Active: currentPage == 1,
+	})
+	// Add dots to link between 1 and current-1
+	if currentPage > 3 {
+		pages = append(pages, Pagination{
+			Dots: true,
+		})
+	}
+	for i := currentPage - 1; i <= currentPage+1; i++ {
+		if i <= 1 || i >= pageMax {
+			continue
+		}
+		if i == currentPage {
+			pages = append(pages, Pagination{
+				Number: i,
+				Active: true,
+			})
+		} else {
+			pages = append(pages, Pagination{
+				Number: i,
+			})
+		}
+	}
+	// Add dots to link between current+1 and max
+	if currentPage < pageMax-2 {
+		pages = append(pages, Pagination{
+			Dots: true,
+		})
+	}
+	pages = append(pages, Pagination{
+		Number: pageMax,
+		Active: currentPage == pageMax,
+	})
+
+	return pages
 }

@@ -3,18 +3,20 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 
 	"github.com/Agurato/starfin/internal/cache"
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
-	"github.com/Agurato/starfin/internal/utilities"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+const (
+	nbMoviesPerPage int = 64
 )
 
 // Handle404 displays the 404 page
@@ -287,24 +289,32 @@ func HandleGetWriter(c *gin.Context) {
 
 // HandleGETMovies displays the list of movies
 func HandleGETMovies(c *gin.Context) {
-	movies := db.GetMovies()
 	var (
 		inputSearch string
 		searchTerm  string
 		searchYear  int
+		page        int
+		err         error
 		ok          bool
 	)
+
+	// Get page number
+	pageParam := c.Param("page")
+	if pageParam == "" {
+		page = 1
+	} else {
+		page, err = strconv.Atoi(pageParam)
+		if err != nil {
+			// TODO: return 404
+		}
+	}
+
+	movies := db.GetMoviesRange((page-1)*nbMoviesPerPage, nbMoviesPerPage)
 
 	// Filter movies from search
 	if inputSearch, ok = c.GetQuery("search"); ok {
 		movies, searchTerm, searchYear = SearchMovies(inputSearch, movies)
 	}
-
-	sort.Slice(movies, func(i, j int) bool {
-		titleI := utilities.RemoveArticle(movies[i].Title)
-		titleJ := utilities.RemoveArticle(movies[j].Title)
-		return titleI < titleJ
-	})
 
 	RenderHTML(c, http.StatusOK, "pages/movies.go.html", gin.H{
 		"title":      "Movies",
@@ -312,6 +322,7 @@ func HandleGETMovies(c *gin.Context) {
 		"search":     inputSearch,
 		"searchTerm": searchTerm,
 		"searchYear": searchYear,
+		"pages":      getPagination(int64(page)),
 	})
 }
 

@@ -106,6 +106,7 @@ func InitServer(datab database.DB) *gin.Engine {
 		needsLogin.GET("/", HandleGETIndex)
 
 		needsLogin.GET("/movies", HandleGETMovies)
+		needsLogin.GET("/movies/page/:page", HandleGETMovies)
 		needsLogin.GET("/movie/:id", HandleGETMovie)
 		needsLogin.GET("/movie/:id/download/:idx", HandleGETDownloadMovie)
 		needsLogin.GET("/movie/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)

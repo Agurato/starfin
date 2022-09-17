@@ -86,3 +86,31 @@ table a:hover {
     background-size: 100%;
     background-repeat: no-repeat;
 }
+
+.pagination .page-link {
+    background-color: transparent !important;
+    color: #9ab;
+    border: none;
+    transition: none;
+    box-shadow: none;
+}
+
+.pagination .active .page-link {
+    color: #567;
+    cursor: default;
+}
+
+.pagination .dots {
+    padding: 0.25rem 0.5rem;
+    font-size: .875rem;
+    color: #9ab;
+    cursor: default;
+}
+
+.pagination .page-item:not(.active):not(.dots):hover {
+    background-color: #303840;
+}
+
+.pagination :not(.active):not(.dots) .page-link:hover {
+    color: #def
+}

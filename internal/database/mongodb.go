@@ -384,9 +384,40 @@ func (m MongoDB) GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err e
 	return movie, err
 }
 
+func (m MongoDB) GetMovieCount() int64 {
+	count, err := m.moviesColl.CountDocuments(m.ctx, bson.M{})
+	if err != nil {
+		return 0
+	}
+	return count
+}
+
 // GetMovies returns a slice of Movie
 func (m MongoDB) GetMovies() (movies []media.Movie) {
-	moviesCur, err := m.moviesColl.Find(m.ctx, bson.M{})
+	options := options.Find()
+	options.SetSort(bson.M{"title": 1})
+	moviesCur, err := m.moviesColl.Find(m.ctx, bson.M{}, options)
+	if err != nil {
+		log.WithField("error", err).Errorln("Unable to retrieve movies from database")
+	}
+	for moviesCur.Next(m.ctx) {
+		var movie media.Movie
+		err := moviesCur.Decode(&movie)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch movie from database")
+		}
+		movies = append(movies, movie)
+	}
+	return
+}
+
+// GetMoviesRange returns a slice of Movie from start to number
+func (m MongoDB) GetMoviesRange(start, number int) (movies []media.Movie) {
+	options := options.Find()
+	options.SetSort(bson.M{"title": 1})
+	options.SetSkip(int64(start))
+	options.SetLimit(int64(number))
+	moviesCur, err := m.moviesColl.Find(m.ctx, bson.M{}, options)
 	if err != nil {
 		log.WithField("error", err).Errorln("Unable to retrieve movies from database")
 	}
