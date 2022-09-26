@@ -25,8 +25,8 @@
         <div class="mb-3">
             <label>Media type</label>
             <div class="form-check">
-                <input class="form-check-input" type="radio" id="mediatype-movie" name="mediatype" value="Movie" checked>
-                <label class="form-check-label" for="mediatype-movie">Movie</label>
+                <input class="form-check-input" type="radio" id="mediatype-film" name="mediatype" value="Film" checked>
+                <label class="form-check-label" for="mediatype-film">Film</label>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="radio" id="mediatype-tv" name="mediatype" value="TV">
@@ -53,8 +53,8 @@
         <div class="mb-3">
             <label>Media type</label>
             <div class="form-check">
-                <input class="form-check-input" type="radio" id="mediatype-movie" name="mediatype" value="Movie" {{ if eq .volume.MediaType "Movie" }}checked{{ end }}>
-                <label class="form-check-label" for="mediatype-movie">Movie</label>
+                <input class="form-check-input" type="radio" id="mediatype-film" name="mediatype" value="Film" {{ if eq .volume.MediaType "Film" }}checked{{ end }}>
+                <label class="form-check-label" for="mediatype-film">Film</label>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="radio" id="mediatype-tv" name="mediatype" value="TV" {{ if eq .volume.MediaType "TV" }}checked{{ end }}>

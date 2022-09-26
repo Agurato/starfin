@@ -163,21 +163,21 @@ func AddVolume(volume *media.Volume) error {
 	return nil
 }
 
-// SearchMovies returns a sublist of movies containing the search terms
+// SearchFilms returns a sublist of films containing the search terms
 // Searches in the title and original title (case-insensitive)
-// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
-func SearchMovies(search string, movies []media.Movie) ([]media.Movie, string, int) {
+// Searches films from specific year (indicated by "y:XXXX" as the last part of the search)
+func SearchFilms(search string, films []media.Film) ([]media.Film, string, int) {
 	search = strings.Trim(search, " ")
 	searchSplit := strings.Split(search, " ")
 	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
 	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]")
 	lastSearchIdx := len(searchSplit) - 1
 	var (
-		searchYear     int
-		filteredMovies []media.Movie
+		searchYear    int
+		filteredFilms []media.Film
 	)
 
-	// If there's a year in last part of search term, return false if the movie is not from that year
+	// If there's a year in last part of search term, return false if the film is not from that year
 	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
 		searchYear, _ = strconv.Atoi(searchSplit[lastSearchIdx][2:])
 		searchSplit = searchSplit[:lastSearchIdx]
@@ -185,18 +185,18 @@ func SearchMovies(search string, movies []media.Movie) ([]media.Movie, string, i
 
 	search = strings.Join(searchSplit, "")
 	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
-	for _, m := range movies {
+	for _, m := range films {
 		if searchYear != 0 && m.ReleaseYear != searchYear {
 			continue
 		}
 		title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
 		originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
 		if strings.Contains(title, search) || strings.Contains(originalTitle, search) {
-			filteredMovies = append(filteredMovies, m)
+			filteredFilms = append(filteredFilms, m)
 		}
 	}
 
-	return filteredMovies, strings.Join(searchSplit, " "), searchYear
+	return filteredFilms, strings.Join(searchSplit, " "), searchYear
 }
 
 type Pagination struct {
@@ -208,7 +208,7 @@ type Pagination struct {
 // getPagination creates a Pagination slice
 func getPagination(currentPage int64) []Pagination {
 	var pages []Pagination
-	pageMax := int64(math.Ceil(float64(db.GetMovieCount()) / float64(nbMoviesPerPage)))
+	pageMax := int64(math.Ceil(float64(db.GetFilmCount()) / float64(nbFilmsPerPage)))
 
 	pages = append(pages, Pagination{
 		Number: 1,

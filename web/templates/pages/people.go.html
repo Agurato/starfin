@@ -15,20 +15,19 @@
     </form>
 </div>
 <div class="container text-secondary text-center mb-2">
-    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}{{if .searchYear}} from {{.searchYear}}{{end}}</span>{{end}}
+    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}</span>{{end}}
 </div>
 <div class="row row-cols-auto gx-0 justify-content-center">
-    {{range $index, $film := .films}}
-    coucou
+    {{range $index, $person := .people}}
     <div class="col item">
-        <a href="/film/{{filmID $film}}">
-            {{if $film.PosterPath}}
-            <img src="{{getImageURL "poster" $film.PosterPath}}" class="rounded" width="154"/>
+        <a href="/person/{{$person.TMDBID}}">
+            {{if $person.Photo}}
+            <img src="{{getImageURL "poster" $person.Photo}}" class="rounded" width="154"/>
             {{else}}
             <img src="/static/images/no_poster.png" class="rounded" width="154"/>
             {{end}}
         </a>
-        <span>{{filmName $film}}</span>
+        <span>{{$person.Name}}</span>
     </div>
     {{end}}
 </div>

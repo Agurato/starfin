@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	nbMoviesPerPage int = 64
+	nbFilmsPerPage int = 64
 )
 
 // Handle404 displays the 404 page
@@ -73,8 +73,8 @@ func HandleGETLogout(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-// HandleGETMovie displays information about a movie
-func HandleGETMovie(c *gin.Context) {
+// HandleGETFilm displays information about a film
+func HandleGETFilm(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -82,7 +82,7 @@ func HandleGETMovie(c *gin.Context) {
 		})
 		return
 	}
-	movie, err := db.GetMovieFromID(id)
+	film, err := db.GetFilmFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -95,7 +95,7 @@ func HandleGETMovie(c *gin.Context) {
 		directors []media.Person
 		writers   []media.Person
 	)
-	for _, cast := range movie.Cast {
+	for _, cast := range film.Cast {
 		actor, err := db.GetPersonFromID(cast.ActorID)
 		if err != nil {
 			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
@@ -108,13 +108,13 @@ func HandleGETMovie(c *gin.Context) {
 			"Photo":     actor.Photo,
 		})
 	}
-	for _, directorID := range movie.Directors {
+	for _, directorID := range film.Directors {
 		person, err := db.GetPersonFromID(directorID)
 		if err == nil {
 			directors = append(directors, person)
 		}
 	}
-	for _, writerID := range movie.Writers {
+	for _, writerID := range film.Writers {
 		person, err := db.GetPersonFromID(writerID)
 		if err == nil {
 			writers = append(writers, person)
@@ -122,15 +122,15 @@ func HandleGETMovie(c *gin.Context) {
 	}
 
 	var volumes []string
-	for _, path := range movie.VolumeFiles {
+	for _, path := range film.VolumeFiles {
 		var volume media.Volume
 		db.GetVolumeFromID(path.FromVolume, &volume)
 		volumes = append(volumes, volume.Name)
 	}
 
-	RenderHTML(c, http.StatusOK, "pages/movie.go.html", gin.H{
-		"title":     fmt.Sprintf("%s (%d)", movie.Title, movie.ReleaseYear),
-		"movie":     movie,
+	RenderHTML(c, http.StatusOK, "pages/film.go.html", gin.H{
+		"title":     fmt.Sprintf("%s (%d)", film.Title, film.ReleaseYear),
+		"film":      film,
 		"directors": directors,
 		"writers":   writers,
 		"cast":      fullCast,
@@ -138,8 +138,8 @@ func HandleGETMovie(c *gin.Context) {
 	})
 }
 
-// HandleGETDownloadMovie downloads a movie file
-func HandleGETDownloadMovie(c *gin.Context) {
+// HandleGETDownloadFilm downloads a film file
+func HandleGETDownloadFilm(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -152,20 +152,20 @@ func HandleGETDownloadMovie(c *gin.Context) {
 		fileIndex = 0
 	}
 
-	movie, err := db.GetMovieFromID(id)
+	film, err := db.GetFilmFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	if fileIndex >= len(movie.VolumeFiles) {
-		fileIndex = len(movie.VolumeFiles) - 1
+	if fileIndex >= len(film.VolumeFiles) {
+		fileIndex = len(film.VolumeFiles) - 1
 	}
-	http.ServeFile(c.Writer, c.Request, movie.VolumeFiles[fileIndex].Path)
+	http.ServeFile(c.Writer, c.Request, film.VolumeFiles[fileIndex].Path)
 }
 
-// HandleGETDownloadMovie downloads a subtitle file
+// HandleGETDownloadFilm downloads a subtitle file
 func HandleGETDownloadSubtitle(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
@@ -174,29 +174,29 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 		})
 		return
 	}
-	movieFileIndex, err := strconv.Atoi(c.Param("idx"))
+	filmFileIndex, err := strconv.Atoi(c.Param("idx"))
 	if err != nil {
-		movieFileIndex = 0
+		filmFileIndex = 0
 	}
 	subFileIndex, err := strconv.Atoi(c.Param("subIdx"))
 	if err != nil {
 		subFileIndex = 0
 	}
 
-	movie, err := db.GetMovieFromID(id)
+	film, err := db.GetFilmFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	if movieFileIndex >= len(movie.VolumeFiles) {
+	if filmFileIndex >= len(film.VolumeFiles) {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	extSubtitles := movie.VolumeFiles[movieFileIndex].ExtSubtitles
+	extSubtitles := film.VolumeFiles[filmFileIndex].ExtSubtitles
 	if subFileIndex >= len(extSubtitles) {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -206,7 +206,46 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, extSubtitles[subFileIndex].Path)
 }
 
-// HandleGetActor displays the actor's bio and the movies they star in
+// HandleGETFilms displays the list of films
+func HandleGETPeople(c *gin.Context) {
+	var (
+		inputSearch string
+		searchTerm  string
+		page        int
+		err         error
+		// ok          bool
+	)
+
+	// Get page number
+	pageParam := c.Param("page")
+	if pageParam == "" {
+		page = 1
+	} else {
+		page, err = strconv.Atoi(pageParam)
+		if err != nil {
+			RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+				"title": "404 - Not Found",
+			})
+		}
+	}
+
+	people := db.GetPeople()
+
+	// Filter films from search
+	// if inputSearch, ok = c.GetQuery("search"); ok {
+	// 	films, searchTerm, searchYear = SearchFilms(inputSearch, people)
+	// }
+
+	RenderHTML(c, http.StatusOK, "pages/people.go.html", gin.H{
+		"title":      "People",
+		"films":      people,
+		"search":     inputSearch,
+		"searchTerm": searchTerm,
+		"pages":      getPagination(int64(page)),
+	})
+}
+
+// HandleGetActor displays the actor's bio and the films they star in
 func HandleGetActor(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {
@@ -223,17 +262,17 @@ func HandleGetActor(c *gin.Context) {
 		return
 	}
 
-	movies := db.GetMoviesWithActor(person.TMDBID)
+	films := db.GetFilmsWithActor(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
 		"job":    "actor",
 		"person": person,
-		"movies": movies,
+		"films":  films,
 	})
 }
 
-// HandleGetDirector displays the directors's bio and the movies they directed
+// HandleGetDirector displays the directors's bio and the films they directed
 func HandleGetDirector(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {
@@ -250,17 +289,17 @@ func HandleGetDirector(c *gin.Context) {
 		return
 	}
 
-	movies := db.GetMoviesWithDirector(person.TMDBID)
+	films := db.GetFilmsWithDirector(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
 		"job":    "director",
 		"person": person,
-		"movies": movies,
+		"films":  films,
 	})
 }
 
-// HandleGetWriter displays the writer's bio and the movies they wrote
+// HandleGetWriter displays the writer's bio and the films they wrote
 func HandleGetWriter(c *gin.Context) {
 	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
 	if err != nil {
@@ -277,18 +316,18 @@ func HandleGetWriter(c *gin.Context) {
 		return
 	}
 
-	movies := db.GetMoviesWithWriter(person.TMDBID)
+	films := db.GetFilmsWithWriter(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
 		"job":    "writer",
 		"person": person,
-		"movies": movies,
+		"films":  films,
 	})
 }
 
-// HandleGETMovies displays the list of movies
-func HandleGETMovies(c *gin.Context) {
+// HandleGETFilms displays the list of films
+func HandleGETFilms(c *gin.Context) {
 	var (
 		inputSearch string
 		searchTerm  string
@@ -305,20 +344,23 @@ func HandleGETMovies(c *gin.Context) {
 	} else {
 		page, err = strconv.Atoi(pageParam)
 		if err != nil {
-			// TODO: return 404
+			RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+				"title": "404 - Not Found",
+			})
 		}
 	}
 
-	movies := db.GetMoviesRange((page-1)*nbMoviesPerPage, nbMoviesPerPage)
+	films := db.GetFilmsRange((page-1)*nbFilmsPerPage, nbFilmsPerPage)
 
-	// Filter movies from search
+	// Filter films from search
 	if inputSearch, ok = c.GetQuery("search"); ok {
-		movies, searchTerm, searchYear = SearchMovies(inputSearch, movies)
+		films, searchTerm, searchYear = SearchFilms(inputSearch, films)
 	}
 
-	RenderHTML(c, http.StatusOK, "pages/movies.go.html", gin.H{
-		"title":      "Movies",
-		"movies":     movies,
+	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
+		"title":      "Films",
+		"error":      "test",
+		"films":      films,
 		"search":     inputSearch,
 		"searchTerm": searchTerm,
 		"searchYear": searchYear,

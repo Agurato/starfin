@@ -116,7 +116,7 @@ func HandlePOSTEditVolume(c *gin.Context) {
 	volumeName := strings.Trim(c.PostForm("name"), " ")
 	volumePath := strings.Trim(c.PostForm("path"), " ")
 	volumeIsRecursive := c.PostForm("recursive") == "recursive"
-	volumeMediaType := c.PostForm("mediatype") // "Movie" or "TV"
+	volumeMediaType := c.PostForm("mediatype") // "Film" or "TV"
 
 	if volumeIdStr == "" {
 		volume := &media.Volume{

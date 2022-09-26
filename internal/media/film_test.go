@@ -31,28 +31,28 @@ func TestGetLetterboxdRating(t *testing.T) {
 	assert.LessOrEqual(t, value, float64(10))
 }
 
-type movieTest struct {
-	fileName  string
-	movieName string
-	year      int
+type filmTest struct {
+	fileName string
+	filmName string
+	year     int
 }
 
-func TestNewMovie(t *testing.T) {
-	expected := []movieTest{
+func TestNewFilm(t *testing.T) {
+	expected := []filmTest{
 		{
-			fileName:  "1917.2019.mkv",
-			movieName: "1917",
-			year:      2019,
+			fileName: "1917.2019.mkv",
+			filmName: "1917",
+			year:     2019,
 		},
 	}
 
 	for _, exp := range expected {
-		movie := NewMovie(exp.fileName, primitive.NewObjectID(), nil)
-		assert.Equal(t, exp.movieName, movie.Name)
-		assert.Equal(t, exp.year, movie.ReleaseYear)
+		film := NewFilm(exp.fileName, primitive.NewObjectID(), nil)
+		assert.Equal(t, exp.filmName, film.Name)
+		assert.Equal(t, exp.year, film.ReleaseYear)
 
-		assert.NoError(t, movie.FetchTMDBID())
-		movie.FetchDetails()
-		assert.Contains(t, movie.Cast, Cast{Character: "Lance Corporal Schofield", ActorID: 146750})
+		assert.NoError(t, film.FetchTMDBID())
+		film.FetchDetails()
+		assert.Contains(t, film.Cast, Cast{Character: "Lance Corporal Schofield", ActorID: 146750})
 	}
 }

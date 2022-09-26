@@ -62,14 +62,14 @@ func InitServer(datab database.DB) *gin.Engine {
 			return len(elem) > 0
 		}), sep)
 	}
-	router.FuncMap["movieID"] = func(movie media.Movie) string {
-		return movie.ID.Hex()
+	router.FuncMap["filmID"] = func(film media.Film) string {
+		return film.ID.Hex()
 	}
-	router.FuncMap["movieName"] = func(movie media.Movie) string {
-		if movie.Title == "" {
-			return movie.Name
+	router.FuncMap["filmName"] = func(film media.Film) string {
+		if film.Title == "" {
+			return film.Name
 		}
-		return movie.Title
+		return film.Title
 	}
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
@@ -105,12 +105,13 @@ func InitServer(datab database.DB) *gin.Engine {
 	{
 		needsLogin.GET("/", HandleGETIndex)
 
-		needsLogin.GET("/movies", HandleGETMovies)
-		needsLogin.GET("/movies/page/:page", HandleGETMovies)
-		needsLogin.GET("/movie/:id", HandleGETMovie)
-		needsLogin.GET("/movie/:id/download/:idx", HandleGETDownloadMovie)
-		needsLogin.GET("/movie/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
+		needsLogin.GET("/films", HandleGETFilms)
+		needsLogin.GET("/films/page/:page", HandleGETFilms)
+		needsLogin.GET("/film/:id", HandleGETFilm)
+		needsLogin.GET("/film/:id/download/:idx", HandleGETDownloadFilm)
+		needsLogin.GET("/film/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
 
+		needsLogin.GET("/people", HandleGETPeople)
 		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
 		needsLogin.GET("/director/:tmdbId", HandleGetDirector)
 		needsLogin.GET("/writer/:tmdbId", HandleGetWriter)

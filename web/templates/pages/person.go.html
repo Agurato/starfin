@@ -34,7 +34,7 @@
             <img class="img-fluid" src="/static/images/no_profile.png" width="342"/>
             {{end}}
         </div>
-        <!-- Movie info -->
+        <!-- Film info -->
         <div class="col-12 col-sm-8">
             <!-- Title(s) -->
             <p class="mb-2">
@@ -51,32 +51,32 @@
             </div>
             <!-- External links -->
             <div>
-                <p>View on <a href="https://www.imdb.com/name/{{.person.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.themoviedb.org/person/{{.person.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
+                <p>View on <a href="https://www.imdb.com/name/{{.person.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.thefilmdb.org/person/{{.person.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
             </div>
         </div>
     </div>
-    <!-- Linked movies -->
+    <!-- Linked films -->
     <hr>
-    <div id="movies" class="container text-center mb-2">
+    <div id="films" class="container text-center mb-2">
         {{if eq .job "actor"}}
-        <span class="job selected">Movies starring {{.person.Name}}</span><span class="job"> | <a href="/director/{{.person.TMDBID}}#movies">Directed by</a> | <a href="/writer/{{.person.TMDBID}}#movies">Written by</a></span>
+        <span class="job selected">Films starring {{.person.Name}}</span><span class="job"> | <a href="/director/{{.person.TMDBID}}#films">Directed by</a> | <a href="/writer/{{.person.TMDBID}}#films">Written by</a></span>
         {{else if eq .job "director"}}
-        <span class="job"><a href="/actor/{{.person.TMDBID}}#movies">Starring</a> | </span><span class="job selected">Movies directed by {{.person.Name}}</span> | <span class="job"><a href="/writer/{{.person.TMDBID}}#movies">Written by</a></span>
+        <span class="job"><a href="/actor/{{.person.TMDBID}}#films">Starring</a> | </span><span class="job selected">Films directed by {{.person.Name}}</span> | <span class="job"><a href="/writer/{{.person.TMDBID}}#films">Written by</a></span>
         {{else if eq .job "writer"}}
-        <span class="job"><a href="/actor/{{.person.TMDBID}}#movies">Starring</a> | <a href="/director/{{.person.TMDBID}}#movies">Directed by</a> | </span><span>Movies written by {{.person.Name}}</span>
+        <span class="job"><a href="/actor/{{.person.TMDBID}}#films">Starring</a> | <a href="/director/{{.person.TMDBID}}#films">Directed by</a> | </span><span>Films written by {{.person.Name}}</span>
         {{end}}
     </div>
     <div class="row row-cols-auto gx-0 justify-content-center">
-        {{range $index, $movie := .movies}}
+        {{range $index, $film := .films}}
         <div class="col item">
-            <a href="/movie/{{movieID $movie}}">
-                {{if $movie.PosterPath}}
-                <img src="{{getImageURL "poster" $movie.PosterPath}}" class="rounded" width="154" />
+            <a href="/film/{{filmID $film}}">
+                {{if $film.PosterPath}}
+                <img src="{{getImageURL "poster" $film.PosterPath}}" class="rounded" width="154" />
                 {{else}}
                 <img src="/static/images/no_poster.png" class="rounded" width="154" />
                 {{end}}
             </a>
-            <span>{{$movie.Title}}</span>
+            <span>{{$film.Title}}</span>
         </div>
         {{end}}
     </div>

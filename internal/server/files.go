@@ -131,63 +131,63 @@ func getVolumeFromFilePath(path string) *media.Volume {
 	return nil
 }
 
-// addMovieFromPath adds a movie from its path and the volume
-func addMovieFromPath(path string, volumeID primitive.ObjectID) error {
+// addFilmFromPath adds a film from its path and the volume
+func addFilmFromPath(path string, volumeID primitive.ObjectID) error {
 	// Get subtitle files in same directory
 	subs, err := getRelatedSubFiles(path)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
 	}
-	movie := media.NewMovie(path, volumeID, subs)
+	film := media.NewFilm(path, volumeID, subs)
 	// Search ID on TMDB
-	if err := movie.FetchTMDBID(); err != nil {
-		log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch movie ID from TMDB")
-		movie.Title = movie.Name
+	if err := film.FetchTMDBID(); err != nil {
+		log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch film ID from TMDB")
+		film.Title = film.Name
 	} else {
-		log.WithField("tmdbID", movie.TMDBID).Infoln("Found media with TMDB ID")
+		log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
 		// Fill info from TMDB
-		movie.FetchDetails()
+		film.FetchDetails()
 	}
 
 	// Add media to DB
-	if err = tryAddMovieToDB(movie); err != nil {
-		log.WithField("path", movie.VolumeFiles[0].Path).Errorln(err)
+	if err = tryAddFilmToDB(film); err != nil {
+		log.WithField("path", film.VolumeFiles[0].Path).Errorln(err)
 	}
 
 	return nil
 }
 
-// tryAddMovieToDB checks if the movie already exists in database before adding it
+// tryAddFilmToDB checks if the film already exists in database before adding it
 // Also adds persons to the database if they don't exist
-func tryAddMovieToDB(movie *media.Movie) error {
-	if movie.TMDBID == 0 || !db.IsMoviePresent(movie) {
-		if err := db.AddMovie(movie); err != nil {
-			return errors.New("cannot add movie to database")
+func tryAddFilmToDB(film *media.Film) error {
+	if film.TMDBID == 0 || !db.IsFilmPresent(film) {
+		if err := db.AddFilm(film); err != nil {
+			return errors.New("cannot add film to database")
 		}
 		// Cache poster, backdrop
 		go func() {
-			hasToWait, err := media.CachePoster(movie.PosterPath)
+			hasToWait, err := media.CachePoster(film.PosterPath)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache poster")
+				log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
 			}
 			if hasToWait {
-				log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache poster later")
+				log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
 			}
-			hasToWait, err = media.CacheBackdrop(movie.BackdropPath)
+			hasToWait, err = media.CacheBackdrop(film.BackdropPath)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err, "movieID": movie.ID}).Errorln("Could not cache backdrop")
+				log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
 			}
 			if hasToWait {
-				log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache backdrop later")
+				log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
 			}
 		}()
 	} else {
-		if err := db.AddVolumeSourceToMovie(movie); err != nil {
-			return errors.New("cannot add volume source to movie in database")
+		if err := db.AddVolumeSourceToFilm(film); err != nil {
+			return errors.New("cannot add volume source to film in database")
 		}
 	}
 
-	for _, personID := range movie.GetCastAndCrewIDs() {
+	for _, personID := range film.GetCastAndCrewIDs() {
 		if !db.IsPersonPresent(personID) {
 			person := media.FetchPersonDetails(personID)
 			db.AddPerson(person)
@@ -198,7 +198,7 @@ func tryAddMovieToDB(movie *media.Movie) error {
 					log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
 				}
 				if hasToWait {
-					log.WithFields(log.Fields{"warning": err, "movieID": movie.ID}).Errorln("Will try to cache photo later")
+					log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache photo later")
 				}
 			}()
 		}
@@ -207,17 +207,17 @@ func tryAddMovieToDB(movie *media.Movie) error {
 	return nil
 }
 
-// searchMediaFilesInVolume scans a volume and add all movies to the database
+// searchMediaFilesInVolume scans a volume and add all films to the database
 func searchMediaFilesInVolume(volume *media.Volume) {
 	// Channel to add media to DB as they are fetched from TMDB
-	movieChan := make(chan *media.Movie)
+	filmChan := make(chan *media.Film)
 
-	go volume.Scan(movieChan)
+	go volume.Scan(filmChan)
 
 	for {
-		movie, more := <-movieChan
+		film, more := <-filmChan
 		if more {
-			tryAddMovieToDB(movie)
+			tryAddFilmToDB(film)
 		} else {
 			break
 		}
@@ -225,7 +225,7 @@ func searchMediaFilesInVolume(volume *media.Volume) {
 }
 
 // SynchronizeFilesAndDB synchronizes the database to the current files in the volume
-// It adds the missing movies and subtitles from the database, and removes the movies and subtitles
+// It adds the missing films and subtitles from the database, and removes the films and subtitles
 // that are not currently in the volume
 func SynchronizeFilesAndDB(volume *media.Volume) {
 	videoFiles, subFiles, err := volume.ListVideoFiles()
@@ -235,25 +235,25 @@ func SynchronizeFilesAndDB(volume *media.Volume) {
 
 	// Add to database all new video files
 	for _, videoFile := range videoFiles {
-		// If movie is not in database
-		if !db.IsMoviePathPresent(videoFile) {
+		// If film is not in database
+		if !db.IsFilmPathPresent(videoFile) {
 			handleFileCreate(videoFile)
 		}
 	}
 
 	// Add to database all new subtitle files
 	for _, subFile := range subFiles {
-		// If movie is not in database
+		// If film is not in database
 		if !db.IsSubtitlePathPresent(subFile) {
 			handleFileCreate(subFile)
 		}
 	}
 
-	// Get all movies from volume
-	movies := db.GetMoviesFromVolume(volume.ID)
-	for _, movie := range movies {
-		for _, volumeFile := range movie.VolumeFiles {
-			// If the movie is not in the volume files, remove this movie
+	// Get all films from volume
+	films := db.GetFilmsFromVolume(volume.ID)
+	for _, film := range films {
+		for _, volumeFile := range film.VolumeFiles {
+			// If the film is not in the volume files, remove this film
 			if !slices.Contains(videoFiles, volumeFile.Path) {
 				handleFileRemoved(volumeFile.Path)
 			}
