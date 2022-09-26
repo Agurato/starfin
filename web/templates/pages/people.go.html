@@ -1,4 +1,4 @@
-{{ define "pages/films.go.html" }}
+{{ define "pages/people.go.html" }}
 {{ template "partials/header.go.html" . }}
 <section>
     {{ if .error }}
@@ -22,9 +22,9 @@
     <div class="col item">
         <a href="/person/{{$person.TMDBID}}">
             {{if $person.Photo}}
-            <img src="{{getImageURL "poster" $person.Photo}}" class="rounded" width="154"/>
+            <img src="{{getImageURL "photo" $person.Photo}}" class="rounded" width="154"/>
             {{else}}
-            <img src="/static/images/no_poster.png" class="rounded" width="154"/>
+            <img src="/static/images/no_profile.png" class="rounded" width="154"/>
             {{end}}
         </a>
         <span>{{$person.Name}}</span>

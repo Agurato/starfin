@@ -238,7 +238,7 @@ func HandleGETPeople(c *gin.Context) {
 
 	RenderHTML(c, http.StatusOK, "pages/people.go.html", gin.H{
 		"title":      "People",
-		"films":      people,
+		"people":     people,
 		"search":     inputSearch,
 		"searchTerm": searchTerm,
 		"pages":      getPagination(int64(page)),
@@ -359,7 +359,6 @@ func HandleGETFilms(c *gin.Context) {
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
 		"title":      "Films",
-		"error":      "test",
 		"films":      films,
 		"search":     inputSearch,
 		"searchTerm": searchTerm,
