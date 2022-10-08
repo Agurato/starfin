@@ -6,25 +6,63 @@
     {{ end }}
 </section>
 <!-- Filter bar -->
-<div class="container mt-2 mb-3">
-    <form action="" method="get">
-        <div class="input-group w-25 mx-auto">
-            <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}"/>
+<div class="container d-flex justify-content-center mt-2 mb-3 filter">
+    <div class="btn-group dropdown mx-2">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            {{if $.filterYear}}{{$.filterYear}}{{else}}Year{{end}}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="/films{{if $.filterGenre}}/genre/{{$.filterGenre}}{{end}}/">Year<span class="ms-2"><i class="fa-solid fa-caret-down"></i></span></a></li>
+            <li>
+                <hr class="dropdown-divider">
+            </li>
+            {{range $decade := .filters.Decades}}
+            <li>
+                <div class="btn-group dropdown">
+                    <a class="dropdown-item" href="/films/year/{{$decade.DecadeYear}}s{{if $.filterGenre}}/genre/{{$.filterGenre}}{{end}}/">{{$decade.DecadeYear}}s</a>
+                    <ul class="dropdown-menu dropdown-menu-dark subdropdown">
+                        {{range $year := $decade.Years}}
+                        <li><a class="dropdown-item" href="/films/year/{{$year}}{{if $.filterGenre}}/genre/{{$.filterGenre}}{{end}}/">{{$year}}</a></li>
+                        {{end}}
+                    </ul>
+                </div>
+            </li>
+            {{end}}
+        </ul>
+    </div>
+    <div class="btn-group dropdown mx-2">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            {{if $.filterGenre}}{{$.filterGenre}}{{else}}Genre{{end}}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/">Genre<span class="ms-2"><i class="fa-solid fa-caret-down"></i></span></a></li>
+            <li>
+                <hr class="dropdown-divider">
+            </li>
+            {{range $genre := .filters.Genres}}
+            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/genre/{{$genre}}/">{{$genre}}</a></li>
+            {{end}}
+        </ul>
+    </div>
+    <form action="" method="get" class="d-inline-flex mx-2">
+        <div class="input-group">
+            <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}" />
             <button type="submit" class="btn btn-outline-secondary" id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
         </div>
     </form>
 </div>
 <div class="container text-secondary text-center mb-2">
-    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}{{if .searchYear}} from {{.searchYear}}{{end}}</span>{{end}}
+    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}{{if .searchYear}} from
+        {{.searchYear}}{{end}}</span>{{end}}
 </div>
 <div class="row row-cols-auto gx-0 justify-content-center">
     {{range $index, $film := .films}}
     <div class="col item">
         <a href="/film/{{filmID $film}}">
             {{if $film.PosterPath}}
-            <img src="{{getImageURL "poster" $film.PosterPath}}" class="rounded" width="154"/>
+            <img src="{{getImageURL "poster" $film.PosterPath}}" class="rounded" width="154" />
             {{else}}
-            <img src="/static/images/no_poster.png" class="rounded" width="154"/>
+            <img src="/static/images/no_poster.png" class="rounded" width="154" />
             {{end}}
         </a>
         <span>{{filmName $film}}</span>
@@ -35,11 +73,19 @@
     <ul class="pagination pagination-sm justify-content-center">
         {{range $index, $page := .pages}}
         {{if $page.Active}}
-        <li class="page-item active"><a class="page-link" href="/films/page/{{$page.Number}}">{{$page.Number}}<span class="sr-only">(current)</span></a></li>
+        <li class="page-item active">
+            <a class="page-link" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{$.filterGenre}}{{end}}/page/{{$page.Number}}/">
+                {{$page.Number}}<span class="sr-only">(current)</span>
+            </a>
+        </li>
         {{else if $page.Dots}}
         <li class="page-item dots">…</li>
         {{else}}
-        <li class="page-item"><a class="page-link" href="/films/page/{{$page.Number}}">{{$page.Number}}</a></li>
+        <li class="page-item">
+            <a class="page-link" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{$.filterGenre}}{{end}}/page/{{$page.Number}}/">
+                {{$page.Number}}
+            </a>
+        </li>
         {{end}}
         {{end}}
     </ul>

@@ -431,6 +431,37 @@ func (m MongoDB) GetFilms() (films []media.Film) {
 	return
 }
 
+func (m MongoDB) GetFilmsFiltered(years []int, genre string) (films []media.Film) {
+	options := options.Find()
+	options.SetSort(bson.M{"title": 1})
+	filter := bson.M{}
+	if len(years) > 0 {
+		var orYears []bson.M
+		for _, year := range years {
+			orYears = append(orYears, bson.M{"releaseyear": year})
+		}
+		filter["$or"] = orYears
+	}
+	if genre != "" {
+		filter["genres"] = primitive.Regex{Pattern: fmt.Sprintf("^%s$", genre), Options: "i"}
+	}
+
+	filmsCur, err := m.filmsColl.Find(m.ctx, filter, options)
+	if err != nil {
+		log.WithField("error", err).Errorln("Unable to retrieve films from database")
+		return
+	}
+	for filmsCur.Next(m.ctx) {
+		var film media.Film
+		err := filmsCur.Decode(&film)
+		if err != nil {
+			log.WithField("error", err).Errorln("Unable to fetch film from database")
+		}
+		films = append(films, film)
+	}
+	return
+}
+
 // GetFilmsRange returns a slice of Film from start to number
 func (m MongoDB) GetFilmsRange(start, number int) (films []media.Film) {
 	options := options.Find()

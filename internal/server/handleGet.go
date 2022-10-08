@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	nbFilmsPerPage int = 64
+	nbFilmsPerPage int64 = 20
 )
 
 // Handle404 displays the 404 page
@@ -236,12 +236,41 @@ func HandleGETPeople(c *gin.Context) {
 	// 	films, searchTerm, searchYear = SearchFilms(inputSearch, people)
 	// }
 
+	people, pages := getPagination(int64(page), people)
+
 	RenderHTML(c, http.StatusOK, "pages/people.go.html", gin.H{
 		"title":      "People",
 		"people":     people,
 		"search":     inputSearch,
 		"searchTerm": searchTerm,
-		"pages":      getPagination(int64(page)),
+		"pages":      pages,
+	})
+}
+
+// HandleGetActor displays the actor's bio and the films they star in
+func HandleGetPerson(c *gin.Context) {
+	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+	person, err := db.GetPersonFromID(tmdbID)
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
+		return
+	}
+
+	films := db.GetFilmsWithActor(person.TMDBID)
+
+	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
+		"title":  person.Name,
+		"job":    "actor",
+		"person": person,
+		"films":  films,
 	})
 }
 
@@ -332,38 +361,35 @@ func HandleGETFilms(c *gin.Context) {
 		inputSearch string
 		searchTerm  string
 		searchYear  int
-		page        int
-		err         error
-		ok          bool
 	)
 
-	// Get page number
-	pageParam := c.Param("page")
-	if pageParam == "" {
-		page = 1
-	} else {
-		page, err = strconv.Atoi(pageParam)
-		if err != nil {
-			RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-				"title": "404 - Not Found",
-			})
-		}
+	yearFilter, years, genre, page, err := ParseParamsFilters(c.Param("params"))
+	if err != nil {
+		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
+			"title": "404 - Not Found",
+		})
 	}
 
-	films := db.GetFilmsRange((page-1)*nbFilmsPerPage, nbFilmsPerPage)
+	// films := db.GetFilmsRange((page-1)*nbFilmsPerPage, nbFilmsPerPage)
+	films := db.GetFilmsFiltered(years, genre)
+
+	films, pages := getPagination(int64(page), films)
 
 	// Filter films from search
-	if inputSearch, ok = c.GetQuery("search"); ok {
-		films, searchTerm, searchYear = SearchFilms(inputSearch, films)
-	}
+	// if inputSearch, ok = c.GetQuery("search"); ok {
+	// 	films, searchTerm, searchYear = SearchFilms(inputSearch, films)
+	// }
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
-		"title":      "Films",
-		"films":      films,
-		"search":     inputSearch,
-		"searchTerm": searchTerm,
-		"searchYear": searchYear,
-		"pages":      getPagination(int64(page)),
+		"title":       "Films",
+		"films":       films,
+		"filters":     filters,
+		"filterYear":  yearFilter,
+		"filterGenre": genre,
+		"search":      inputSearch,
+		"searchTerm":  searchTerm,
+		"searchYear":  searchYear,
+		"pages":       pages,
 	})
 }
 

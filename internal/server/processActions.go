@@ -206,9 +206,9 @@ type Pagination struct {
 }
 
 // getPagination creates a Pagination slice
-func getPagination(currentPage int64) []Pagination {
+func getPagination[T any](currentPage int64, items []T) ([]T, []Pagination) {
 	var pages []Pagination
-	pageMax := int64(math.Ceil(float64(db.GetFilmCount()) / float64(nbFilmsPerPage)))
+	pageMax := int64(math.Ceil(float64(len(items)) / float64(nbFilmsPerPage)))
 
 	pages = append(pages, Pagination{
 		Number: 1,
@@ -248,5 +248,13 @@ func getPagination(currentPage int64) []Pagination {
 		})
 	}
 
-	return pages
+	itemsIndexStart := (currentPage - 1) * nbFilmsPerPage
+	itemsIndexEnd := itemsIndexStart + nbFilmsPerPage
+
+	var pagedItems []T
+	for i := itemsIndexStart; i < itemsIndexEnd && i < int64(len(items)); i++ {
+		pagedItems = append(pagedItems, items[i])
+	}
+
+	return pagedItems, pages
 }

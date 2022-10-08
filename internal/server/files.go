@@ -36,6 +36,8 @@ func InitFileWatching() (err error) {
 		SynchronizeFilesAndDB(&v)
 	}
 
+	initFilters()
+
 	if err := fileWatcher.Start(1 * time.Second); err != nil {
 		log.Fatalln(err)
 	}
@@ -164,6 +166,7 @@ func tryAddFilmToDB(film *media.Film) error {
 		if err := db.AddFilm(film); err != nil {
 			return errors.New("cannot add film to database")
 		}
+		addToFilters(film)
 		// Cache poster, backdrop
 		go func() {
 			hasToWait, err := media.CachePoster(film.PosterPath)
