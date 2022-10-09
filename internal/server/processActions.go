@@ -2,9 +2,9 @@ package server
 
 import (
 	"errors"
+	"math"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Agurato/starfin/internal/database"
@@ -162,38 +162,85 @@ func AddVolume(volume *media.Volume) error {
 	return nil
 }
 
-// SearchMovies returns a sublist of movies containing the search terms
+// SearchFilms returns a sublist of films containing the search terms
 // Searches in the title and original title (case-insensitive)
-// Searches movies from specific year (indicated by "y:XXXX" as the last part of the search)
-func SearchMovies(search string, movies []media.Movie) ([]media.Movie, string, int) {
+// Searches films from specific year (indicated by "y:XXXX" as the last part of the search)
+func SearchFilms(search string, films []media.Film) []media.Film {
 	search = strings.Trim(search, " ")
-	searchSplit := strings.Split(search, " ")
-	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
 	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]")
-	lastSearchIdx := len(searchSplit) - 1
 	var (
-		searchYear     int
-		filteredMovies []media.Movie
+		filteredFilms []media.Film
 	)
 
-	// If there's a year in last part of search term, return false if the movie is not from that year
-	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
-		searchYear, _ = strconv.Atoi(searchSplit[lastSearchIdx][2:])
-		searchSplit = searchSplit[:lastSearchIdx]
-	}
-
-	search = strings.Join(searchSplit, "")
 	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
-	for _, m := range movies {
-		if searchYear != 0 && m.ReleaseYear != searchYear {
-			continue
-		}
+	for _, m := range films {
 		title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
 		originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
 		if strings.Contains(title, search) || strings.Contains(originalTitle, search) {
-			filteredMovies = append(filteredMovies, m)
+			filteredFilms = append(filteredFilms, m)
 		}
 	}
 
-	return filteredMovies, strings.Join(searchSplit, " "), searchYear
+	return filteredFilms
+}
+
+type Pagination struct {
+	Number int64
+	Active bool
+	Dots   bool
+}
+
+// getPagination creates a Pagination slice
+func getPagination[T any](currentPage int64, items []T) ([]T, []Pagination) {
+	var pages []Pagination
+	pageMax := int64(math.Ceil(float64(len(items)) / float64(nbFilmsPerPage)))
+
+	pages = append(pages, Pagination{
+		Number: 1,
+		Active: currentPage == 1,
+	})
+	// Add dots to link between 1 and current-1
+	if currentPage > 3 {
+		pages = append(pages, Pagination{
+			Dots: true,
+		})
+	}
+	for i := currentPage - 1; i <= currentPage+1; i++ {
+		if i <= 1 || i >= pageMax {
+			continue
+		}
+		if i == currentPage {
+			pages = append(pages, Pagination{
+				Number: i,
+				Active: true,
+			})
+		} else {
+			pages = append(pages, Pagination{
+				Number: i,
+			})
+		}
+	}
+	// Add dots to link between current+1 and max
+	if currentPage < pageMax-2 {
+		pages = append(pages, Pagination{
+			Dots: true,
+		})
+	}
+	if pageMax > 1 {
+		pages = append(pages, Pagination{
+			Number: pageMax,
+			Active: currentPage == pageMax,
+		})
+	}
+
+	// Return only part of the items (corresponding to the current page)
+	itemsIndexStart := (currentPage - 1) * nbFilmsPerPage
+	itemsIndexEnd := itemsIndexStart + nbFilmsPerPage
+
+	var pagedItems []T
+	for i := itemsIndexStart; i < itemsIndexEnd && i < int64(len(items)); i++ {
+		pagedItems = append(pagedItems, items[i])
+	}
+
+	return pagedItems, pages
 }

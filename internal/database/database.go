@@ -24,30 +24,34 @@ type DB interface {
 	AddVolume(volume *media.Volume) error
 	DeleteVolume(hexId string) error
 
-	IsMoviePresent(MovieFile *media.Movie) bool
-	IsMoviePathPresent(moviePath string) bool
+	IsFilmPresent(FilmFile *media.Film) bool
+	IsFilmPathPresent(filmPath string) bool
 	IsSubtitlePathPresent(subPath string) bool
-	AddMovie(MovieFile *media.Movie) error
-	AddVolumeSourceToMovie(MovieFile *media.Movie) error
-	GetMovieFromPath(moviePath string) (movie *media.Movie, err error)
-	UpdateMovieVolumeFile(movie *media.Movie, oldPath string, newVolumeFile media.VolumeFile) error
-	DeleteMovie(id primitive.ObjectID) error
-	DeleteMovieVolumeFile(path string) error
-	RemoveSubtitleFile(MoviePath, subtitlePath string) error
+	AddFilm(FilmFile *media.Film) error
+	AddVolumeSourceToFilm(FilmFile *media.Film) error
+	GetFilmFromPath(filmPath string) (film *media.Film, err error)
+	UpdateFilmVolumeFile(film *media.Film, oldPath string, newVolumeFile media.VolumeFile) error
+	DeleteFilm(id primitive.ObjectID) error
+	DeleteFilmVolumeFile(path string) error
+	RemoveSubtitleFile(FilmPath, subtitlePath string) error
 
 	IsPersonPresent(personID int64) bool
 	AddPerson(person media.Person)
 	AddActors(actors []media.Person)
 	GetPersonFromID(TMDBID int64) (person media.Person, err error)
+	GetPeople() (people []media.Person)
 
-	GetMovieFromID(id primitive.ObjectID) (movie media.Movie, err error)
-	GetMovies() (movies []media.Movie)
-	GetMoviesFromVolume(id primitive.ObjectID) (movies []media.Movie)
-	GetMoviesWithActor(actorID int64) (movies []media.Movie)
-	GetMoviesWithDirector(directorID int64) (movies []media.Movie)
-	GetMoviesWithWriter(writerID int64) (movies []media.Movie)
-	AddSubtitleToMoviePath(movieFilePath string, sub media.Subtitle) error
-	GetMovieFromExternalSubtitle(subtitlePath string) (media.Movie, error)
+	GetFilmFromID(id primitive.ObjectID) (film media.Film, err error)
+	GetFilmCount() int64
+	GetFilms() (films []media.Film)
+	GetFilmsFiltered(years []int, genre, country string) (films []media.Film)
+	GetFilmsRange(start, number int) (films []media.Film)
+	GetFilmsFromVolume(id primitive.ObjectID) (films []media.Film)
+	GetFilmsWithActor(actorID int64) (films []media.Film)
+	GetFilmsWithDirector(directorID int64) (films []media.Film)
+	GetFilmsWithWriter(writerID int64) (films []media.Film)
+	AddSubtitleToFilmPath(filmFilePath string, sub media.Subtitle) error
+	GetFilmFromExternalSubtitle(subtitlePath string) (media.Film, error)
 }
 
 // User is a user

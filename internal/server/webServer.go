@@ -13,6 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
 	"github.com/samber/lo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/Agurato/starfin/internal/context"
 	"github.com/Agurato/starfin/internal/database"
@@ -52,27 +54,25 @@ func InitServer(datab database.DB) *gin.Engine {
 		return a + b
 	}
 	router.FuncMap["basename"] = filepath.Base
-	router.FuncMap["countryName"] = func(code string) string {
-		country, _ := gountries.New().FindCountryByAlpha(code)
-		return country.Name.Common
-	}
+	router.FuncMap["countryName"] = getCountryName
 	router.FuncMap["join"] = strings.Join
 	router.FuncMap["joinStrings"] = func(sep string, elems ...string) string {
 		return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
 			return len(elem) > 0
 		}), sep)
 	}
-	router.FuncMap["movieID"] = func(movie media.Movie) string {
-		return movie.ID.Hex()
+	router.FuncMap["filmID"] = func(film media.Film) string {
+		return film.ID.Hex()
 	}
-	router.FuncMap["movieName"] = func(movie media.Movie) string {
-		if movie.Title == "" {
-			return movie.Name
+	router.FuncMap["filmName"] = func(film media.Film) string {
+		if film.Title == "" {
+			return film.Name
 		}
-		return movie.Title
+		return film.Title
 	}
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
+	router.FuncMap["title"] = cases.Title(language.English).String
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
 	router.FuncMap["getImageURL"] = func(imageType, key string) string {
 		return "/cache/" + imageType + key
@@ -105,11 +105,15 @@ func InitServer(datab database.DB) *gin.Engine {
 	{
 		needsLogin.GET("/", HandleGETIndex)
 
-		needsLogin.GET("/movies", HandleGETMovies)
-		needsLogin.GET("/movie/:id", HandleGETMovie)
-		needsLogin.GET("/movie/:id/download/:idx", HandleGETDownloadMovie)
-		needsLogin.GET("/movie/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
+		needsLogin.GET("/films/*params", HandleGETFilms)
+		// needsLogin.GET("/films/year/*year", HandleGETFilms)
+		// needsLogin.GET("/films/page/:page", HandleGETFilms)
+		needsLogin.GET("/film/:id", HandleGETFilm)
+		needsLogin.GET("/film/:id/download/:idx", HandleGETDownloadFilm)
+		needsLogin.GET("/film/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
 
+		needsLogin.GET("/people", HandleGETPeople)
+		needsLogin.GET("/person/:tmdbId", HandleGetPerson)
 		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
 		needsLogin.GET("/director/:tmdbId", HandleGetDirector)
 		needsLogin.GET("/writer/:tmdbId", HandleGetWriter)
@@ -203,4 +207,9 @@ func AdminRequired(c *gin.Context) {
 		return
 	}
 	c.Next()
+}
+
+func getCountryName(code string) string {
+	country, _ := gountries.New().FindCountryByAlpha(code)
+	return country.Name.Common
 }

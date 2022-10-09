@@ -14,7 +14,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type Movie struct {
+type Film struct {
 	ID          primitive.ObjectID `bson:"_id"`
 	VolumeFiles []VolumeFile
 	Name        string // Name fetched from filename
@@ -42,15 +42,15 @@ type Movie struct {
 	ProdCountries    []string
 }
 
-// NewMovie instantiates a Movie struct implementing
-func NewMovie(file string, volumeID primitive.ObjectID, subFiles []string) *Movie {
+// NewFilm instantiates a Film struct implementing
+func NewFilm(file string, volumeID primitive.ObjectID, subFiles []string) *Film {
 	filename := filepath.Base(file)
 	mediaInfo, err := GetMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
 	if err != nil {
 		log.WithField("file", file).Errorln("Could not get media info")
 	}
 	subtitles := GetExternalSubtitles(file, subFiles)
-	movie := Movie{
+	film := Film{
 		ID: primitive.NewObjectID(),
 		VolumeFiles: []VolumeFile{{
 			Path:         file,
@@ -71,23 +71,23 @@ func NewMovie(file string, volumeID primitive.ObjectID, subFiles []string) *Movi
 		if len(potentialYear) == 4 {
 			year, err := strconv.Atoi(potentialYear)
 			if err == nil {
-				movie.ReleaseYear = year
+				film.ReleaseYear = year
 				break
 			}
 		}
 		if len(potentialYear) == 6 && potentialYear[0] == '(' && potentialYear[5] == ')' {
 			year, err := strconv.Atoi(potentialYear[1:5])
 			if err == nil {
-				movie.ReleaseYear = year
+				film.ReleaseYear = year
 				break
 			}
 		}
 	}
-	// The movie name should be right before the movie year
-	if movie.ReleaseYear > 0 && i >= 0 {
-		movie.Name = strings.Join(parts[:i], " ")
+	// The film name should be right before the film year
+	if film.ReleaseYear > 0 && i >= 0 {
+		film.Name = strings.Join(parts[:i], " ")
 	} else {
-		movie.Name = strings.Join(parts, " ")
+		film.Name = strings.Join(parts, " ")
 	}
 
 	// Get resolution from name
@@ -96,20 +96,20 @@ func NewMovie(file string, volumeID primitive.ObjectID, subFiles []string) *Movi
 	for i := len(parts) - 1; i >= 0; i-- {
 		potentialRes := parts[i]
 		if resolutionPRegex.MatchString(potentialRes) || resolutionKRegex.MatchString(potentialRes) {
-			movie.Resolution = potentialRes
+			film.Resolution = potentialRes
 			break
 		}
 	}
 	// If resolution not found, get it from MediaInfo video
-	if movie.Resolution == "" {
-		movie.Resolution = mediaInfo.Resolution
+	if film.Resolution == "" {
+		film.Resolution = mediaInfo.Resolution
 	}
 
-	return &movie
+	return &film
 }
 
 // FetchMediaID fetches media ID from TMDB and stores it
-func (m *Movie) FetchTMDBID() error {
+func (m *Film) FetchTMDBID() error {
 	urlOptions := make(map[string]string)
 	if m.ReleaseYear != 0 {
 		urlOptions["year"] = strconv.Itoa(m.ReleaseYear)
@@ -119,7 +119,7 @@ func (m *Movie) FetchTMDBID() error {
 		return err
 	}
 	if len(tmdbSearchRes.Results) == 0 {
-		return errors.New("movie not found")
+		return errors.New("film not found")
 	}
 
 	mostPopular := float32(0)
@@ -136,11 +136,11 @@ func (m *Movie) FetchTMDBID() error {
 }
 
 // FetchDetails fetches media details from TMDB and stores it
-func (m *Movie) FetchDetails() {
+func (m *Film) FetchDetails() {
 	// Get details
 	details, err := TMDBClient.GetMovieDetails(m.TMDBID, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie details from TMDB")
+		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch film details from TMDB")
 	}
 	m.IMDbID = details.IMDbID
 	m.Title = details.Title
@@ -162,7 +162,7 @@ func (m *Movie) FetchDetails() {
 	// Set classification
 	releaseDates, err := TMDBClient.GetMovieReleaseDates(m.TMDBID)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie release dates from TMDB")
+		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch film release dates from TMDB")
 	} else {
 		for _, releasesCountry := range releaseDates.Results {
 			if releasesCountry.Iso3166_1 == "US" {
@@ -175,7 +175,7 @@ func (m *Movie) FetchDetails() {
 	// Set cast and crew
 	credits, err := TMDBClient.GetMovieCredits(m.TMDBID, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch movie credits from TMDB")
+		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch film credits from TMDB")
 	} else {
 		for _, crew := range credits.Crew {
 			if crew.Job == "Director" {
@@ -198,7 +198,7 @@ func (m *Movie) FetchDetails() {
 	}
 }
 
-func (m Movie) GetCastAndCrewIDs() (ids []int64) {
+func (m Film) GetCastAndCrewIDs() (ids []int64) {
 	for _, cast := range m.Cast {
 		ids = append(ids, cast.ActorID)
 	}

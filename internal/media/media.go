@@ -78,10 +78,10 @@ func IsSubtitleFileExtension(ext string) bool {
 // sub:   BigBuckBunny.srt
 // Language can be inferred from the subtitle file name, following ISO 639-1 codes. Ex:
 // sub:   BigBuckBunny.en.srt
-func GetExternalSubtitles(movieFilePath string, subFiles []string) (subs []Subtitle) {
-	dir := filepath.Dir(movieFilePath)
-	movieFileBase := filepath.Base(movieFilePath)
-	movieFileNoExt := movieFileBase[:len(movieFileBase)-len(filepath.Ext(movieFileBase))]
+func GetExternalSubtitles(filmFilePath string, subFiles []string) (subs []Subtitle) {
+	dir := filepath.Dir(filmFilePath)
+	filmFileBase := filepath.Base(filmFilePath)
+	filmFileNoExt := filmFileBase[:len(filmFileBase)-len(filepath.Ext(filmFileBase))]
 
 	for _, subFile := range subFiles {
 		// Checks same folder
@@ -89,12 +89,12 @@ func GetExternalSubtitles(movieFilePath string, subFiles []string) (subs []Subti
 			continue
 		}
 		subFileBase := filepath.Base(subFile)
-		// Checks sub file start with the same name as movie file
-		if !strings.HasPrefix(subFileBase, movieFileNoExt) {
+		// Checks sub file start with the same name as film file
+		if !strings.HasPrefix(subFileBase, filmFileNoExt) {
 			continue
 		}
 
-		subFileEnd := subFileBase[len(movieFileNoExt):] // eg: .en.srt
+		subFileEnd := subFileBase[len(filmFileNoExt):] // eg: .en.srt
 		subFileExt := filepath.Ext(subFileBase)
 		// If no language info
 		if len(subFileEnd) == len(subFileExt) {
@@ -151,13 +151,13 @@ func GetLetterboxdRating(imdbId string) string {
 		return ""
 	}
 
-	movieUrl, exists := doc.Find("#content > div > div > section > ul > li:nth-child(1) > div").First().Attr("data-target-link")
+	filmUrl, exists := doc.Find("#content > div > div > section > ul > li:nth-child(1) > div").First().Attr("data-target-link")
 	if !exists {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
 		return ""
 	}
 
-	res, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", movieUrl))
+	res, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", filmUrl))
 	if err != nil {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
 		return ""

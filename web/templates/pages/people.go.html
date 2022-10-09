@@ -1,0 +1,48 @@
+{{ define "pages/people.go.html" }}
+{{ template "partials/header.go.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<!-- Filter bar -->
+<div class="container mt-2 mb-3">
+    <form action="" method="get">
+        <div class="input-group w-25 mx-auto">
+            <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}"/>
+            <button type="submit" class="btn btn-outline-secondary" id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+    </form>
+</div>
+<div class="container text-secondary text-center mb-2">
+    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}</span>{{end}}
+</div>
+<div class="row row-cols-auto gx-0 justify-content-center">
+    {{range $index, $person := .people}}
+    <div class="col item">
+        <a href="/person/{{$person.TMDBID}}">
+            {{if $person.Photo}}
+            <img src="{{getImageURL "photo" $person.Photo}}" class="rounded" width="154"/>
+            {{else}}
+            <img src="/static/images/no_profile.png" class="rounded" width="154"/>
+            {{end}}
+        </a>
+        <span>{{$person.Name}}</span>
+    </div>
+    {{end}}
+</div>
+<nav class="mt-3" aria-label="Page navigation">
+    <ul class="pagination pagination-sm justify-content-center">
+        {{range $index, $page := .pages}}
+        {{if $page.Active}}
+        <li class="page-item active"><a class="page-link" href="/films/page/{{$page.Number}}">{{$page.Number}}<span class="sr-only">(current)</span></a></li>
+        {{else if $page.Dots}}
+        <li class="page-item dots">…</li>
+        {{else}}
+        <li class="page-item"><a class="page-link" href="/films/page/{{$page.Number}}">{{$page.Number}}</a></li>
+        {{end}}
+        {{end}}
+    </ul>
+  </nav>
+{{ template "partials/footer.go.html" . }}
+{{ end }}

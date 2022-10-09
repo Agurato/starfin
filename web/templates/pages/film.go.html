@@ -1,4 +1,4 @@
-{{ define "pages/movie.go.html" }}
+{{ define "pages/film.go.html" }}
 {{ template "partials/header.go.html" . }}
 <style>
     header {
@@ -39,7 +39,7 @@
         margin-right: 5px;
     }
 
-    a.dl-movie {
+    a.dl-film {
         color: white;
         float: right;
     }
@@ -113,37 +113,37 @@
     <p style="color:red">{{ .error }}</p>
     {{ end }}
 </section>
-{{if .movie.BackdropPath}}
-<img class="backdrop" src="{{getImageURL "backdrop" .movie.BackdropPath}}" ondragstart="retFalse()" width="1280"/>
+{{if .film.BackdropPath}}
+<img class="backdrop" src="{{getImageURL "backdrop" .film.BackdropPath}}" ondragstart="retFalse()" width="1280"/>
 {{end}}
 <div class="container">
     <div class="row mt-5">
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
-            {{if .movie.PosterPath}}
-            <img class="img-fluid" src="{{getImageURL "poster" .movie.PosterPath}}" width="342"/>
+            {{if .film.PosterPath}}
+            <img class="img-fluid" src="{{getImageURL "poster" .film.PosterPath}}" width="342"/>
             {{else}}
             <img class="img-fluid" src="/static/images/no_poster.png" width="342"/>
             {{end}}
         </div>
-        <!-- Movie info -->
+        <!-- Film info -->
         <div class="col-12 col-sm-8">
             <!-- Title(s) -->
             <p class="mb-2">
-                <span class="fs-1 fw-bold me-3">{{movieName .movie}}</span>
-                {{if ne .movie.Title .movie.OriginalTitle}}
-                <span class="fs-3 fst-italic d-inline-block">{{.movie.OriginalTitle}}</span>
+                <span class="fs-1 fw-bold me-3">{{filmName .film}}</span>
+                {{if ne .film.Title .film.OriginalTitle}}
+                <span class="fs-3 fst-italic d-inline-block">{{.film.OriginalTitle}}</span>
                 {{end}}
             </p>
             <!-- General info -->
             <div class="row row-cols-auto my-3">
-                <div class="col mb-2"><span class="fw-bold">{{.movie.ReleaseYear}}</span></div>
-                <div class="col">{{.movie.Runtime}} min</div>
-                {{if .movie.Classification}}<div class="col"><span class="classif">{{.movie.Classification}}</span></div>{{end}}
-                {{if .movie.IMDbRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="IMDb rating"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.movie.IMDbRating}}</div>{{end}}
-                {{if .movie.LetterboxdRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Letterboxd rating"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.movie.LetterboxdRating}}</div>{{end}}
+                <div class="col mb-2"><span class="fw-bold">{{.film.ReleaseYear}}</span></div>
+                <div class="col">{{.film.Runtime}} min</div>
+                {{if .film.Classification}}<div class="col"><span class="classif">{{.film.Classification}}</span></div>{{end}}
+                {{if .film.IMDbRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="IMDb rating"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.film.IMDbRating}}</div>{{end}}
+                {{if .film.LetterboxdRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Letterboxd rating"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.film.LetterboxdRating}}</div>{{end}}
                 <div class="col">
-                    {{range $_, $country := .movie.ProdCountries}}
+                    {{range $_, $country := .film.ProdCountries}}
                     <span class="flag-icon flag-icon-{{lower $country}}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{countryName $country}}"></span>
                     {{end}}
                 </div>
@@ -153,11 +153,11 @@
                 <table class="table table-borderless table-sm text-white">
                     <tbody>
                         <tr>
-                            <td>{{$genresLength := len .movie.Genres}}{{if gt $genresLength 1}}Genres{{else}}Genre{{end}}</td>
-                            <th>{{join .movie.Genres ", "}}</th>
+                            <td>{{$genresLength := len .film.Genres}}{{if gt $genresLength 1}}Genres{{else}}Genre{{end}}</td>
+                            <th>{{join .film.Genres ", "}}</th>
                         </tr>
                         <tr>
-                            <td>{{$directorsLength := len .movie.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}}</td>
+                            <td>{{$directorsLength := len .film.Directors}}{{if gt $directorsLength 1}}Directors{{else}}Director{{end}}</td>
                             <th>
                                 {{range $idx, $dir := .directors}}
                                 {{$idx := add $idx 1}}
@@ -166,7 +166,7 @@
                             </th>
                         </tr>
                         <tr>
-                            <td>{{$writersLength := len .movie.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}}</td>
+                            <td>{{$writersLength := len .film.Writers}}{{if gt $writersLength 1}}Writers{{else}}Writer{{end}}</td>
                             <th>
                                 {{range $idx, $dir := .writers}}
                                 {{$idx := add $idx 1}}
@@ -177,12 +177,12 @@
                     </tbody>
                 </table>
                 <!-- Tagline & overview -->
-                <p class="fst-italic">{{.movie.Tagline}}</p>
-                <p>{{.movie.Overview}}</p>
+                <p class="fst-italic">{{.film.Tagline}}</p>
+                <p>{{.film.Overview}}</p>
             </div>
             <!-- External links -->
             <div>
-                <p>View on <a href="https://www.imdb.com/title/{{.movie.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.themoviedb.org/movie/{{.movie.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
+                <p>View on <a href="https://www.imdb.com/title/{{.film.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.thefilmdb.org/film/{{.film.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
             </div>
             <!-- Cast -->
             <div class="cast">
@@ -206,19 +206,19 @@
     <div>
         <!-- File selection -->
         <ul class="nav nav-tabs nav-fill" id="filesTabs" role="tablist">
-            {{range $idx, $path := .movie.VolumeFiles}}
+            {{range $idx, $path := .film.VolumeFiles}}
             <li class="nav-item" role="presentation">
                 <span class="nav-link {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}-tab" data-bs-toggle="tab" data-bs-target="#files-{{$idx}}" type="button" role="tab" aria-controls="files-{{$idx}}" aria-selected="true">
-                    {{joinStrings " - " $.movie.Name $.movie.Resolution $path.Info.FileSize}}
+                    {{joinStrings " - " $.film.Name $.film.Resolution $path.Info.FileSize}}
                     <!-- Download button -->
-                    <a href="/movie/{{movieID $.movie}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-movie"><i class="fa-solid fa-download"></i></a>
+                    <a href="/film/{{filmID $.film}}/download/{{$idx}}" download="{{basename $path.Path}}" class="dl-film"><i class="fa-solid fa-download"></i></a>
                 </span>
             </li>
             {{end}}
         </ul>
         <!-- MediaInfo display -->
         <div class="tab-content mb-4 p-2" id="filesTabsContent">
-            {{range $idx, $path := .movie.VolumeFiles}}
+            {{range $idx, $path := .film.VolumeFiles}}
             {{$extSubLength := len $path.ExtSubtitles}}
             <div class="tab-pane fade show {{if eq $idx 0}}active{{end}}" id="files-{{$idx}}" role="tabpanel" aria-labelledby="files-{{$idx}}-tab">
                 <!-- MediaInfo categories -->
@@ -383,7 +383,7 @@
                             {{if gt $subIdx 0}}
                             <hr>
                             {{end}}
-                            <div class="mb-2"><a href="/movie/{{movieID $.movie}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
+                            <div class="mb-2"><a href="/film/{{filmID $.film}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
                             <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>

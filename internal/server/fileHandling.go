@@ -16,7 +16,7 @@ func handleFileCreate(path string) error {
 	volume := getVolumeFromFilePath(path)
 
 	if media.IsVideoFileExtension(ext) { // Adding a video
-		if err := addMovieFromPath(path, volume.ID); err != nil {
+		if err := addFilmFromPath(path, volume.ID); err != nil {
 			return err
 		}
 	} else if media.IsSubtitleFileExtension(ext) { // Adding a subtitle
@@ -24,7 +24,7 @@ func handleFileCreate(path string) error {
 		mediaPaths, subtitle := getRelatedMediaFiles(path)
 		for _, mediaPath := range mediaPaths {
 			// Add it to the database
-			err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
+			err := db.AddSubtitleToFilmPath(mediaPath, *subtitle)
 			if err != nil {
 				log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
 			}
@@ -45,33 +45,33 @@ func handleFileRenamed(oldPath, newPath string) error {
 		if err != nil {
 			log.WithField("path", newPath).Errorln("Error with file rename: could not get related subtitles")
 		}
-		// Create movie
-		newMovie := media.NewMovie(newPath, volume.ID, subFiles)
-		err = newMovie.FetchTMDBID()
+		// Create film
+		newFilm := media.NewFilm(newPath, volume.ID, subFiles)
+		err = newFilm.FetchTMDBID()
 		if err != nil {
 			log.WithFields(log.Fields{"path": newPath, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
 			// TODO
 		}
 
-		// Get the current movie struct from mongo
-		oldMovie, err := db.GetMovieFromPath(oldPath)
+		// Get the current film struct from mongo
+		oldFilm, err := db.GetFilmFromPath(oldPath)
 		if err != nil {
-			return errors.New("could not get movie from path")
+			return errors.New("could not get film from path")
 		}
 
-		if oldMovie.TMDBID == newMovie.TMDBID {
+		if oldFilm.TMDBID == newFilm.TMDBID {
 			// If they have the same TMDB ID, replace the correct volumeFile
-			if err = db.UpdateMovieVolumeFile(oldMovie, oldPath, newMovie.VolumeFiles[0]); err != nil {
+			if err = db.UpdateFilmVolumeFile(oldFilm, oldPath, newFilm.VolumeFiles[0]); err != nil {
 				log.WithFields(log.Fields{"oldPath": oldPath}).Errorln(err)
 			}
 		} else {
-			// If they don't have the same TMDB ID, remove the path from the previous movie
-			if err := db.DeleteMovieVolumeFile(oldPath); err != nil {
+			// If they don't have the same TMDB ID, remove the path from the previous film
+			if err := db.DeleteFilmVolumeFile(oldPath); err != nil {
 				return err
 			}
 
-			// Fetch movie details and add it to the database
-			if err := addMovieFromPath(newPath, volume.ID); err != nil {
+			// Fetch film details and add it to the database
+			if err := addFilmFromPath(newPath, volume.ID); err != nil {
 				return err
 			}
 		}
@@ -86,7 +86,7 @@ func handleFileRenamed(oldPath, newPath string) error {
 		mediaPaths, subtitle := getRelatedMediaFiles(newPath)
 		for _, mediaPath := range mediaPaths {
 			// Add it to the database
-			err := db.AddSubtitleToMoviePath(mediaPath, *subtitle)
+			err := db.AddSubtitleToFilmPath(mediaPath, *subtitle)
 			if err != nil {
 				log.WithFields(log.Fields{"subtitle": newPath, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
 			}
@@ -99,7 +99,7 @@ func handleFileRenamed(oldPath, newPath string) error {
 func handleFileRemoved(path string) {
 	ext := filepath.Ext(path)
 	if media.IsVideoFileExtension(ext) { // If we're deleting a video
-		if err := db.DeleteMovieVolumeFile(path); err != nil {
+		if err := db.DeleteFilmVolumeFile(path); err != nil {
 			log.Errorln(err)
 		}
 	} else if media.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
@@ -111,12 +111,12 @@ func handleFileRemoved(path string) {
 	}
 }
 
-// getRelatedSubFiles returns a list of subtitle file paths for a given movie file path
-func getRelatedSubFiles(movieFilePath string) (subs []string, err error) {
-	dir := filepath.Dir(movieFilePath)
-	movieFileBase := filepath.Base(movieFilePath)
-	movieFileNoExt := movieFileBase[:len(movieFileBase)-len(filepath.Ext(movieFileBase))]
-	matches, err := filepath.Glob(filepath.Join(dir, movieFileNoExt+"*"))
+// getRelatedSubFiles returns a list of subtitle file paths for a given film file path
+func getRelatedSubFiles(filmFilePath string) (subs []string, err error) {
+	dir := filepath.Dir(filmFilePath)
+	filmFileBase := filepath.Base(filmFilePath)
+	filmFileNoExt := filmFileBase[:len(filmFileBase)-len(filepath.Ext(filmFileBase))]
+	matches, err := filepath.Glob(filepath.Join(dir, filmFileNoExt+"*"))
 	if err != nil {
 		return subs, err
 	}

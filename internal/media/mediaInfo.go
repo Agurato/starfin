@@ -111,7 +111,7 @@ func GetMediaInfo(mediaInfoPath, filePath string) (MediaInfo, error) {
 			})
 			// Compute resolution on first video stream
 			if mediaInfo.Resolution == "" {
-				// Switch on the width because movie can have black horizontal bars
+				// Switch on the width because film can have black horizontal bars
 				width, _ := strconv.Atoi(track["Width"])
 				switch width {
 				case 720:
