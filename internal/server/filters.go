@@ -11,11 +11,15 @@ import (
 var (
 	minReleaseYear, maxReleaseYear int
 	filters                        Filters
+
+	paramsRegex *regexp.Regexp = regexp.MustCompile(`\/(year\/(?P<year>\d{4}s?)\/)?(genre\/(?P<genre>[a-zA-Z\s]+)\/)?(country\/(?P<country>[a-zA-Z\s]+)\/)?(page\/(?P<page>\d{1,})\/)?`)
 )
 
+// Filters holds the different filters that can be applied
 type Filters struct {
-	Decades []Decade
-	Genres  []string
+	Decades   []Decade
+	Genres    []string
+	Countries []string
 }
 
 type Decade struct {
@@ -52,7 +56,16 @@ func initFilters() {
 				filters.Genres = append(filters.Genres, genre)
 			}
 		}
+		for _, country := range film.ProdCountries {
+			if !slices.Contains(filters.Countries, country) {
+				filters.Countries = append(filters.Countries, country)
+			}
+		}
 	}
+	slices.Sort(filters.Genres)
+	slices.SortFunc(filters.Countries, func(a, b string) bool {
+		return getCountryName(a) < getCountryName(b)
+	})
 	filters.ComputeDecades()
 }
 
@@ -75,16 +88,26 @@ func addToFilters(film *media.Film) {
 			filters.Genres = append(filters.Genres, genre)
 		}
 	}
+	for _, country := range film.ProdCountries {
+		if !slices.Contains(filters.Countries, country) {
+			filters.Countries = append(filters.Countries, country)
+		}
+	}
+	slices.Sort(filters.Genres)
+	slices.SortFunc(filters.Countries, func(a, b string) bool {
+		return getCountryName(a) < getCountryName(b)
+	})
 }
 
-func ParseParamsFilters(params string) (yearFilter string, years []int, genre string, page int, err error) {
-	paramsRegex := regexp.MustCompile(`\/(year\/(?P<year>\d{4}s?)\/)?(genre\/(?P<genre>[a-zA-Z\s]+)\/)?(page\/(?P<page>\d{1,})\/)?`)
+func ParseParamsFilters(params string) (yearFilter string, years []int, genre, country string, page int, err error) {
 	submatches := paramsRegex.FindStringSubmatch(params)
 	for i, captureName := range paramsRegex.SubexpNames() {
 		if captureName == "year" {
 			yearFilter = submatches[i]
 		} else if captureName == "genre" {
 			genre = submatches[i]
+		} else if captureName == "country" {
+			country = submatches[i]
 		} else if captureName == "page" {
 			pageMatch := submatches[i]
 			if pageMatch == "" {
@@ -106,5 +129,5 @@ func ParseParamsFilters(params string) (yearFilter string, years []int, genre st
 		yearInt, _ := strconv.Atoi(yearFilter)
 		years = append(years, yearInt)
 	}
-	return yearFilter, years, genre, page, nil
+	return yearFilter, years, genre, country, page, nil
 }

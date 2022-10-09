@@ -241,13 +241,14 @@ func getPagination[T any](currentPage int64, items []T) ([]T, []Pagination) {
 			Dots: true,
 		})
 	}
-	if pageMax != 1 {
+	if pageMax > 1 {
 		pages = append(pages, Pagination{
 			Number: pageMax,
 			Active: currentPage == pageMax,
 		})
 	}
 
+	// Return only part of the items (corresponding to the current page)
 	itemsIndexStart := (currentPage - 1) * nbFilmsPerPage
 	itemsIndexEnd := itemsIndexStart + nbFilmsPerPage
 

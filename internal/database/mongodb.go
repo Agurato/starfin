@@ -431,7 +431,7 @@ func (m MongoDB) GetFilms() (films []media.Film) {
 	return
 }
 
-func (m MongoDB) GetFilmsFiltered(years []int, genre string) (films []media.Film) {
+func (m MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []media.Film) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	filter := bson.M{}
@@ -444,6 +444,9 @@ func (m MongoDB) GetFilmsFiltered(years []int, genre string) (films []media.Film
 	}
 	if genre != "" {
 		filter["genres"] = primitive.Regex{Pattern: fmt.Sprintf("^%s$", genre), Options: "i"}
+	}
+	if country != "" {
+		filter["prodcountries"] = primitive.Regex{Pattern: fmt.Sprintf("^%s$", country), Options: "i"}
 	}
 
 	filmsCur, err := m.filmsColl.Find(m.ctx, filter, options)

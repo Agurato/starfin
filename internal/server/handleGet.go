@@ -363,7 +363,7 @@ func HandleGETFilms(c *gin.Context) {
 		searchYear  int
 	)
 
-	yearFilter, years, genre, page, err := ParseParamsFilters(c.Param("params"))
+	yearFilter, years, genre, country, page, err := ParseParamsFilters(c.Param("params"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -371,7 +371,7 @@ func HandleGETFilms(c *gin.Context) {
 	}
 
 	// films := db.GetFilmsRange((page-1)*nbFilmsPerPage, nbFilmsPerPage)
-	films := db.GetFilmsFiltered(years, genre)
+	films := db.GetFilmsFiltered(years, genre, country)
 
 	films, pages := getPagination(int64(page), films)
 
@@ -381,15 +381,16 @@ func HandleGETFilms(c *gin.Context) {
 	// }
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
-		"title":       "Films",
-		"films":       films,
-		"filters":     filters,
-		"filterYear":  yearFilter,
-		"filterGenre": genre,
-		"search":      inputSearch,
-		"searchTerm":  searchTerm,
-		"searchYear":  searchYear,
-		"pages":       pages,
+		"title":         "Films",
+		"films":         films,
+		"filters":       filters,
+		"filterYear":    yearFilter,
+		"filterGenre":   genre,
+		"filterCountry": country,
+		"search":        inputSearch,
+		"searchTerm":    searchTerm,
+		"searchYear":    searchYear,
+		"pages":         pages,
 	})
 }
 

@@ -44,7 +44,7 @@ type DB interface {
 	GetFilmFromID(id primitive.ObjectID) (film media.Film, err error)
 	GetFilmCount() int64
 	GetFilms() (films []media.Film)
-	GetFilmsFiltered(years []int, genre string) (films []media.Film)
+	GetFilmsFiltered(years []int, genre, country string) (films []media.Film)
 	GetFilmsRange(start, number int) (films []media.Film)
 	GetFilmsFromVolume(id primitive.ObjectID) (films []media.Film)
 	GetFilmsWithActor(actorID int64) (films []media.Film)

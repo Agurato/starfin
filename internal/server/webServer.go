@@ -13,6 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
 	"github.com/samber/lo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/Agurato/starfin/internal/context"
 	"github.com/Agurato/starfin/internal/database"
@@ -52,10 +54,7 @@ func InitServer(datab database.DB) *gin.Engine {
 		return a + b
 	}
 	router.FuncMap["basename"] = filepath.Base
-	router.FuncMap["countryName"] = func(code string) string {
-		country, _ := gountries.New().FindCountryByAlpha(code)
-		return country.Name.Common
-	}
+	router.FuncMap["countryName"] = getCountryName
 	router.FuncMap["join"] = strings.Join
 	router.FuncMap["joinStrings"] = func(sep string, elems ...string) string {
 		return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
@@ -73,6 +72,7 @@ func InitServer(datab database.DB) *gin.Engine {
 	}
 	router.FuncMap["lower"] = strings.ToLower
 	router.FuncMap["replace"] = strings.ReplaceAll
+	router.FuncMap["title"] = cases.Title(language.English).String
 	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
 	router.FuncMap["getImageURL"] = func(imageType, key string) string {
 		return "/cache/" + imageType + key
@@ -207,4 +207,9 @@ func AdminRequired(c *gin.Context) {
 		return
 	}
 	c.Next()
+}
+
+func getCountryName(code string) string {
+	country, _ := gountries.New().FindCountryByAlpha(code)
+	return country.Name.Common
 }
