@@ -359,8 +359,7 @@ func HandleGetWriter(c *gin.Context) {
 func HandleGETFilms(c *gin.Context) {
 	var (
 		inputSearch string
-		searchTerm  string
-		searchYear  int
+		ok          bool
 	)
 
 	yearFilter, years, genre, country, page, err := ParseParamsFilters(c.Param("params"))
@@ -370,15 +369,14 @@ func HandleGETFilms(c *gin.Context) {
 		})
 	}
 
-	// films := db.GetFilmsRange((page-1)*nbFilmsPerPage, nbFilmsPerPage)
 	films := db.GetFilmsFiltered(years, genre, country)
 
-	films, pages := getPagination(int64(page), films)
-
 	// Filter films from search
-	// if inputSearch, ok = c.GetQuery("search"); ok {
-	// 	films, searchTerm, searchYear = SearchFilms(inputSearch, films)
-	// }
+	if inputSearch, ok = c.GetQuery("search"); ok {
+		films = SearchFilms(inputSearch, films)
+	}
+
+	films, pages := getPagination(int64(page), films)
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
 		"title":         "Films",
@@ -388,8 +386,6 @@ func HandleGETFilms(c *gin.Context) {
 		"filterGenre":   genre,
 		"filterCountry": country,
 		"search":        inputSearch,
-		"searchTerm":    searchTerm,
-		"searchYear":    searchYear,
 		"pages":         pages,
 	})
 }

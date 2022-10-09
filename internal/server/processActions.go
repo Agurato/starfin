@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Agurato/starfin/internal/database"
@@ -166,29 +165,15 @@ func AddVolume(volume *media.Volume) error {
 // SearchFilms returns a sublist of films containing the search terms
 // Searches in the title and original title (case-insensitive)
 // Searches films from specific year (indicated by "y:XXXX" as the last part of the search)
-func SearchFilms(search string, films []media.Film) ([]media.Film, string, int) {
+func SearchFilms(search string, films []media.Film) []media.Film {
 	search = strings.Trim(search, " ")
-	searchSplit := strings.Split(search, " ")
-	yearRegex := regexp.MustCompile(`^y:\d{4}$`)
 	specialChars := regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]")
-	lastSearchIdx := len(searchSplit) - 1
 	var (
-		searchYear    int
 		filteredFilms []media.Film
 	)
 
-	// If there's a year in last part of search term, return false if the film is not from that year
-	if yearRegex.MatchString(searchSplit[lastSearchIdx]) {
-		searchYear, _ = strconv.Atoi(searchSplit[lastSearchIdx][2:])
-		searchSplit = searchSplit[:lastSearchIdx]
-	}
-
-	search = strings.Join(searchSplit, "")
 	search = specialChars.ReplaceAllString(strings.ToLower(search), "")
 	for _, m := range films {
-		if searchYear != 0 && m.ReleaseYear != searchYear {
-			continue
-		}
 		title := specialChars.ReplaceAllString(strings.ToLower(m.Title), "")
 		originalTitle := specialChars.ReplaceAllString(strings.ToLower(m.OriginalTitle), "")
 		if strings.Contains(title, search) || strings.Contains(originalTitle, search) {
@@ -196,7 +181,7 @@ func SearchFilms(search string, films []media.Film) ([]media.Film, string, int) 
 		}
 	}
 
-	return filteredFilms, strings.Join(searchSplit, " "), searchYear
+	return filteredFilms
 }
 
 type Pagination struct {

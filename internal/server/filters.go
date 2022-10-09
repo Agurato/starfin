@@ -12,7 +12,11 @@ var (
 	minReleaseYear, maxReleaseYear int
 	filters                        Filters
 
-	paramsRegex *regexp.Regexp = regexp.MustCompile(`\/(year\/(?P<year>\d{4}s?)\/)?(genre\/(?P<genre>[a-zA-Z\s]+)\/)?(country\/(?P<country>[a-zA-Z\s]+)\/)?(page\/(?P<page>\d{1,})\/)?`)
+	paramsYearRegex    string         = `(\/year\/(?P<year>\d{4}s?))?`
+	paramsGenreRegex   string         = `(\/genre\/(?P<genre>[a-zA-Z\s]+))?`
+	paramsCountryRegex string         = `(\/country\/(?P<country>[a-zA-Z\s]+))?`
+	paramsPageRegex    string         = `(\/page\/(?P<page>\d{1,}))?`
+	paramsRegex        *regexp.Regexp = regexp.MustCompile(paramsYearRegex + paramsGenreRegex + paramsCountryRegex + paramsPageRegex)
 )
 
 // Filters holds the different filters that can be applied

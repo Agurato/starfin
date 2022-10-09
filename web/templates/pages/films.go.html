@@ -12,17 +12,21 @@
             {{if $.filterYear}}{{$.filterYear}}{{else}}Year{{end}}
         </button>
         <ul class="dropdown-menu dropdown-menu-dark">
-            <li><a class="dropdown-item" href="/films{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/">Year<span class="ms-2"><i class="fa-solid fa-caret-down"></i></span></a></li>
+            <li><a class="dropdown-item" href="/films{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">Year<span class="ms-2"><i
+                            class="fa-solid fa-caret-down"></i></span></a></li>
             <li>
                 <hr class="dropdown-divider">
             </li>
             {{range $decade := .filters.Decades}}
             <li>
                 <div class="btn-group dropdown">
-                    <a class="dropdown-item" href="/films/year/{{$decade.DecadeYear}}s{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/">{{$decade.DecadeYear}}s</a>
+                    <a class="dropdown-item"
+                        href="/films/year/{{$decade.DecadeYear}}s{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">{{$decade.DecadeYear}}s</a>
                     <ul class="dropdown-menu dropdown-menu-dark subdropdown">
                         {{range $year := $decade.Years}}
-                        <li><a class="dropdown-item" href="/films/year/{{$year}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/">{{$year}}</a></li>
+                        <li><a class="dropdown-item"
+                                href="/films/year/{{$year}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">{{$year}}</a>
+                        </li>
                         {{end}}
                     </ul>
                 </div>
@@ -35,12 +39,13 @@
             {{if $.filterGenre}}{{title $.filterGenre}}{{else}}Genre{{end}}
         </button>
         <ul class="dropdown-menu dropdown-menu-dark">
-            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/">Genre<span class="ms-2"><i class="fa-solid fa-caret-down"></i></span></a></li>
+            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">Genre<span class="ms-2"><i
+                            class="fa-solid fa-caret-down"></i></span></a></li>
             <li>
                 <hr class="dropdown-divider">
             </li>
             {{range $genre := .filters.Genres}}
-            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/genre/{{lower $genre}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/">{{$genre}}</a></li>
+            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/genre/{{lower $genre}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">{{$genre}}</a></li>
             {{end}}
         </ul>
     </div>
@@ -49,15 +54,19 @@
             {{if $.filterCountry}}{{countryName $.filterCountry}}{{else}}Country{{end}}
         </button>
         <ul class="dropdown-menu dropdown-menu-dark">
-            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/">Country<span class="ms-2"><i class="fa-solid fa-caret-down"></i></span></a></li>
+            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">Country<span class="ms-2"><i
+                            class="fa-solid fa-caret-down"></i></span></a></li>
             <li>
                 <hr class="dropdown-divider">
             </li>
             {{range $country := .filters.Countries}}
-            <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/country/{{lower $country}}/">{{countryName $country}}</a></li>
+            <li><a class="dropdown-item"
+                    href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/country/{{lower $country}}/{{if $.search}}?search={{$.search}}{{end}}">{{countryName $country}}</a>
+            </li>
             {{end}}
         </ul>
     </div>
+    <!-- Search form -->
     <form action="" method="get" class="d-inline-flex mx-2">
         <div class="input-group">
             <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}" />
@@ -66,8 +75,7 @@
     </form>
 </div>
 <div class="container text-secondary text-center mb-2">
-    {{if .search}}<span>Search results for {{if .searchTerm}}"{{.searchTerm}}"{{else}}films{{end}}{{if .searchYear}} from
-        {{.searchYear}}{{end}}</span>{{end}}
+    {{if .search}}<span>Search results for {{if .search}}"{{.search}}"{{else}}films{{end}}</span>{{end}}
 </div>
 <div class="row row-cols-auto gx-0 justify-content-center">
     {{range $index, $film := .films}}
@@ -88,7 +96,8 @@
         {{range $index, $page := .pages}}
         {{if $page.Active}}
         <li class="page-item active">
-            <a class="page-link" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/">
+            <a class="page-link"
+                href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/{{if $.search}}?search={{$.search}}{{end}}">
                 {{$page.Number}}<span class="sr-only">(current)</span>
             </a>
         </li>
@@ -96,7 +105,8 @@
         <li class="page-item dots">…</li>
         {{else}}
         <li class="page-item">
-            <a class="page-link" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/">
+            <a class="page-link"
+                href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/{{if $.search}}?search={{$.search}}{{end}}">
                 {{$page.Number}}
             </a>
         </li>
