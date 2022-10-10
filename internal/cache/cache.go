@@ -2,9 +2,11 @@ package cache
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -36,8 +38,12 @@ func GetCachedPath(filePath string) string {
 }
 
 func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
+	fmt.Println("IN CacheFile")
+	defer fmt.Println("OUT CacheFile")
 	// Create directories in the requested path if needed
 	parent := GetCachedPath(filepath.Dir(filePath))
+	fmt.Println("parent", parent)
+	fmt.Println(exec.Command("ls", "-r", "../").Output())
 	if _, err := os.Stat(parent); errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(parent, os.ModeDir)
 		if err != nil {

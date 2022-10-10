@@ -21,4 +21,4 @@ jobs:
       - name: Test
         run: go test -v ./internal/cache/... ./internal/server/...
         env:
-          CACHE_PATH: ../../../cache
+          CACHE_PATH: ../../cache
