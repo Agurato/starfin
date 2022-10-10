@@ -2,13 +2,13 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "setup-actions" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "setup-actions" ]
 
 jobs:
 
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

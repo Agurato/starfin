@@ -43,6 +43,8 @@ func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 		if err != nil {
 			return false, err
 		}
+	} else {
+		return false, err
 	}
 	// Get file as buffer
 	resp, err := http.Get(sourceUrl)
