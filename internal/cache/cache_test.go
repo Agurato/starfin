@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Agurato/starfin/internal/cache"
+	"github.com/Agurato/starfin/internal/context"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,10 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	os.Setenv("CACHE_PATH", cachePath)
+	envCachePath := os.Getenv(context.EnvCachePath)
+	if envCachePath == "" {
+		os.Setenv(context.EnvCachePath, cachePath)
+	}
 	cache.InitCache()
 	os.RemoveAll(cachePath + "/test")
 	result := m.Run()

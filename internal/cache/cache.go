@@ -20,7 +20,7 @@ func InitCache() {
 	if cachePath == "" {
 		cachePath = "./cache"
 	}
-	err := os.MkdirAll(cachePath, os.ModeDir)
+	err := os.MkdirAll(cachePath, 0755)
 	if err != nil {
 		log.WithField("error", err).Fatalln("Could not create cache directory")
 	}
@@ -39,10 +39,12 @@ func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	// Create directories in the requested path if needed
 	parent := GetCachedPath(filepath.Dir(filePath))
 	if _, err := os.Stat(parent); errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(parent, os.ModeDir)
+		err = os.MkdirAll(parent, 0755)
 		if err != nil {
 			return false, err
 		}
+	} else {
+		return false, err
 	}
 	// Get file as buffer
 	resp, err := http.Get(sourceUrl)
