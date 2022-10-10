@@ -36,9 +36,3 @@ func TestCacheFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Greater(t, info.Size(), int64(0))
 }
-
-func TestTooManyRequests(t *testing.T) {
-	hasToWait, err := cache.CacheFile("https://starfin.free.beeceptor.com", "")
-	assert.NoError(t, err)
-	assert.True(t, hasToWait)
-}
