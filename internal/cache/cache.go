@@ -43,8 +43,8 @@ func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	// Create directories in the requested path if needed
 	parent := GetCachedPath(filepath.Dir(filePath))
 	fmt.Println("parent", parent)
-	outTest, _ := exec.Command("ls", "-R", "../../cache").Output()
-	fmt.Println(string(outTest))
+	outTest, err := exec.Command("ls", "-R", "../../cache").Output()
+	fmt.Println(string(outTest), err)
 	if _, err := os.Stat(parent); errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(parent, os.ModeDir)
 		if err != nil {
