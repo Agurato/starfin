@@ -2,9 +2,9 @@ name: Go
 
 on:
   push:
-    branches: [ "setup-actions" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "setup-actions" ]
+    branches: [ "main" ]
 
 jobs:
 
