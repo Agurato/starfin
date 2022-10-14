@@ -155,6 +155,7 @@ func (m *Film) FetchDetails() {
 	m.LetterboxdRating = GetLetterboxdRating(m.IMDbID)
 
 	// Set genres
+	m.Genres = nil
 	for _, genre := range details.Genres {
 		m.Genres = append(m.Genres, genre.Name)
 	}
@@ -177,6 +178,9 @@ func (m *Film) FetchDetails() {
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": m.TMDBID, "error": err}).Errorln("Unable to fetch film credits from TMDB")
 	} else {
+		m.Directors = nil
+		m.Writers = nil
+		m.Cast = nil
 		for _, crew := range credits.Crew {
 			if crew.Job == "Director" {
 				m.Directors = append(m.Directors, crew.ID)
@@ -192,6 +196,7 @@ func (m *Film) FetchDetails() {
 		}
 	}
 
+	m.ProdCountries = nil
 	// Set production countries
 	for _, country := range details.ProductionCountries {
 		m.ProdCountries = append(m.ProdCountries, country.Iso3166_1)

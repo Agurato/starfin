@@ -152,7 +152,7 @@ func addFilmFromPath(path string, volumeID primitive.ObjectID) error {
 	}
 
 	// Add media to DB
-	if err = tryAddFilmToDB(film); err != nil {
+	if err = tryAddFilmToDB(film, false); err != nil {
 		log.WithField("path", film.VolumeFiles[0].Path).Errorln(err)
 	}
 
@@ -161,8 +161,9 @@ func addFilmFromPath(path string, volumeID primitive.ObjectID) error {
 
 // tryAddFilmToDB checks if the film already exists in database before adding it
 // Also adds persons to the database if they don't exist
-func tryAddFilmToDB(film *media.Film) error {
-	if film.TMDBID == 0 || !db.IsFilmPresent(film) {
+// Set update to true to force the update of the film
+func tryAddFilmToDB(film *media.Film, update bool) error {
+	if update || film.TMDBID == 0 || !db.IsFilmPresent(film) {
 		if err := db.AddFilm(film); err != nil {
 			return errors.New("cannot add film to database")
 		}
@@ -226,7 +227,7 @@ func searchMediaFilesInVolume(volume *media.Volume) {
 	for {
 		film, more := <-filmChan
 		if more {
-			tryAddFilmToDB(film)
+			tryAddFilmToDB(film, false)
 		} else {
 			break
 		}

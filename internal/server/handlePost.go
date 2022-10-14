@@ -246,7 +246,7 @@ func HandlePOSTEditFilmOnline(c *gin.Context) {
 	}
 	film.TMDBID = int(tmdbID)
 	film.FetchDetails()
-	err = tryAddFilmToDB(&film)
+	err = tryAddFilmToDB(&film, true)
 	if err != nil {
 		log.Warning(err)
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not update film in database"})
