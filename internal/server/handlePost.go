@@ -210,3 +210,29 @@ func HandlePOSTDeleteUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("User #%s deleted", userID)})
 }
+
+func HandlePOSTReloadCache(c *gin.Context) {
+	films := db.GetFilms()
+	for _, film := range films {
+		cachePosterAndBackdrop(&film)
+		for _, personID := range film.GetCastAndCrewIDs() {
+			person, _ := db.GetPersonFromID(personID)
+			cachePersonPhoto(&person)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func HandlePOSTEditFilmOnline(c *gin.Context) {
+	inputUrl := c.PostForm("url")
+
+	tmdbID, err := GetTMDBIDFromLink(inputUrl)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Wrong URL format"})
+		return
+	}
+	fmt.Println(inputUrl, tmdbID)
+
+	c.JSON(http.StatusOK, gin.H{"tmdbID": tmdbID})
+}

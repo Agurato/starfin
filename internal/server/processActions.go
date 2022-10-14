@@ -3,12 +3,16 @@ package server
 import (
 	"errors"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/matthewhartstonge/argon2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -243,4 +247,80 @@ func getPagination[T any](currentPage int64, items []T) ([]T, []Pagination) {
 	}
 
 	return pagedItems, pages
+}
+
+func GetTMDBIDFromLink(inputUrl string) (tmdbID string, err error) {
+	urlParsed, err := url.Parse(inputUrl)
+	if err != nil {
+		return tmdbID, err
+	}
+	switch urlParsed.Host {
+	case "www.themoviedb.org":
+		tmdbID, err = getTMDBIDFromTheMovieDB(inputUrl)
+	case "www.imdb.com":
+		tmdbID, err = getTMDBIDFromIMDB(inputUrl)
+	case "letterboxd.com":
+		tmdbID, err = getTMDBIDFromLetterboxd(inputUrl)
+	default:
+		err = errors.New("the host could not be found")
+	}
+
+	return tmdbID, err
+}
+
+func getTMDBIDFromTheMovieDB(inputUrl string) (TMDBID string, err error) {
+	err = nil
+	urlParsed, err := url.Parse(inputUrl)
+	if err != nil {
+		return TMDBID, err
+	}
+	if strings.HasPrefix(urlParsed.Path, "/movie/") {
+		if strings.HasSuffix(urlParsed.Path, "/") { // this is a valid link: https://www.themoviedb.org/movie/1817/
+			TMDBID = urlParsed.Path[7 : len(urlParsed.Path)-1]
+		} else { // real link: https://www.themoviedb.org/movie/1817-phone-booth
+			TMDBID = strings.Split(urlParsed.Path[7:], "-")[0]
+		}
+		if _, err = strconv.Atoi(TMDBID); err != nil {
+			err = errors.New("could not parse TheMovieDB URL")
+		}
+	} else {
+		err = errors.New("could not parse TheMovieDB URL")
+	}
+	return TMDBID, err
+}
+
+func getTMDBIDFromLetterboxd(inputUrl string) (TMDBID string, err error) {
+	res, err := http.Get(inputUrl)
+	if err != nil {
+		log.WithField("url", inputUrl).Errorln("Cannot fetch TMDB ID from Letterboxd")
+		return TMDBID, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return TMDBID, errors.New("cannot fetch TMDB ID from Letterboxd")
+	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		return TMDBID, err
+	}
+
+	tmdbUrl, exists := doc.Find("a[data-track-action=TMDb]").First().Attr("href")
+	if !exists {
+		return TMDBID, errors.New("cannot fetch TMDB ID from Letterboxd")
+	}
+	return getTMDBIDFromTheMovieDB(tmdbUrl)
+}
+
+func getTMDBIDFromIMDB(inputUrl string) (TMDBID string, err error) {
+	urlParsed, err := url.Parse(inputUrl)
+	if err != nil {
+		return TMDBID, err
+	}
+	if strings.HasPrefix(urlParsed.Path, "/title/") {
+		imdbID := urlParsed.Path[7 : len(urlParsed.Path)-1]
+		TMDBID, err = media.GetTMDBIDFromIMDBID(imdbID)
+	} else {
+		err = errors.New("cannot fetch TMDB ID from IMDB")
+	}
+	return
 }

@@ -9,14 +9,14 @@
         position: fixed;
         z-index: -999;
         top: 0;
-        -webkit-mask-image:-webkit-gradient(linear, left top, left bottom, from(rgba(0,0,0,0.2)), to(rgba(0,0,0,0)));
-        mask-image: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0));
+        -webkit-mask-image: -webkit-gradient(linear, left top, left bottom, from(rgba(0, 0, 0, 0.2)), to(rgba(0, 0, 0, 0)));
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
 
-        min-height:100%;
-        min-width:100%;
+        min-height: 100%;
+        min-width: 100%;
         transform: translateX(-50%);
-        width:auto;
-        height:auto;
+        width: auto;
+        height: auto;
         left: 50%;
 
         pointer-events: none;
@@ -107,6 +107,26 @@
         color: #a0a0a0;
         font-size: 10pt;
     }
+
+    #admin-panel {
+        border: 1px solid lightgray;
+        margin: inherit;
+        padding: inherit;
+    }
+
+    #admin-panel legend {
+        float: none;
+        width: inherit;
+        margin: initial;
+        margin-bottom: -3px;
+        padding: inherit;
+        font-size: inherit;
+        color: lightgray;
+    }
+
+    #admin-panel button {
+        margin-right: 5px;
+    }
 </style>
 <section>
     {{ if .error }}
@@ -114,16 +134,48 @@
     {{ end }}
 </section>
 {{if .film.BackdropPath}}
-<img class="backdrop" src="{{getImageURL "backdrop" .film.BackdropPath}}" ondragstart="retFalse()" width="1280"/>
+<img class="backdrop" src="{{getImageURL "backdrop" .film.BackdropPath}}" ondragstart="retFalse()" width="1280" />
 {{end}}
 <div class="container">
-    <div class="row mt-5">
+    {{if .user.isAdmin}}
+    <fieldset id="admin-panel" class="pb-2">
+        <legend>Admin panel</legend>
+        <button type="button" class="btn btn-secondary mt-0 py-0 px-1" data-bs-toggle="modal" data-bs-target="#editFilmOnlineModal">Edit with online data</button>
+        <button type="button" class="btn btn-secondary mt-0 py-0 px-1" data-bs-toggle="modal" data-bs-target="#editFilmManualModal">Edit manually</button>
+    </fieldset>
+    <div class="modal fade" id="editFilmOnlineModal" tabindex="-1" aria-labelledby="editFilmOnlineModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="editFilmOnlineModalLabel">Edit film metadata</h1>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editFilmOnlineForm">
+                        <div class="form-floating text-dark">
+                            <input type="text" id="filmUrl" class="form-control" aria-describedby="filmUrlHelp" placeholder="URL">
+                            <label for="filmUrl" class="form-label">Film URL</label>
+                            <div id="filmUrlHelp" class="form-text">
+                                This must be a Letterboxd, TMDB or IMDb URL to the film.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="editFilmOnlineButton(this)">Update metadata</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+    <div class="row mt-4">
         <!-- Poster -->
         <div class="col-12 col-sm-4 mb-3">
             {{if .film.PosterPath}}
-            <img class="img-fluid" src="{{getImageURL "poster" .film.PosterPath}}" width="342"/>
+            <img class="img-fluid" src="{{getImageURL "poster" .film.PosterPath}}" width="342" />
             {{else}}
-            <img class="img-fluid" src="/static/images/no_poster.png" width="342"/>
+            <img class="img-fluid" src="/static/images/no_poster.png" width="342" />
             {{end}}
         </div>
         <!-- Film info -->
@@ -141,7 +193,8 @@
                 <div class="col">{{.film.Runtime}} min</div>
                 {{if .film.Classification}}<div class="col"><span class="classif">{{.film.Classification}}</span></div>{{end}}
                 {{if .film.IMDbRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="IMDb rating"><i class="fa-solid fa-star" style="color: #eed33a"></i> {{.film.IMDbRating}}</div>{{end}}
-                {{if .film.LetterboxdRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Letterboxd rating"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.film.LetterboxdRating}}</div>{{end}}
+                {{if .film.LetterboxdRating}}<div class="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Letterboxd rating"><img src="/static/images/letterboxd.png" height="12" class="align-baseline" /> {{.film.LetterboxdRating}}</div>
+                {{end}}
                 <div class="col">
                     {{range $_, $country := .film.ProdCountries}}
                     <span class="flag-icon flag-icon-{{lower $country}}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{countryName $country}}"></span>
@@ -182,7 +235,8 @@
             </div>
             <!-- External links -->
             <div>
-                <p>View on <a href="https://www.imdb.com/title/{{.film.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20"/></a> <a href="https://www.thefilmdb.org/film/{{.film.TMDBID}}"><img src="/static/images/tmdb.png" height="20"/></a></p>
+                <p>View on <a href="https://www.imdb.com/title/{{.film.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20" /></a> <a href="https://www.thefilmdb.org/film/{{.film.TMDBID}}"><img src="/static/images/tmdb.png"
+                            height="20" /></a></p>
             </div>
             <!-- Cast -->
             <div class="cast">
@@ -190,9 +244,9 @@
                 <div class="actor mx-2 text-center">
                     <a href="/actor/{{$actor.Id}}">
                         {{if $actor.Photo}}
-                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}" width="185"/>
+                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}" width="185" />
                         {{else}}
-                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}" width="185"/>
+                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}" width="185" />
                         {{end}}
                         <p class="fw-bold mt-2 mb-1">{{$actor.Name}}</p>
                         {{if $actor.Character}}<p class="character">as {{$actor.Character}}</p>{{end}}
@@ -261,37 +315,37 @@
                     <!-- MediaInfo Overview -->
                     <div class="tab-pane fade show active" id="mediaInfo-{{$idx}}-overview" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-overview-tab">
                         <table class="table table-borderless table-sm text-white">
-                        <tbody>
-                            <tr>
-                                <td>File name</td>
-                                <th>{{basename $path.Path}}</th>
-                            </tr>
-                            <tr>
-                                <td>File size</td>
-                                <th>{{$path.Info.FileSize}}</th>
-                            </tr>
-                            <tr>
-                                <td>Duration</td>
-                                <th>{{$path.Info.Duration}}</th>
-                            </tr>
-                            <tr>
-                                <td>Format</td>
-                                <th>{{$path.Info.Format}}</th>
-                            </tr>
-                        </tbody>
+                            <tbody>
+                                <tr>
+                                    <td>File name</td>
+                                    <th>{{basename $path.Path}}</th>
+                                </tr>
+                                <tr>
+                                    <td>File size</td>
+                                    <th>{{$path.Info.FileSize}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Duration</td>
+                                    <th>{{$path.Info.Duration}}</th>
+                                </tr>
+                                <tr>
+                                    <td>Format</td>
+                                    <th>{{$path.Info.Format}}</th>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                     <!-- MediaInfo Video(s) -->
                     <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-video" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-video-tab">
                         {{$videosLength := len $path.Info.Video}}
                         {{range $videoIdx, $video := $path.Info.Video}}
-                            {{if gt $videosLength 1}}
-                            {{if gt $videoIdx 0}}
-                            <hr>
-                            {{end}}
-                            <div class="mb-2">Video #{{add $videoIdx 1}}</div>
-                            {{end}}
-                            <table class="table table-borderless table-sm text-white">
+                        {{if gt $videosLength 1}}
+                        {{if gt $videoIdx 0}}
+                        <hr>
+                        {{end}}
+                        <div class="mb-2">Video #{{add $videoIdx 1}}</div>
+                        {{end}}
+                        <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>
                                     <td>Codec</td>
@@ -314,20 +368,20 @@
                                     <th>{{$video.BitDepth}}</th>
                                 </tr>
                             </tbody>
-                            </table>
+                        </table>
                         {{end}}
                     </div>
                     <!-- MediaInfo Audio(s) -->
                     <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-audio" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-audio-tab">
                         {{$audiosLength := len $path.Info.Audio}}
                         {{range $audioIdx, $audio := $path.Info.Audio}}
-                            {{if gt $audiosLength 1}}
-                            {{if gt $audioIdx 0}}
-                            <hr>
-                            {{end}}
-                            <div class="mb-2">Audio #{{add $audioIdx 1}}</div>
-                            {{end}}
-                            <table class="table table-borderless table-sm text-white">
+                        {{if gt $audiosLength 1}}
+                        {{if gt $audioIdx 0}}
+                        <hr>
+                        {{end}}
+                        <div class="mb-2">Audio #{{add $audioIdx 1}}</div>
+                        {{end}}
+                        <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>
                                     <td>Codec</td>
@@ -346,20 +400,20 @@
                                     <th>{{$audio.SamplingRate}}</th>
                                 </tr>
                             </tbody>
-                            </table>
+                        </table>
                         {{end}}
                     </div>
                     <!-- MediaInfo Sub(s) -->
                     <div class="tab-pane fade show" id="mediaInfo-{{$idx}}-subs" role="tabpanel" aria-labelledby="mediaInfo-{{$idx}}-subs-tab">
                         {{$subsLength := len $path.Info.Subs}}
                         {{range $subIdx, $sub := $path.Info.Subs}}
-                            {{if gt $subsLength 1}}
-                            {{if gt $subIdx 0}}
-                            <hr>
-                            {{end}}
-                            <div class="mb-2">Subtitle #{{add $subIdx 1}}</div>
-                            {{end}}
-                            <table class="table table-borderless table-sm text-white">
+                        {{if gt $subsLength 1}}
+                        {{if gt $subIdx 0}}
+                        <hr>
+                        {{end}}
+                        <div class="mb-2">Subtitle #{{add $subIdx 1}}</div>
+                        {{end}}
+                        <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>
                                     <td>Codec</td>
@@ -374,17 +428,17 @@
                                     <th>{{$sub.Forced}}</th>
                                 </tr>
                             </tbody>
-                            </table>
+                        </table>
                         {{end}}
                     </div>
                     <!-- External subtitles -->
                     <div class="tab-pane fade show" id="extsub-{{$idx}}" role="tabpanel" aria-labelledby="extsub-{{$idx}}-tab">
                         {{range $subIdx, $sub := $path.ExtSubtitles}}
-                            {{if gt $subIdx 0}}
-                            <hr>
-                            {{end}}
-                            <div class="mb-2"><a href="/film/{{filmID $.film}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
-                            <table class="table table-borderless table-sm text-white">
+                        {{if gt $subIdx 0}}
+                        <hr>
+                        {{end}}
+                        <div class="mb-2"><a href="/film/{{filmID $.film}}/download/{{$idx}}/sub/{{$subIdx}}" download="{{basename $sub.Path}}" class="dl-sub"><i class="fa-solid fa-download"></i></a> Subtitle #{{add $subIdx 1}}</div>
+                        <table class="table table-borderless table-sm text-white">
                             <tbody>
                                 <tr>
                                     <td>Name</td>
@@ -395,7 +449,7 @@
                                     <th>{{$sub.Language}}</th>
                                 </tr>
                             </tbody>
-                            </table>
+                        </table>
                         {{end}}
                     </div>
                     <!-- MediaInfo Full Output -->

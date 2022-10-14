@@ -34,6 +34,14 @@
                 $(this).children('.dropdown-menu').removeClass('show');
             });
     });
+
+    // Edit film features
+    $("#editFilmOnlineForm").keypress(function (e) {
+        if (e.keyCode == 13) {
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
 
 </body>

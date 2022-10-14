@@ -6,6 +6,13 @@
     {{ end }}
 </section>
 <div class="container py-5 text-center">
+    <h2>Cache</h2>
+    <button type="button" class="btn btn-secondary" onclick="reloadCache(this)">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+        Reload cache
+    </button>
+</div>
+<div class="container py-5 text-center">
     <h2>Volumes</h2>
     <table class="table table-dark table-striped w-50 mx-auto">
         <thead>

@@ -86,3 +86,56 @@ function deleteUser(el) {
 function retFalse() {
   return false;
 }
+
+function reloadCache(el) {
+  let url = "/admin/reloadcache";
+
+  el.setAttribute("disabled", "");
+  let spinner = el.children.item(0);
+  spinner.style.display = "inline-block";
+
+  fetch(url, {
+    method: "POST",
+  }).then((res) => {
+    if (res.status == 200) {
+      res.json().then((data) => {
+        if (data.error) {
+          console.error(data.error);
+        } else {
+          console.log(data.message);
+          el.removeAttribute("disabled");
+          spinner.style.display = "none";
+        }
+      });
+    } else {
+      res.json().then((data) => {
+        console.error(res.status, data.message);
+      });
+    }
+  });
+}
+
+function editFilmOnlineButton(el) {
+  let url = "/admin/editfilmonline";
+
+  fetch(url, {
+    method: "POST",
+    body: new URLSearchParams({ "url": el.parentNode.parentNode.querySelector("#filmUrl").value }),
+  }).then((res) => {
+    if (res.status == 200) {
+      res.json().then((data) => {
+        if (data.error) {
+          console.error(data.error);
+        } else {
+          console.log(data);
+          // el.removeAttribute("disabled");
+          // spinner.style.display = "none";
+        }
+      });
+    } else {
+      res.json().then((data) => {
+        console.error(res.status, data.message);
+      });
+    }
+  });
+}

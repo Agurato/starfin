@@ -168,22 +168,7 @@ func tryAddFilmToDB(film *media.Film) error {
 		}
 		addToFilters(film)
 		// Cache poster, backdrop
-		go func() {
-			hasToWait, err := media.CachePoster(film.PosterPath)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
-			}
-			if hasToWait {
-				log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
-			}
-			hasToWait, err = media.CacheBackdrop(film.BackdropPath)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
-			}
-			if hasToWait {
-				log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
-			}
-		}()
+		go cachePosterAndBackdrop(film)
 	} else {
 		if err := db.AddVolumeSourceToFilm(film); err != nil {
 			return errors.New("cannot add volume source to film in database")
@@ -195,19 +180,40 @@ func tryAddFilmToDB(film *media.Film) error {
 			person := media.FetchPersonDetails(personID)
 			db.AddPerson(person)
 			// Cache photos
-			go func() {
-				hasToWait, err := media.CachePhoto(person.Photo)
-				if err != nil {
-					log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
-				}
-				if hasToWait {
-					log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache photo later")
-				}
-			}()
+			go cachePersonPhoto(&person)
 		}
 	}
 
 	return nil
+}
+
+// cachePosterAndBackdrop caches the poster and the backdrop image of a film
+func cachePosterAndBackdrop(film *media.Film) {
+	hasToWait, err := media.CachePoster(film.PosterPath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
+	}
+	hasToWait, err = media.CacheBackdrop(film.BackdropPath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
+	}
+}
+
+// cacheCast caches the person's image
+func cachePersonPhoto(person *media.Person) {
+	hasToWait, err := media.CachePhoto(person.Photo)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "personTMDBID": person.TMDBID}).Errorln("Will try to cache photo later")
+	}
 }
 
 // searchMediaFilesInVolume scans a volume and add all films to the database

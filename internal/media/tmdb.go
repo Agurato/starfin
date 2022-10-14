@@ -1,6 +1,7 @@
 package media
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/Agurato/starfin/internal/cache"
@@ -60,4 +61,15 @@ func GetBackdrop(key string) ([]byte, error) {
 
 func GetPhoto(key string) ([]byte, error) {
 	return cache.GetCachedFile(photo + key)
+}
+
+func GetTMDBIDFromIMDBID(imdbID string) (TMDBID string, err error) {
+	urlOptions := make(map[string]string)
+	urlOptions["external_source"] = "imdb_id"
+	res, err := TMDBClient.GetFindByID(imdbID, urlOptions)
+	if err != nil {
+		return TMDBID, err
+	}
+	TMDBID = fmt.Sprint(res.MovieResults[0].ID)
+	return
 }

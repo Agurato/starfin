@@ -136,6 +136,9 @@ func InitServer(datab database.DB) *gin.Engine {
 		needsAdmin.GET("/admin/user/:userId", HandleGETAdminUser)
 		needsAdmin.POST("/admin/edituser", HandlePOSTEditUser)
 		needsAdmin.POST("/admin/deleteuser", HandlePOSTDeleteUser)
+
+		needsAdmin.POST("/admin/reloadcache", HandlePOSTReloadCache)
+		needsAdmin.POST("/admin/editfilmonline", HandlePOSTEditFilmOnline)
 	}
 
 	return router
