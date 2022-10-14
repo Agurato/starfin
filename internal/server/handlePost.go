@@ -226,13 +226,32 @@ func HandlePOSTReloadCache(c *gin.Context) {
 
 func HandlePOSTEditFilmOnline(c *gin.Context) {
 	inputUrl := c.PostForm("url")
+	filmID := c.PostForm("filmID")
 
 	tmdbID, err := GetTMDBIDFromLink(inputUrl)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Wrong URL format"})
 		return
 	}
-	fmt.Println(inputUrl, tmdbID)
+
+	objID, err := primitive.ObjectIDFromHex(filmID)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Wrong film ID", "filmID": filmID})
+		return
+	}
+	film, err := db.GetFilmFromID(objID)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not get film from database"})
+		return
+	}
+	film.TMDBID = int(tmdbID)
+	film.FetchDetails()
+	err = tryAddFilmToDB(&film)
+	if err != nil {
+		log.Warning(err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not update film in database"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"tmdbID": tmdbID})
 }

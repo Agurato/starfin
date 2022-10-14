@@ -163,7 +163,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="editFilmOnlineButton(this)">Update metadata</button>
+                    <button type="button" class="btn btn-primary" onclick="editFilmOnlineButton(this)" film-id="{{filmID .film}}">Update metadata</button>
                 </div>
             </div>
         </div>
@@ -235,8 +235,8 @@
             </div>
             <!-- External links -->
             <div>
-                <p>View on <a href="https://www.imdb.com/title/{{.film.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20" /></a> <a href="https://www.thefilmdb.org/film/{{.film.TMDBID}}"><img src="/static/images/tmdb.png"
-                            height="20" /></a></p>
+                <p>View on {{if .film.IMDbID}}<a href="https://www.imdb.com/title/{{.film.IMDbID}}/" class="extlink"><img src="/static/images/imdb.png" height="20" /></a> {{end}}{{if .film.TMDBID}}<a
+                        href="https://www.thefilmdb.org/film/{{.film.TMDBID}}"><img src="/static/images/tmdb.png" height="20" /></a>{{end}}</p>
             </div>
             <!-- Cast -->
             <div class="cast">

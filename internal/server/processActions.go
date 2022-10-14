@@ -249,7 +249,8 @@ func getPagination[T any](currentPage int64, items []T) ([]T, []Pagination) {
 	return pagedItems, pages
 }
 
-func GetTMDBIDFromLink(inputUrl string) (tmdbID string, err error) {
+// GetTMDBIDFromLink returns the TMDB ID from a TMDB, IMDb, or Letterboxd URL
+func GetTMDBIDFromLink(inputUrl string) (tmdbID int, err error) {
 	urlParsed, err := url.Parse(inputUrl)
 	if err != nil {
 		return tmdbID, err
@@ -268,19 +269,21 @@ func GetTMDBIDFromLink(inputUrl string) (tmdbID string, err error) {
 	return tmdbID, err
 }
 
-func getTMDBIDFromTheMovieDB(inputUrl string) (TMDBID string, err error) {
+// getTMDBIDFromTheMovieDB returns the TMDB ID from a TMDB URL
+func getTMDBIDFromTheMovieDB(inputUrl string) (TMDBID int, err error) {
 	err = nil
 	urlParsed, err := url.Parse(inputUrl)
 	if err != nil {
 		return TMDBID, err
 	}
+	var tmdbIDStr string
 	if strings.HasPrefix(urlParsed.Path, "/movie/") {
 		if strings.HasSuffix(urlParsed.Path, "/") { // this is a valid link: https://www.themoviedb.org/movie/1817/
-			TMDBID = urlParsed.Path[7 : len(urlParsed.Path)-1]
+			tmdbIDStr = urlParsed.Path[7 : len(urlParsed.Path)-1]
 		} else { // real link: https://www.themoviedb.org/movie/1817-phone-booth
-			TMDBID = strings.Split(urlParsed.Path[7:], "-")[0]
+			tmdbIDStr = strings.Split(urlParsed.Path[7:], "-")[0]
 		}
-		if _, err = strconv.Atoi(TMDBID); err != nil {
+		if TMDBID, err = strconv.Atoi(tmdbIDStr); err != nil {
 			err = errors.New("could not parse TheMovieDB URL")
 		}
 	} else {
@@ -289,7 +292,8 @@ func getTMDBIDFromTheMovieDB(inputUrl string) (TMDBID string, err error) {
 	return TMDBID, err
 }
 
-func getTMDBIDFromLetterboxd(inputUrl string) (TMDBID string, err error) {
+// getTMDBIDFromLetterboxd returns the TMDB ID from a Letterboxd URL
+func getTMDBIDFromLetterboxd(inputUrl string) (TMDBID int, err error) {
 	res, err := http.Get(inputUrl)
 	if err != nil {
 		log.WithField("url", inputUrl).Errorln("Cannot fetch TMDB ID from Letterboxd")
@@ -311,14 +315,19 @@ func getTMDBIDFromLetterboxd(inputUrl string) (TMDBID string, err error) {
 	return getTMDBIDFromTheMovieDB(tmdbUrl)
 }
 
-func getTMDBIDFromIMDB(inputUrl string) (TMDBID string, err error) {
+// getTMDBIDFromIMDB returns the TMDB ID from an IMDb URL
+func getTMDBIDFromIMDB(inputUrl string) (TMDBID int, err error) {
 	urlParsed, err := url.Parse(inputUrl)
 	if err != nil {
 		return TMDBID, err
 	}
 	if strings.HasPrefix(urlParsed.Path, "/title/") {
 		imdbID := urlParsed.Path[7 : len(urlParsed.Path)-1]
-		TMDBID, err = media.GetTMDBIDFromIMDBID(imdbID)
+		tmdbIDInt64, err := media.GetTMDBIDFromIMDBID(imdbID)
+		if err != nil {
+			return TMDBID, err
+		}
+		TMDBID = int(tmdbIDInt64)
 	} else {
 		err = errors.New("cannot fetch TMDB ID from IMDB")
 	}

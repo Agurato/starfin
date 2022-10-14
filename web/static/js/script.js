@@ -120,7 +120,10 @@ function editFilmOnlineButton(el) {
 
   fetch(url, {
     method: "POST",
-    body: new URLSearchParams({ "url": el.parentNode.parentNode.querySelector("#filmUrl").value }),
+    body: new URLSearchParams({
+      "url": el.parentNode.parentNode.querySelector("#filmUrl").value,
+      "filmID": el.getAttribute("film-id"),
+    }),
   }).then((res) => {
     if (res.status == 200) {
       res.json().then((data) => {
@@ -128,6 +131,7 @@ function editFilmOnlineButton(el) {
           console.error(data.error);
         } else {
           console.log(data);
+          location.reload();
           // el.removeAttribute("disabled");
           // spinner.style.display = "none";
         }
