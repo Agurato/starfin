@@ -15,6 +15,7 @@ import (
 
 var cachePath string
 
+// InitCache initializes the cache folder
 func InitCache() {
 	cachePath = os.Getenv(context.EnvCachePath)
 	if cachePath == "" {
@@ -31,10 +32,14 @@ func InitCache() {
 	log.WithField("path", cachePath).Infoln("Using cache directory")
 }
 
+// GetCachedPath returns the full path from a filepath in the cache
 func GetCachedPath(filePath string) string {
 	return filepath.Join(cachePath, filePath)
 }
 
+// CacheFile caches a file from a sourceUrl to the filePath in the cache folder
+// Returns true if the URL returns a Status TooManyRequests (429) and will retry at a later moment
+// Returns false if the file was immediately cached
 func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	// Create directories in the requested path if needed
 	parent := GetCachedPath(filepath.Dir(filePath))
@@ -49,7 +54,7 @@ func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	if resp.StatusCode == 429 {
+	if resp.StatusCode == http.StatusTooManyRequests {
 		waitSeconds, err := strconv.Atoi(resp.Header.Get("retry-after"))
 		if err != nil {
 			waitSeconds = 300 // Wait 5 minutes by default
@@ -78,11 +83,13 @@ func CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	return false, nil
 }
 
+// IsCached returns true if a filepath is in the cache
 func IsCached(filePath string) bool {
 	_, err := os.Stat(GetCachedPath(filePath))
 	return err == nil
 }
 
+// GetCachedFile returns a buffer to the cached file
 func GetCachedFile(filePath string) ([]byte, error) {
 	return os.ReadFile(GetCachedPath(filePath))
 }

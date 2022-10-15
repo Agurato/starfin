@@ -1,46 +1,68 @@
 {{ define "partials/footer.go.html" }}
-<script src="/static/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/libs/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
 <script src="/static/libs/jquery-3.6.0.min.js"></script>
-<script type="text/javascript" src="/static/libs/slick/slick.min.js"></script>
+<script type="text/javascript" src="/static/libs/slick-1.8.1/slick.min.js"></script>
+<script src="/static/libs/tagify-4.16.4/tagify.min.js"></script>
+<script src="/static/libs/tagify-4.16.4/tagify.polyfills.min.js"></script>
 
 <script type="text/javascript">
-    // Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-
-    // Carousel
-
+    var filmEditGenreTags;
     $(document).ready(function () {
+        // Bootstrap tooltips for film production countries
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // Carousel for film cast
         $('.cast').slick({
             infinite: false,
             variableWidth: true,
             swipeToSlide: true,
         });
-    });
 
-    $(function () {
-        $('.btn-group').hover(function () {
-                let button = $(this).find('.btn')
-                button.addClass('show');
-                button.attr('aria-expanded', 'true')
-                $(this).children('.dropdown-menu').addClass('show');
-            },
-            function () {
-                let button = $(this).find('.btn')
-                button.removeClass('show');
-                button.attr('aria-expanded', 'false')
-                $(this).children('.dropdown-menu').removeClass('show');
-            });
-    });
+        // Films filters dropdown
+        $(function () {
+            $('.btn-group').hover(function () {
+                    let button = $(this).find('.btn')
+                    button.addClass('show');
+                    button.attr('aria-expanded', 'true')
+                    $(this).children('.dropdown-menu').addClass('show');
+                },
+                function () {
+                    let button = $(this).find('.btn')
+                    button.removeClass('show');
+                    button.attr('aria-expanded', 'false')
+                    $(this).children('.dropdown-menu').removeClass('show');
+                });
+        });
 
-    // Edit film features
-    $("#editFilmOnlineForm").keypress(function (e) {
-        if (e.keyCode == 13) {
-            e.preventDefault();
-            return false;
-        }
+        // Film edit forms prevent return key
+        $("#editFilmOnlineForm").keypress(function (e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        $("#editFilmManualForm").keypress(function (e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Film edit genre tags
+        var input = document.querySelector('input[name="genreTagsInput"]');
+        // Init Tagify script on the above inputs
+        filmEditGenreTags = new Tagify(input, {
+            whitelist: eval(input.getAttribute("whitelist")),
+            dropdown: {
+                maxItems: 20, // <- mixumum allowed rendered suggestions
+                classname: "tags-look", // <- custom classname for this dropdown, so it could be targeted
+                enabled: 0, // <- show suggestions on focus
+                closeOnSelect: false // <- do not hide the suggestions dropdown once an item has been selected
+            }
+        });
     });
 </script>
 

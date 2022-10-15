@@ -29,6 +29,10 @@
         font-size: 80%;
     }
 
+    span.fi {
+        padding-top: 8px;
+    }
+
     td {
         padding-left: 0px !important;
         width: 10%;
@@ -127,6 +131,46 @@
     #admin-panel button {
         margin-right: 5px;
     }
+
+    .tags-look .tagify__dropdown__item {
+        display: inline-block;
+        vertical-align: middle;
+        border-radius: 3px;
+        padding: .3em .5em;
+        border: 1px solid #CCC;
+        background: #F3F3F3;
+        margin: .2em;
+        font-size: .85em;
+        color: black;
+        transition: 0s;
+    }
+
+    .tags-look .tagify__dropdown__item--active {
+        color: black;
+    }
+
+    .tags-look .tagify__dropdown__item:hover {
+        background: lightyellow;
+        border-color: gold;
+    }
+
+    .tags-look .tagify__dropdown__item--hidden {
+        max-width: 0;
+        max-height: initial;
+        padding: .3em 0;
+        margin: .2em 0;
+        white-space: nowrap;
+        text-indent: -20px;
+        border: 0;
+    }
+
+    #genreTagsDiv .tagify__tag>div::before {
+        box-shadow: 0px 10px 10px var(--tag-inset-shadow-size) var(--tag-bg) inset;
+    }
+
+    #genreTagsDiv .tagify__tag__removeBtn:hover+div::before {
+        box-shadow: 0px 10px 10px var(--tag-inset-shadow-size) var(--tag-remove-bg, rgba(211, 148, 148, .3)) inset !important;
+    }
 </style>
 <section>
     {{ if .error }}
@@ -138,11 +182,13 @@
 {{end}}
 <div class="container">
     {{if .user.isAdmin}}
+    <!-- Admin panel to edit a film -->
     <fieldset id="admin-panel" class="pb-2">
         <legend>Admin panel</legend>
         <button type="button" class="btn btn-secondary mt-0 py-0 px-1" data-bs-toggle="modal" data-bs-target="#editFilmOnlineModal">Edit with online data</button>
         <button type="button" class="btn btn-secondary mt-0 py-0 px-1" data-bs-toggle="modal" data-bs-target="#editFilmManualModal">Edit manually</button>
     </fieldset>
+    <!-- Modal window to edit metadata from URL -->
     <div class="modal fade" id="editFilmOnlineModal" tabindex="-1" aria-labelledby="editFilmOnlineModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content bg-dark">
@@ -164,6 +210,64 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="editFilmOnlineButton(this)" film-id="{{filmID .film}}">Update metadata</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal window to edit metadata manually, field by field -->
+    <div class="modal fade" id="editFilmManualModal" tabindex="-1" aria-labelledby="editFilmManualModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-dark">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="editFilmManualModalLabel">Edit film metadata</h1>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editFilmManualForm" class="row g-3 fs-6">
+                        <div class="col-12">
+                            <label for="filmTitle" class="form-label fs-6">Title</label>
+                            <input type="text" id="filmTitle" class="form-control form-control-sm" placeholder="Title" value="{{.film.Title}}" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="filmOriginalTitle" class="form-label fs-6">Original title</label>
+                            <input type="text" id="filmOriginalTitle" class="form-control form-control-sm" placeholder="Original title" value="{{.film.OriginalTitle}}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filmReleaseYear" class="form-label fs-6">Release year</label>
+                            <input type="text" id="filmReleaseYear" class="form-control form-control-sm" placeholder="Release year">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filmDuration" class="form-label">Duration</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="filmDuration" class="form-control form-control-sm" placeholder="Duration" aria-label="Duration" aria-describedby="filmDurationMinutes">
+                                <span class="input-group-text" id="filmDurationMinutes">min</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="filmRating" class="form-label fs-6">Rating</label>
+                            <input type="text" id="filmRating" class="form-control form-control-sm" placeholder="Rating">
+                        </div>
+                        <div class="col-12">
+                            Production Countries
+                            <!-- TODO: see https://yaireo.github.io/tagify/#section-extra-properties -->
+                        </div>
+                        <div class="col-12" id="genreTagsDiv">
+                            <label for="genreTagsInput" class="form-label">Genres</label>
+                            <input type="text" name="genreTagsInput" class="form-control form-control-sm" whitelist="{{json .admin.genres}}" />
+                        </div>
+                        <div class="col-12">
+                            <label for="filmTagline" class="form-label fs-6">Tagline</label>
+                            <textarea id="filmTagline" class="form-control" aria-label="Film tagline" placeholder="Tagline"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="filmOverview" class="form-label fs-6">Overview</label>
+                            <textarea id="filmOverview" class="form-control" aria-label="Film overview" placeholder="Overview"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="editFilmManualButton(this)" film-id="{{filmID .film}}">Update metadata</button>
                 </div>
             </div>
         </div>
@@ -197,7 +301,7 @@
                 {{end}}
                 <div class="col">
                     {{range $_, $country := .film.ProdCountries}}
-                    <span class="flag-icon flag-icon-{{lower $country}}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{countryName $country}}"></span>
+                    <span class="fi fi-{{lower $country}}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{countryName $country}}"></span>
                     {{end}}
                 </div>
             </div>

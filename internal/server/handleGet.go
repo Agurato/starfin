@@ -135,6 +135,9 @@ func HandleGETFilm(c *gin.Context) {
 		"writers":   writers,
 		"cast":      fullCast,
 		"volumes":   volumes,
+		"admin": gin.H{
+			"genres": filters.Genres,
+		},
 	})
 }
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -60,6 +61,10 @@ func InitServer(datab database.DB) *gin.Engine {
 		return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
 			return len(elem) > 0
 		}), sep)
+	}
+	router.FuncMap["json"] = func(input any) string {
+		ret, _ := json.Marshal(input)
+		return string(ret)
 	}
 	router.FuncMap["filmID"] = func(film media.Film) string {
 		return film.ID.Hex()

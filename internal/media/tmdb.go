@@ -29,6 +29,7 @@ const (
 	tmdbImageURL = "https://image.tmdb.org/t/p/"
 )
 
+// CachePoster caches a poster from TMDB using its id
 func CachePoster(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, poster+key)
@@ -36,6 +37,7 @@ func CachePoster(key string) (bool, error) {
 	return false, nil
 }
 
+// CacheBackdrop caches a backdrop from TMDB using its id
 func CacheBackdrop(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W1280+key, backdrop+key)
@@ -43,6 +45,7 @@ func CacheBackdrop(key string) (bool, error) {
 	return false, nil
 }
 
+// CachePhoto caches a person's photo from TMDB using its id
 func CachePhoto(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, photo+key)
@@ -62,6 +65,7 @@ func GetPhoto(key string) ([]byte, error) {
 	return cache.GetCachedFile(photo + key)
 }
 
+// GetTMDBIDFromIMDBID retrieves the TMDB ID from an IMDb ID
 func GetTMDBIDFromIMDBID(imdbID string) (TMDBID int64, err error) {
 	urlOptions := make(map[string]string)
 	urlOptions["external_source"] = "imdb_id"

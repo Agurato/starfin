@@ -223,8 +223,8 @@ func (m MongoDB) IsFilmPresent(film *media.Film) bool {
 }
 
 // AddFilmToDB adds a given film to the DB
+// If the film is already in the database, updates it
 func (m MongoDB) AddFilm(film *media.Film) error {
-	// _, err := m.filmsColl.InsertOne(m.ctx, film)
 	_, err := m.filmsColl.UpdateOne(m.ctx, bson.M{"_id": film.ID}, bson.M{"$set": film}, options.Update().SetUpsert(true))
 	return err
 }
