@@ -10,6 +10,7 @@ import (
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/pariz/gountries"
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -128,6 +129,14 @@ func HandleGETFilm(c *gin.Context) {
 		volumes = append(volumes, volume.Name)
 	}
 
+	var countries []gin.H
+	for code, country := range gountries.New().Countries {
+		countries = append(countries, gin.H{
+			"value": country.Name.Common,
+			"code":  code,
+		})
+	}
+
 	RenderHTML(c, http.StatusOK, "pages/film.go.html", gin.H{
 		"title":     fmt.Sprintf("%s (%d)", film.Title, film.ReleaseYear),
 		"film":      film,
@@ -136,7 +145,8 @@ func HandleGETFilm(c *gin.Context) {
 		"cast":      fullCast,
 		"volumes":   volumes,
 		"admin": gin.H{
-			"genres": filters.Genres,
+			"genres":    filters.Genres,
+			"countries": countries,
 		},
 	})
 }

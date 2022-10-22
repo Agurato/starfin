@@ -132,7 +132,11 @@
         margin-right: 5px;
     }
 
-    .tags-look .tagify__dropdown__item {
+    #editFilmManualForm textarea {
+        white-space: pre-wrap;
+    }
+
+    .genreTagsLookup .tagify__dropdown__item {
         display: inline-block;
         vertical-align: middle;
         border-radius: 3px;
@@ -145,16 +149,16 @@
         transition: 0s;
     }
 
-    .tags-look .tagify__dropdown__item--active {
+    .genreTagsLookup .tagify__dropdown__item--active {
         color: black;
     }
 
-    .tags-look .tagify__dropdown__item:hover {
+    .genreTagsLookup .tagify__dropdown__item:hover {
         background: lightyellow;
         border-color: gold;
     }
 
-    .tags-look .tagify__dropdown__item--hidden {
+    .genreTagsLookup .tagify__dropdown__item--hidden {
         max-width: 0;
         max-height: initial;
         padding: .3em 0;
@@ -164,11 +168,47 @@
         border: 0;
     }
 
-    #genreTagsDiv .tagify__tag>div::before {
+    .tagify__dropdown.countryTagsLookup {
+        color: black;
+    }
+
+    .tagify__dropdown.countryTagsLookup .tagify__dropdown__item>img {
+        display: inline-block;
+        vertical-align: middle;
+        height: 20px;
+        transform: scale(.75);
+        margin-right: 5px;
+        border-radius: 2px;
+        transition: 0s;
+    }
+
+    .tagify__dropdown.countryTagsLookup .tagify__dropdown__item--active>img,
+    .tagify__dropdown.countryTagsLookup .tagify__dropdown__item:hover>img {
+        transform: none;
+        margin-right: 12px;
+    }
+
+    .tagify.countries .tagify__input {
+        min-width: 175px;
+    }
+
+    .tagify.countries tag {
+        white-space: nowrap;
+    }
+
+    .tagify.countries tag img {
+        display: inline-block;
+        height: 16px;
+        margin-right: 3px;
+        border-radius: 2px;
+        pointer-events: none;
+    }
+
+    .tagify__tag>div::before {
         box-shadow: 0px 10px 10px var(--tag-inset-shadow-size) var(--tag-bg) inset;
     }
 
-    #genreTagsDiv .tagify__tag__removeBtn:hover+div::before {
+    .tagify__tag__removeBtn:hover+div::before {
         box-shadow: 0px 10px 10px var(--tag-inset-shadow-size) var(--tag-remove-bg, rgba(211, 148, 148, .3)) inset !important;
     }
 </style>
@@ -234,34 +274,34 @@
                         </div>
                         <div class="col-md-4">
                             <label for="filmReleaseYear" class="form-label fs-6">Release year</label>
-                            <input type="text" id="filmReleaseYear" class="form-control form-control-sm" placeholder="Release year">
+                            <input type="text" id="filmReleaseYear" class="form-control form-control-sm" placeholder="Release year" value="{{.film.ReleaseYear}}">
                         </div>
                         <div class="col-md-4">
                             <label for="filmDuration" class="form-label">Duration</label>
                             <div class="input-group input-group-sm">
-                                <input type="text" id="filmDuration" class="form-control form-control-sm" placeholder="Duration" aria-label="Duration" aria-describedby="filmDurationMinutes">
+                                <input type="text" id="filmDuration" class="form-control form-control-sm" placeholder="Duration" aria-label="Duration" aria-describedby="filmDurationMinutes" value="{{.film.Runtime}}">
                                 <span class="input-group-text" id="filmDurationMinutes">min</span>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <label for="filmRating" class="form-label fs-6">Rating</label>
-                            <input type="text" id="filmRating" class="form-control form-control-sm" placeholder="Rating">
+                            <input type="text" id="filmRating" class="form-control form-control-sm" placeholder="Rating" value="{{.film.Classification}}">
                         </div>
-                        <div class="col-12">
-                            Production Countries
-                            <!-- TODO: see https://yaireo.github.io/tagify/#section-extra-properties -->
+                        <div class=" col-12">
+                            <label for="countriesTagsInput" class="form-label">Production Countries</label>
+                            <input id="filmCountries" name='countriesTagsInput' class='form-control form-control-sm countries' placeholder="Add countries" whitelist="{{json .admin.countries}}" tags="{{json .film.ProdCountries}}">
                         </div>
-                        <div class="col-12" id="genreTagsDiv">
+                        <div class=" col-12" id="genreTagsDiv">
                             <label for="genreTagsInput" class="form-label">Genres</label>
-                            <input type="text" name="genreTagsInput" class="form-control form-control-sm" whitelist="{{json .admin.genres}}" />
+                            <input type="text" id="filmGenres" name="genreTagsInput" class="form-control form-control-sm" whitelist="{{json .admin.genres}}" tags="{{json .film.Genres}}" />
                         </div>
                         <div class="col-12">
                             <label for="filmTagline" class="form-label fs-6">Tagline</label>
-                            <textarea id="filmTagline" class="form-control" aria-label="Film tagline" placeholder="Tagline"></textarea>
+                            <textarea id="filmTagline" class="form-control" aria-label="Film tagline" placeholder="Tagline">{{.film.Tagline}}</textarea>
                         </div>
                         <div class="col-12">
                             <label for="filmOverview" class="form-label fs-6">Overview</label>
-                            <textarea id="filmOverview" class="form-control" aria-label="Film overview" placeholder="Overview"></textarea>
+                            <textarea id="filmOverview" class="form-control" aria-label="Film overview" placeholder="Overview">{{.film.Overview}}</textarea>
                         </div>
                     </form>
                 </div>

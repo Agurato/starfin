@@ -7,6 +7,7 @@
 
 <script type="text/javascript">
     var filmEditGenreTags;
+    var filmEditCountryTags;
     $(document).ready(function () {
         // Bootstrap tooltips for film production countries
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -39,30 +40,89 @@
 
         // Film edit forms prevent return key
         $("#editFilmOnlineForm").keypress(function (e) {
-            if (e.keyCode == 13) {
+            if (e.target.localName != "textarea" && e.keyCode == 13) {
                 e.preventDefault();
                 return false;
             }
         });
         $("#editFilmManualForm").keypress(function (e) {
-            if (e.keyCode == 13) {
+            console.log(e);
+            if (e.target.localName != "textarea" && e.keyCode == 13) {
                 e.preventDefault();
                 return false;
             }
         });
 
         // Film edit genre tags
-        var input = document.querySelector('input[name="genreTagsInput"]');
-        // Init Tagify script on the above inputs
-        filmEditGenreTags = new Tagify(input, {
-            whitelist: eval(input.getAttribute("whitelist")),
-            dropdown: {
-                maxItems: 20, // <- mixumum allowed rendered suggestions
-                classname: "tags-look", // <- custom classname for this dropdown, so it could be targeted
-                enabled: 0, // <- show suggestions on focus
-                closeOnSelect: false // <- do not hide the suggestions dropdown once an item has been selected
+        let genreTagsInput = document.querySelector('input[name="genreTagsInput"]');
+        if (genreTagsInput != null) {
+            // Init Tagify script on the above inputs
+            filmEditGenreTags = new Tagify(genreTagsInput, {
+                whitelist: eval(genreTagsInput.getAttribute("whitelist")),
+                dropdown: {
+                    maxItems: 20, // <- mixumum allowed rendered suggestions
+                    classname: "genreTagsLookup", // <- custom classname for this dropdown, so it could be targeted
+                    enabled: 0, // <- show suggestions on focus
+                    closeOnSelect: false // <- do not hide the suggestions dropdown once an item has been selected
+                }
+            });
+            let tags = eval(genreTagsInput.getAttribute("tags"));
+            for (tag of tags) {
+                for (genre of filmEditGenreTags.whitelist) {
+                    if (genre == tag) {
+                        filmEditGenreTags.addTags([genre]);
+                    }
+                }
             }
-        });
+        }
+
+        let countryTagsInput = document.querySelector('input[name="countriesTagsInput"]');
+        if (countryTagsInput != null) {
+            filmEditCountryTags = new Tagify(countryTagsInput, {
+                delimiters: null,
+                templates: {
+                    tag: function (tagData) {
+                        try {
+                            return `<tag title='${tagData.value}' contenteditable='false' spellcheck="false" class='tagify__tag ${tagData.class ? tagData.class : ""}' ${this.getAttributes(tagData)}>
+                        <x title='remove tag' class='tagify__tag__removeBtn'></x>
+                        <div>
+                            ${tagData.code ?
+                            `<img onerror="this.style.visibility='hidden'" src='/static/libs/flag-icons-6.6.5/flags/4x3/${tagData.code}.svg'>` : ''
+                            }
+                            <span class='tagify__tag-text'>${tagData.value}</span>
+                        </div>
+                    </tag>`
+                        } catch (err) {}
+                    },
+
+                    dropdownItem: function (tagData) {
+                        try {
+                            return `<div ${this.getAttributes(tagData)} class='tagify__dropdown__item ${tagData.class ? tagData.class : ""}' >
+                            <img onerror="this.style.visibility = 'hidden'"
+                                src='/static/libs/flag-icons-6.6.5/flags/4x3/${tagData.code}.svg'>
+                            <span>${tagData.value}</span>
+                        </div>`
+                        } catch (err) {
+                            console.error(err)
+                        }
+                    }
+                },
+                enforceWhitelist: true,
+                whitelist: eval(countryTagsInput.getAttribute("whitelist")),
+                dropdown: {
+                    enabled: 1, // suggest tags after a single character input
+                    classname: "countryTagsLookup" // custom class for the suggestions dropdown
+                } // map tags' values to this property name, so this property will be the actual value and not the printed value on the screen
+            });
+            let tags = eval(countryTagsInput.getAttribute("tags"));
+            for (tag of tags) {
+                for (country of filmEditCountryTags.whitelist) {
+                    if (country.code == tag) {
+                        filmEditCountryTags.addTags([country]);
+                    }
+                }
+            }
+        }
     });
 </script>
 
