@@ -95,56 +95,39 @@ func InitServer(datab database.DB) *gin.Engine {
 	router.GET("/start", HandleGETStart)
 	router.POST("/start", HandlePOSTStart)
 
-	mainRouter := router.Group("/")
-	mainRouter.Use(CheckSetupDone)
-	{
-		// Authentication actions
-		mainRouter.GET("/login", HandleGETLogin)
-		mainRouter.POST("/login", HandlePOSTLogin)
-		mainRouter.GET("/logout", HandleGETLogout)
-	}
+	// Authentication actions
+	mainRouter := router.Use(CheckSetupDone).
+		GET("/login", HandleGETLogin).
+		POST("/login", HandlePOSTLogin).
+		GET("/logout", HandleGETLogout)
 
 	// User needs to be logged in to access these pages
-	needsLogin := mainRouter.Group("/")
-	needsLogin.Use(AuthRequired)
-	{
-		needsLogin.GET("/", HandleGETIndex)
-
-		needsLogin.GET("/films/*params", HandleGETFilms)
-		// needsLogin.GET("/films/year/*year", HandleGETFilms)
-		// needsLogin.GET("/films/page/:page", HandleGETFilms)
-		needsLogin.GET("/film/:id", HandleGETFilm)
-		needsLogin.GET("/film/:id/download/:idx", HandleGETDownloadFilm)
-		needsLogin.GET("/film/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle)
-
-		needsLogin.GET("/people", HandleGETPeople)
-		needsLogin.GET("/person/:tmdbId", HandleGetPerson)
-		needsLogin.GET("/actor/:tmdbId", HandleGetActor)
-		needsLogin.GET("/director/:tmdbId", HandleGetDirector)
-		needsLogin.GET("/writer/:tmdbId", HandleGetWriter)
-
-		needsLogin.GET("/settings", HandleGETSettings)
-		needsLogin.POST("/setpassword", HandlePOSTSetPassword)
-
-		needsLogin.GET("/cache/*path", HandleGetCache)
-	}
+	mainRouter.Use(AuthRequired).
+		GET("/", HandleGETIndex).
+		GET("/films/*params", HandleGETFilms).
+		GET("/film/:id", HandleGETFilm).
+		GET("/film/:id/download/:idx", HandleGETDownloadFilm).
+		GET("/film/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle).
+		GET("/people", HandleGETPeople).
+		GET("/person/:tmdbId", HandleGetPerson).
+		GET("/actor/:tmdbId", HandleGetActor).
+		GET("/director/:tmdbId", HandleGetDirector).
+		GET("/writer/:tmdbId", HandleGetWriter).
+		GET("/settings", HandleGETSettings).
+		POST("/setpassword", HandlePOSTSetPassword).
+		GET("/cache/*path", HandleGetCache)
 
 	// User needs to be admin to access these pages
-	needsAdmin := mainRouter.Group("/")
-	needsAdmin.Use(AdminRequired)
-	{
-		needsAdmin.GET("/admin", HandleGETAdmin)
-		needsAdmin.GET("/admin/volume/:volumeId", HandleGETAdminVolume)
-		needsAdmin.POST("/admin/editvolume", HandlePOSTEditVolume)
-		needsAdmin.POST("/admin/deletevolume", HandlePOSTDeleteVolume)
-
-		needsAdmin.GET("/admin/user/:userId", HandleGETAdminUser)
-		needsAdmin.POST("/admin/edituser", HandlePOSTEditUser)
-		needsAdmin.POST("/admin/deleteuser", HandlePOSTDeleteUser)
-
-		needsAdmin.POST("/admin/reloadcache", HandlePOSTReloadCache)
-		needsAdmin.POST("/admin/editfilmonline", HandlePOSTEditFilmOnline)
-	}
+	mainRouter.Use(AdminRequired).
+		GET("/admin", HandleGETAdmin).
+		GET("/admin/volume/:volumeId", HandleGETAdminVolume).
+		POST("/admin/editvolume", HandlePOSTEditVolume).
+		POST("/admin/deletevolume", HandlePOSTDeleteVolume).
+		GET("/admin/user/:userId", HandleGETAdminUser).
+		POST("/admin/edituser", HandlePOSTEditUser).
+		POST("/admin/deleteuser", HandlePOSTDeleteUser).
+		POST("/admin/reloadcache", HandlePOSTReloadCache).
+		POST("/admin/editfilmonline", HandlePOSTEditFilmOnline)
 
 	return router
 }
