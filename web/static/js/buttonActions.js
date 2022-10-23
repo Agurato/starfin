@@ -148,4 +148,15 @@ function editFilmManualButton(el) {
   for(tag of filmEditGenreTags.getTagElms()) {
     console.log(tag.getAttribute("title"));
   }
+  for(tag of filmEditCountryTags.getTagElms()) {
+    console.log(tag.getAttribute("code"));
+  }
+}
+
+function addDirectorLine(el) {
+  console.log(el);
+}
+
+function deleteDirectorLine(el) {
+  console.log(el);
 }

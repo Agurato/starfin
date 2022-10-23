@@ -287,21 +287,69 @@
                             <label for="filmRating" class="form-label fs-6">Rating</label>
                             <input type="text" id="filmRating" class="form-control form-control-sm" placeholder="Rating" value="{{.film.Classification}}">
                         </div>
-                        <div class=" col-12">
+                        <div class="col-12">
                             <label for="countriesTagsInput" class="form-label">Production Countries</label>
                             <input id="filmCountries" name='countriesTagsInput' class='form-control form-control-sm countries' placeholder="Add countries" whitelist="{{json .admin.countries}}" tags="{{json .film.ProdCountries}}">
                         </div>
-                        <div class=" col-12" id="genreTagsDiv">
+                        <div class="col-12" id="genreTagsDiv">
                             <label for="genreTagsInput" class="form-label">Genres</label>
                             <input type="text" id="filmGenres" name="genreTagsInput" class="form-control form-control-sm" whitelist="{{json .admin.genres}}" tags="{{json .film.Genres}}" />
                         </div>
                         <div class="col-12">
                             <label for="filmTagline" class="form-label fs-6">Tagline</label>
-                            <textarea id="filmTagline" class="form-control" aria-label="Film tagline" placeholder="Tagline">{{.film.Tagline}}</textarea>
+                            <textarea id="filmTagline" class="form-control form-control-sm" aria-label="Film tagline" placeholder="Tagline" rows="2">{{.film.Tagline}}</textarea>
                         </div>
                         <div class="col-12">
                             <label for="filmOverview" class="form-label fs-6">Overview</label>
-                            <textarea id="filmOverview" class="form-control" aria-label="Film overview" placeholder="Overview">{{.film.Overview}}</textarea>
+                            <textarea id="filmOverview" class="form-control form-control-sm" aria-label="Film overview" placeholder="Overview" rows="4">{{.film.Overview}}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="filmDirectors" class="form-label fs-6">Directors</label>
+                            <table class="table table-dark table-borderless table-sm mb-0">
+                                <tbody>
+                                    {{range $idx, $dir := .directors}}
+                                    <tr>
+                                        <td class="col-11"><input type="text" class="form-control form-control-sm" placeholder="Name" value="{{$dir.Name}}"></td>
+                                        <td class="col-1 text-center">
+                                            <button type="button" class="btn p-0 text-white" onclick="deleteDirectorLine(this)" lineIndex="{{$idx}}"><i class="fas fa-trash-alt"></i></button>
+                                        </td>
+                                    </tr>
+                                    {{end}}
+                                    <tr>
+                                        <td class="" colspan="2">
+                                            <button type="button" class="btn p-0 text-white d-block text-center w-100 bg-secondary" onclick="addDirectorLine(this)">+</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-12">
+                            <label for="filmWriters" class="form-label fs-6">Writers</label>
+                        </div>
+                        <div class="col-12">
+                            <label for="filmCast" class="form-label fs-6">Cast</label>
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Actor</th>
+                                        <th scope="col">As</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Mark</td>
+                                        <td>Otto</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Jacob</td>
+                                        <td>Thornton</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Jacob</td>
+                                        <td>Thornton</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </form>
                 </div>
