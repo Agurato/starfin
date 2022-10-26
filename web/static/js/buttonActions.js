@@ -153,10 +153,13 @@ function editFilmManualButton(el) {
   }
 }
 
-function addDirectorLine(el) {
-  console.log(el);
+function addDirectorLine() {
+  let dirLine = directorLineToBeCloned.clone();
+  dirLine.id = "";
+  dirLine.removeClass("d-none");
+  $("#filmDirectorsAddNewLine").before(dirLine);
 }
 
 function deleteDirectorLine(el) {
-  console.log(el);
+  $(el).parent().parent().remove();
 }

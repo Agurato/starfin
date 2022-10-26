@@ -374,7 +374,13 @@ func (m MongoDB) AddActors(actors []media.Person) {
 }
 
 // GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromID(TMDBID int64) (person media.Person, err error) {
+func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (person media.Person, err error) {
+	err = m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(&person)
+	return
+}
+
+// GetPersonFromID returns the Person struct
+func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (person media.Person, err error) {
 	err = m.peopleColl.FindOne(m.ctx, bson.M{"tmdbid": TMDBID}).Decode(&person)
 	return
 }

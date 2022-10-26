@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/gin-contrib/sessions"
@@ -51,36 +52,41 @@ func InitServer(datab database.DB) *gin.Engine {
 	router.Use(sessions.Sessions("user-session", store))
 
 	// Add template functions
-	router.FuncMap["add"] = func(a int, b int) int {
-		return a + b
-	}
-	router.FuncMap["basename"] = filepath.Base
-	router.FuncMap["countryName"] = getCountryName
-	router.FuncMap["join"] = strings.Join
-	router.FuncMap["joinStrings"] = func(sep string, elems ...string) string {
-		return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
-			return len(elem) > 0
-		}), sep)
-	}
-	router.FuncMap["json"] = func(input any) string {
-		ret, _ := json.Marshal(input)
-		return string(ret)
-	}
-	router.FuncMap["filmID"] = func(film media.Film) string {
-		return film.ID.Hex()
-	}
-	router.FuncMap["filmName"] = func(film media.Film) string {
-		if film.Title == "" {
-			return film.Name
-		}
-		return film.Title
-	}
-	router.FuncMap["lower"] = strings.ToLower
-	router.FuncMap["replace"] = strings.ReplaceAll
-	router.FuncMap["title"] = cases.Title(language.English).String
-	router.FuncMap["tmdbGetImageURL"] = tmdb.GetImageURL
-	router.FuncMap["getImageURL"] = func(imageType, key string) string {
-		return "/cache/" + imageType + key
+	router.FuncMap = template.FuncMap{
+		"add": func(a int, b int) int {
+			return a + b
+		},
+		"basename":    filepath.Base,
+		"countryName": getCountryName,
+		"join":        strings.Join,
+		"joinStrings": func(sep string, elems ...string) string {
+			return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
+				return len(elem) > 0
+			}), sep)
+		},
+		"json": func(input any) string {
+			ret, _ := json.Marshal(input)
+			return string(ret)
+		},
+		"filmID": func(film media.Film) string {
+			return film.ID.Hex()
+		},
+		"filmName": func(film media.Film) string {
+			if film.Title == "" {
+				return film.Name
+			}
+			return film.Title
+		},
+		"lower": strings.ToLower,
+		"personID": func(person media.Person) string {
+			return person.ID.Hex()
+		},
+		"replace":         strings.ReplaceAll,
+		"title":           cases.Title(language.English).String,
+		"tmdbGetImageURL": tmdb.GetImageURL,
+		"getImageURL": func(imageType, key string) string {
+			return "/cache/" + imageType + key
+		},
 	}
 
 	// Load templates
@@ -109,10 +115,10 @@ func InitServer(datab database.DB) *gin.Engine {
 		GET("/film/:id/download/:idx", HandleGETDownloadFilm).
 		GET("/film/:id/download/:idx/sub/:subIdx", HandleGETDownloadSubtitle).
 		GET("/people", HandleGETPeople).
-		GET("/person/:tmdbId", HandleGetPerson).
-		GET("/actor/:tmdbId", HandleGetActor).
-		GET("/director/:tmdbId", HandleGetDirector).
-		GET("/writer/:tmdbId", HandleGetWriter).
+		GET("/person/:id", HandleGetPerson).
+		GET("/actor/:id", HandleGetActor).
+		GET("/director/:id", HandleGetDirector).
+		GET("/writer/:id", HandleGetWriter).
 		GET("/settings", HandleGETSettings).
 		POST("/setpassword", HandlePOSTSetPassword).
 		GET("/cache/*path", HandleGetCache)

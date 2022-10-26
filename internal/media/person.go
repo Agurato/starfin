@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Cast struct {
@@ -13,6 +14,7 @@ type Cast struct {
 }
 
 type Person struct {
+	ID       primitive.ObjectID `bson:"_id"`
 	TMDBID   int64
 	Name     string
 	Photo    string
@@ -26,6 +28,9 @@ func FetchPersonDetails(personID int64) Person {
 	details, err := TMDBClient.GetPersonDetails(int(personID), nil)
 	if err != nil {
 		log.WithField("personID", personID).Errorln(err)
+		return Person{
+			TMDBID: personID,
+		}
 	}
 
 	return Person{

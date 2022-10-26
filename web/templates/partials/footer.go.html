@@ -8,6 +8,8 @@
 <script type="text/javascript">
     var filmEditGenreTags;
     var filmEditCountryTags;
+    var directorLineToBeCloned = $("#filmDirectorLineToBeCloned");
+
     $(document).ready(function () {
         // Bootstrap tooltips for film production countries
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -123,7 +125,20 @@
                 }
             }
         }
+    
+        let directorsTable = $("#filmDirectorsTable");
+        if (directorsTable != null) {
+            let initDirectors = eval(directorsTable.attr("initValue"));
+            for (let dir of initDirectors) {
+                let dirLine = directorLineToBeCloned.clone();
+                dirLine.id = "";
+                dirLine.removeClass("d-none");
+                dirLine.find("input").attr("value", dir["Name"]);
+                $("#filmDirectorsAddNewLine").before(dirLine);
+            }
+        }
     });
+
 </script>
 
 </body>

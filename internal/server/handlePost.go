@@ -216,7 +216,7 @@ func HandlePOSTReloadCache(c *gin.Context) {
 	for _, film := range films {
 		cachePosterAndBackdrop(&film)
 		for _, personID := range film.GetCastAndCrewIDs() {
-			person, _ := db.GetPersonFromID(personID)
+			person, _ := db.GetPersonFromTMDBID(personID)
 			cachePersonPhoto(&person)
 		}
 	}

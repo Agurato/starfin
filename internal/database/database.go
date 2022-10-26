@@ -38,7 +38,8 @@ type DB interface {
 	IsPersonPresent(personID int64) bool
 	AddPerson(person media.Person)
 	AddActors(actors []media.Person)
-	GetPersonFromID(TMDBID int64) (person media.Person, err error)
+	GetPersonFromID(ID primitive.ObjectID) (person media.Person, err error)
+	GetPersonFromTMDBID(ID int64) (person media.Person, err error)
 	GetPeople() (people []media.Person)
 
 	GetFilmFromID(id primitive.ObjectID) (film media.Film, err error)

@@ -305,19 +305,17 @@
                         </div>
                         <div class="col-12">
                             <label for="filmDirectors" class="form-label fs-6">Directors</label>
-                            <table class="table table-dark table-borderless table-sm mb-0">
+                            <table class="table table-dark table-borderless table-sm mb-0" id="filmDirectorsTable" initValue="{{json .directors}}">
                                 <tbody>
-                                    {{range $idx, $dir := .directors}}
-                                    <tr>
-                                        <td class="col-11"><input type="text" class="form-control form-control-sm" placeholder="Name" value="{{$dir.Name}}"></td>
+                                    <tr class="d-none" id="filmDirectorLineToBeCloned">
+                                        <td class="col-11"><input type="text" class="form-control form-control-sm" placeholder="Name" value=""></td>
                                         <td class="col-1 text-center">
-                                            <button type="button" class="btn p-0 text-white" onclick="deleteDirectorLine(this)" lineIndex="{{$idx}}"><i class="fas fa-trash-alt"></i></button>
+                                            <button type="button" class="btn p-0 text-white" onclick="deleteDirectorLine(this)"><i class="fas fa-trash-alt"></i></button>
                                         </td>
                                     </tr>
-                                    {{end}}
-                                    <tr>
+                                    <tr id="filmDirectorsAddNewLine">
                                         <td class="" colspan="2">
-                                            <button type="button" class="btn p-0 text-white d-block text-center w-100 bg-secondary" onclick="addDirectorLine(this)">+</button>
+                                            <button type="button" class="btn p-0 text-white d-block text-center w-100 bg-secondary" onclick="addDirectorLine()">+</button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -406,7 +404,7 @@
                             <th>
                                 {{range $idx, $dir := .directors}}
                                 {{$idx := add $idx 1}}
-                                <a href="/director/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $directorsLength}}, {{end}}
+                                <a href="/director/{{$dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $directorsLength}}, {{end}}
                                 {{end}}
                             </th>
                         </tr>
@@ -415,7 +413,7 @@
                             <th>
                                 {{range $idx, $dir := .writers}}
                                 {{$idx := add $idx 1}}
-                                <a href="/writer/{{$dir.TMDBID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
+                                <a href="/writer/{{$dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
                                 {{end}}
                             </th>
                         </tr>
@@ -434,7 +432,7 @@
             <div class="cast">
                 {{range $idx, $actor := .cast}}
                 <div class="actor mx-2 text-center">
-                    <a href="/actor/{{$actor.Id}}">
+                    <a href="/actor/{{$actor.ID}}">
                         {{if $actor.Photo}}
                         <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}" width="185" />
                         {{else}}

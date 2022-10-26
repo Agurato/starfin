@@ -97,26 +97,26 @@ func HandleGETFilm(c *gin.Context) {
 		writers   []media.Person
 	)
 	for _, cast := range film.Cast {
-		actor, err := db.GetPersonFromID(cast.ActorID)
+		actor, err := db.GetPersonFromTMDBID(cast.ActorID)
 		if err != nil {
 			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
 			actor = media.Person{}
 		}
 		fullCast = append(fullCast, gin.H{
 			"Character": cast.Character,
-			"Id":        cast.ActorID,
+			"ID":        actor.ID.Hex(),
 			"Name":      actor.Name,
 			"Photo":     actor.Photo,
 		})
 	}
 	for _, directorID := range film.Directors {
-		person, err := db.GetPersonFromID(directorID)
+		person, err := db.GetPersonFromTMDBID(directorID)
 		if err == nil {
 			directors = append(directors, person)
 		}
 	}
 	for _, writerID := range film.Writers {
-		person, err := db.GetPersonFromID(writerID)
+		person, err := db.GetPersonFromTMDBID(writerID)
 		if err == nil {
 			writers = append(writers, person)
 		}
@@ -219,7 +219,7 @@ func HandleGETDownloadSubtitle(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, extSubtitles[subFileIndex].Path)
 }
 
-// HandleGETFilms displays the list of films
+// HandleGETFilms displays the list of people
 func HandleGETPeople(c *gin.Context) {
 	var (
 		inputSearch string
@@ -262,14 +262,14 @@ func HandleGETPeople(c *gin.Context) {
 
 // HandleGetActor displays the actor's bio and the films they star in
 func HandleGetPerson(c *gin.Context) {
-	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	person, err := db.GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -289,14 +289,14 @@ func HandleGetPerson(c *gin.Context) {
 
 // HandleGetActor displays the actor's bio and the films they star in
 func HandleGetActor(c *gin.Context) {
-	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	person, err := db.GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -316,14 +316,14 @@ func HandleGetActor(c *gin.Context) {
 
 // HandleGetDirector displays the directors's bio and the films they directed
 func HandleGetDirector(c *gin.Context) {
-	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	person, err := db.GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -343,14 +343,14 @@ func HandleGetDirector(c *gin.Context) {
 
 // HandleGetWriter displays the writer's bio and the films they wrote
 func HandleGetWriter(c *gin.Context) {
-	tmdbID, err := strconv.ParseInt(c.Param("tmdbId"), 10, 64)
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	person, err := db.GetPersonFromID(tmdbID)
+	person, err := db.GetPersonFromID(id)
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
