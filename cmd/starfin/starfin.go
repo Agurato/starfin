@@ -43,8 +43,11 @@ func main2() {
 		os.Getenv(ctx.EnvDBPort),
 		os.Getenv(ctx.EnvDBName))
 
+	mainHandler := server2.NewMainHandler(db)
+	adminHandler := server2.NewAdminHandler(db)
 	filmHandler := server2.NewFilmHandler(db)
 	personHandler := server2.NewPersonHandler(db)
 
-	server := server2.NewServer(filmHandler, personHandler)
+	server := server2.NewServer(mainHandler, adminHandler, filmHandler, personHandler)
+	server.Run()
 }

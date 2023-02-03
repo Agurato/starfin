@@ -1,23 +1,30 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-gonic/gin"
+	"github.com/matthewhartstonge/argon2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type AdminStorer interface {
+	AddVolume(volume *model.Volume) error
 	GetVolumes() (volumes []model.Volume, err error)
 	GetVolumeFromID(id primitive.ObjectID, volume *model.Volume) error
 	DeleteVolume(hexId string) error
 
+	IsOwnerPresent() bool
+	AddUser(user *model.User) error
 	GetUsers() (users []model.User, err error)
 	GetUserFromID(id primitive.ObjectID, user *model.User) error
+	IsUsernameAvailable(username string) (bool, error)
 	DeleteUser(hexId string) error
 
 	GetFilms() (films []model.Film)
@@ -29,8 +36,10 @@ type AdminHandler struct {
 	AdminStorer
 }
 
-func NewAdminHandler() *AdminHandler {
-	return &AdminHandler{}
+func NewAdminHandler(as AdminStorer) *AdminHandler {
+	return &AdminHandler{
+		AdminStorer: as,
+	}
 }
 
 // GetAdmin displays the admin page
@@ -134,7 +143,7 @@ func (ah AdminHandler) PostEditVolume(c *gin.Context) {
 			MediaType:   volumeMediaType,
 		}
 		// Adding a volume
-		if err := AddVolume(volume); err != nil {
+		if err := ah.addVolume(volume); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 				"title":  "Add new volume",
 				"volume": model.Volume{},
@@ -219,7 +228,7 @@ func (ah AdminHandler) PostEditUser(c *gin.Context) {
 	isAdmin := c.PostForm("isadmin") == "isadmin"
 
 	if userIdStr == "" {
-		if _, err := AddUser(username, password1, password2, isAdmin); err != nil {
+		if _, err := ah.addUser(username, password1, password2, isAdmin); err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
 				"userEdit": model.User{},
@@ -303,4 +312,87 @@ func (ah AdminHandler) PostEditFilmOnline(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"tmdbID": tmdbID})
+}
+
+// addUser checks that the user and password follow specific rules and adds it to the database
+func (ah AdminHandler) addUser(username, password1, password2 string, isAdmin bool) (*model.User, error) {
+	argon := argon2.DefaultConfig()
+
+	// Check username length
+	if len(username) < 2 || len(username) > 25 {
+		return nil, errors.New("username must be between 2 and 25 characters")
+	}
+
+	// Check if username is not already taken
+	if available, err := ah.AdminStorer.IsUsernameAvailable(username); err != nil {
+		log.Errorln(err)
+		return nil, errors.New("an error occured …")
+	} else if !available {
+		return nil, errors.New("this username is already taken")
+	}
+
+	// Check if both passwords are equal
+	if password1 != password2 {
+		return nil, errors.New("passwords don't match")
+	}
+
+	// Check if password is at least 8 characters
+	if len(password1) < 8 {
+		return nil, errors.New("passwords must be at least 8 characters long")
+	}
+
+	// Hash & encode password
+	encoded, err := argon.HashEncoded([]byte(password1))
+	if err != nil {
+		return nil, errors.New("an error occured while creating your account")
+	}
+
+	// Add user to DB
+	user := &model.User{
+		ID:       primitive.NewObjectID(),
+		Name:     username,
+		Password: string(encoded),
+		IsOwner:  !ah.AdminStorer.IsOwnerPresent(),
+		IsAdmin:  isAdmin,
+	}
+
+	err = ah.AdminStorer.AddUser(user)
+	if err != nil {
+		log.Errorln(err)
+		return nil, errors.New("user could not be added")
+	}
+
+	return user, nil
+}
+
+// addVolume checks that the volume follows specific rules and adds it to the database
+func (ah AdminHandler) addVolume(volume *model.Volume) error {
+	// Check volume name length
+	if len(volume.Name) < 3 {
+		return errors.New("volume name must be between 3")
+	}
+
+	// Check path is a directory
+	fileInfo, err := os.Stat(volume.Path)
+	if err != nil {
+		return errors.New("volume path does not exist")
+	}
+	if !fileInfo.IsDir() {
+		return errors.New("volume path is not a directory")
+	}
+
+	// Add volume to the database
+	err = ah.AdminStorer.AddVolume(volume)
+	if err != nil {
+		log.Errorln(err)
+		return errors.New("volume could not be added")
+	}
+
+	// Search for media files in a separate goroutine to return the page asap
+	go searchMediaFilesInVolume(volume)
+
+	// Add file watch to the volume
+	addFileWatch(volume)
+
+	return nil
 }

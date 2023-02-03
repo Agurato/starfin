@@ -28,19 +28,18 @@ const (
 	UserKey = "user"
 )
 
-type Server struct {
-	router    *gin.Engine
-	db        database.DB
+var (
 	setupDone bool
-}
+)
 
 // NewServer initializes the server
-func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler) *Server {
+func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler) *gin.Engine {
 	// Set Gin to production mode
 	// TODO: change to release for deployment
 	// gin.SetMode(gin.DebugMode)
 
 	router := gin.Default()
+
 	router.SetTrustedProxies(nil)
 
 	// Cookies
@@ -53,9 +52,12 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 		"add": func(a int, b int) int {
 			return a + b
 		},
-		"basename":    filepath.Base,
-		"countryName": getCountryName,
-		"join":        strings.Join,
+		"basename": filepath.Base,
+		"countryName": func(code string) string {
+			country, _ := gountries.New().FindCountryByAlpha(code)
+			return country.Name.Common
+		},
+		"join": strings.Join,
 		"joinStrings": func(sep string, elems ...string) string {
 			return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
 				return len(elem) > 0
@@ -99,13 +101,13 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 	router.POST("/start", mainHandler.PostStart)
 
 	// Authentication actions
-	mainRouter := router.Use(CheckSetupDone).
+	mainRouter := router.Use(checkSetupDone).
 		GET("/login", mainHandler.HandleGETLogin).
 		POST("/login", mainHandler.HandlePOSTLogin).
 		GET("/logout", mainHandler.HandleGETLogout)
 
 	// User needs to be logged in to access these pages
-	mainRouter.Use(AuthRequired).
+	mainRouter.Use(authRequired).
 		GET("/", mainHandler.HandleGETIndex).
 		GET("/films/*params", filmHandler.GetFilms).
 		GET("/film/:id", filmHandler.GetFilm).
@@ -121,7 +123,7 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 		GET("/cache/*path", mainHandler.HandleGetCache)
 
 	// User needs to be admin to access these pages
-	mainRouter.Use(AdminRequired).
+	mainRouter.Use(adminRequired).
 		GET("/admin", adminHandler.GetAdmin).
 		GET("/admin/volume/:volumeId", adminHandler.GetAdminVolume).
 		POST("/admin/editvolume", adminHandler.PostEditVolume).
@@ -132,11 +134,7 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 		POST("/admin/reloadcache", adminHandler.PostReloadCache).
 		POST("/admin/editfilmonline", adminHandler.PostEditFilmOnline)
 
-	return &Server{
-		router:    router,
-		db:        db,
-		setupDone: db.IsOwnerPresent(),
-	}
+	return router
 }
 
 // RenderHTML renders HTML pages and adds useful objects for templates
@@ -161,7 +159,7 @@ func RenderHTML(c *gin.Context, code int, name string, obj gin.H) {
 }
 
 // CheckSetupDone ensures that the setup has been done once (a user is registered in the database)
-func CheckSetupDone(c *gin.Context) {
+func checkSetupDone(c *gin.Context) {
 	if !setupDone {
 		c.Redirect(http.StatusSeeOther, "/start")
 		c.Abort()
@@ -171,7 +169,7 @@ func CheckSetupDone(c *gin.Context) {
 }
 
 // AuthRequired ensures that a request will be aborted if the user is not authenticated
-func AuthRequired(c *gin.Context) {
+func authRequired(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey)
 	// Abort request if user is not in cookies
@@ -184,7 +182,7 @@ func AuthRequired(c *gin.Context) {
 }
 
 // AuthRequired ensures that a request will be aborted if the user is not authenticated
-func AdminRequired(c *gin.Context) {
+func adminRequired(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey)
 	// Abort request if user is not in cookies
@@ -205,9 +203,4 @@ func AdminRequired(c *gin.Context) {
 		return
 	}
 	c.Next()
-}
-
-func getCountryName(code string) string {
-	country, _ := gountries.New().FindCountryByAlpha(code)
-	return country.Name.Common
 }

@@ -19,8 +19,10 @@ type MainHandler struct {
 	MainStorer
 }
 
-func NewMainHandler() *MainHandler {
-	return &MainHandler{}
+func NewMainHandler(ms MainStorer) *MainHandler {
+	return &MainHandler{
+		MainStorer: ms,
+	}
 }
 
 // Error404 displays the 404 page
