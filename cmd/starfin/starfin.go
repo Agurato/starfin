@@ -7,6 +7,8 @@ import (
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/server"
+	"github.com/Agurato/starfin/internal2/infrastructure"
+	server2 "github.com/Agurato/starfin/internal2/service/server"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 )
@@ -31,4 +33,18 @@ func main() {
 
 	server := server.InitServer(db)
 	server.Run()
+}
+
+func main2() {
+	db := infrastructure.NewMongoDB(
+		os.Getenv(ctx.EnvDBUser),
+		os.Getenv(ctx.EnvDBPassword),
+		os.Getenv(ctx.EnvDBURL),
+		os.Getenv(ctx.EnvDBPort),
+		os.Getenv(ctx.EnvDBName))
+
+	filmHandler := server2.NewFilmHandler(db)
+	personHandler := server2.NewPersonHandler(db)
+
+	server := server2.NewServer(filmHandler, personHandler)
 }

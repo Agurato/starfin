@@ -178,7 +178,7 @@ func HandleGETDownloadFilm(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, film.VolumeFiles[fileIndex].Path)
 }
 
-// HandleGETDownloadFilm downloads a subtitle file
+// HandleGETDownloadSubtitle downloads a subtitle file
 func HandleGETDownloadSubtitle(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
