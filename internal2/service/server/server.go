@@ -97,42 +97,42 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 	router.NoRoute(mainHandler.Error404)
 
 	// Start page
-	router.GET("/start", mainHandler.GetStart)
-	router.POST("/start", mainHandler.PostStart)
+	router.GET("/start", mainHandler.GETStart)
+	router.POST("/start", mainHandler.POSTStart)
 
 	// Authentication actions
 	mainRouter := router.Use(checkSetupDone).
-		GET("/login", mainHandler.HandleGETLogin).
-		POST("/login", mainHandler.HandlePOSTLogin).
-		GET("/logout", mainHandler.HandleGETLogout)
+		GET("/login", mainHandler.GETLogin).
+		POST("/login", mainHandler.POSTLogin).
+		GET("/logout", mainHandler.GETLogout)
 
 	// User needs to be logged in to access these pages
 	mainRouter.Use(authRequired).
-		GET("/", mainHandler.HandleGETIndex).
-		GET("/films/*params", filmHandler.GetFilms).
-		GET("/film/:id", filmHandler.GetFilm).
-		GET("/film/:id/download/:idx", filmHandler.DownloadFilm).
-		GET("/film/:id/download/:idx/sub/:subIdx", filmHandler.DownloadSubtitle).
-		GET("/people", personHandler.GetPeople).
-		GET("/person/:id", personHandler.GetPerson).
-		GET("/actor/:id", personHandler.GetActor).
-		GET("/director/:id", personHandler.GetDirector).
-		GET("/writer/:id", personHandler.GetWriter).
-		GET("/settings", mainHandler.HandleGETSettings).
-		POST("/setpassword", mainHandler.HandlePOSTSetPassword).
-		GET("/cache/*path", mainHandler.HandleGetCache)
+		GET("/", mainHandler.GETIndex).
+		GET("/films/*params", filmHandler.GETFilms).
+		GET("/film/:id", filmHandler.GETFilm).
+		GET("/film/:id/download/:idx", filmHandler.GETFilmDownload).
+		GET("/film/:id/download/:idx/sub/:subIdx", filmHandler.GETSubtitleDownload).
+		GET("/people", personHandler.GETPeople).
+		GET("/person/:id", personHandler.GETPerson).
+		GET("/actor/:id", personHandler.GETActor).
+		GET("/director/:id", personHandler.GETDirector).
+		GET("/writer/:id", personHandler.GETWriter).
+		GET("/settings", mainHandler.GETSettings).
+		POST("/setpassword", mainHandler.POSTSetPassword).
+		GET("/cache/*path", mainHandler.GETCache)
 
 	// User needs to be admin to access these pages
 	mainRouter.Use(adminRequired).
-		GET("/admin", adminHandler.GetAdmin).
-		GET("/admin/volume/:volumeId", adminHandler.GetAdminVolume).
-		POST("/admin/editvolume", adminHandler.PostEditVolume).
-		POST("/admin/deletevolume", adminHandler.PostDeleteVolume).
-		GET("/admin/user/:userId", adminHandler.GetAdminUser).
-		POST("/admin/edituser", adminHandler.PostEditUser).
-		POST("/admin/deleteuser", adminHandler.PostDeleteUser).
-		POST("/admin/reloadcache", adminHandler.PostReloadCache).
-		POST("/admin/editfilmonline", adminHandler.PostEditFilmOnline)
+		GET("/admin", adminHandler.GETAdmin).
+		GET("/admin/volume/:volumeId", adminHandler.GETAdminVolume).
+		POST("/admin/editvolume", adminHandler.POSTEditVolume).
+		POST("/admin/deletevolume", adminHandler.POSTDeleteVolume).
+		GET("/admin/user/:userId", adminHandler.GETAdminUser).
+		POST("/admin/edituser", adminHandler.POSTEditUser).
+		POST("/admin/deleteuser", adminHandler.POSTDeleteUser).
+		POST("/admin/reloadcache", adminHandler.POSTReloadCache).
+		POST("/admin/editfilmonline", adminHandler.POSTEditFilmOnline)
 
 	return router
 }

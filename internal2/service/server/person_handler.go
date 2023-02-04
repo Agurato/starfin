@@ -29,7 +29,7 @@ func NewPersonHandler(ps PersonStorer) *PersonHandler {
 }
 
 // HandleGETFilms displays the list of people
-func (ph PersonHandler) GetPeople(c *gin.Context) {
+func (ph PersonHandler) GETPeople(c *gin.Context) {
 	var (
 		inputSearch string
 		searchTerm  string
@@ -70,7 +70,7 @@ func (ph PersonHandler) GetPeople(c *gin.Context) {
 }
 
 // HandleGetActor displays the actor's bio and the films they star in
-func (ph PersonHandler) GetPerson(c *gin.Context) {
+func (ph PersonHandler) GETPerson(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -97,7 +97,7 @@ func (ph PersonHandler) GetPerson(c *gin.Context) {
 }
 
 // HandleGetActor displays the actor's bio and the films they star in
-func (ph PersonHandler) GetActor(c *gin.Context) {
+func (ph PersonHandler) GETActor(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -124,7 +124,7 @@ func (ph PersonHandler) GetActor(c *gin.Context) {
 }
 
 // HandleGetDirector displays the directors's bio and the films they directed
-func (ph PersonHandler) GetDirector(c *gin.Context) {
+func (ph PersonHandler) GETDirector(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -151,7 +151,7 @@ func (ph PersonHandler) GetDirector(c *gin.Context) {
 }
 
 // HandleGetWriter displays the writer's bio and the films they wrote
-func (ph PersonHandler) GetWriter(c *gin.Context) {
+func (ph PersonHandler) GETWriter(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{

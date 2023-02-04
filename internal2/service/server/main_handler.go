@@ -32,15 +32,15 @@ func (mh MainHandler) Error404(c *gin.Context) {
 	})
 }
 
-// HandleGETIndex displays the index page
-func (mh MainHandler) HandleGETIndex(c *gin.Context) {
+// GETIndex displays the index page
+func (mh MainHandler) GETIndex(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/index.go.html", gin.H{
 		"title": "starfin",
 	})
 }
 
 // GetStart allows regsitration of first user (admin & owner)
-func (mh MainHandler) GetStart(c *gin.Context) {
+func (mh MainHandler) GETStart(c *gin.Context) {
 	if userNb, err := mh.MainStorer.GetUserNb(); err != nil {
 		log.Errorln(err)
 		c.Redirect(http.StatusTemporaryRedirect, "/")
@@ -54,8 +54,8 @@ func (mh MainHandler) GetStart(c *gin.Context) {
 	})
 }
 
-// PostStart handles registration (only available for first account)
-func (mh MainHandler) PostStart(c *gin.Context) {
+// POSTStart handles registration (only available for first account)
+func (mh MainHandler) POSTStart(c *gin.Context) {
 	session := sessions.Default(c)
 	if userNb, err := mh.MainStorer.GetUserNb(); err != nil {
 		log.Errorln(err)
@@ -95,15 +95,15 @@ func (mh MainHandler) PostStart(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
-// HandleGETLogin displays the registration page
-func (mh MainHandler) HandleGETLogin(c *gin.Context) {
+// GETLogin displays the registration page
+func (mh MainHandler) GETLogin(c *gin.Context) {
 	RenderHTML(c, http.StatusOK, "pages/login.go.html", gin.H{
 		"title": "Login",
 	})
 }
 
-// HandlePOSTLogin handles login from POST request
-func (mh MainHandler) HandlePOSTLogin(c *gin.Context) {
+// POSTLogin handles login from POST request
+func (mh MainHandler) POSTLogin(c *gin.Context) {
 	session := sessions.Default(c)
 	// Fetch username and password from POST data
 	username := strings.Trim(c.PostForm("username"), " ")
@@ -137,8 +137,8 @@ func (mh MainHandler) HandlePOSTLogin(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/")
 }
 
-// HandleGETLogout logs out the user and redirects to index
-func (mh MainHandler) HandleGETLogout(c *gin.Context) {
+// GETLogout logs out the user and redirects to index
+func (mh MainHandler) GETLogout(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey)
 
@@ -155,8 +155,8 @@ func (mh MainHandler) HandleGETLogout(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-// HandleGETSettings displays the user settings page
-func (mh MainHandler) HandleGETSettings(c *gin.Context) {
+// GETSettings displays the user settings page
+func (mh MainHandler) GETSettings(c *gin.Context) {
 	success := ""
 	setPassword := c.Query("setpassword")
 	if setPassword == "success" {
@@ -168,8 +168,8 @@ func (mh MainHandler) HandleGETSettings(c *gin.Context) {
 	})
 }
 
-// HandlePOSTSetPassword handles changing password from POST request
-func (mh MainHandler) HandlePOSTSetPassword(c *gin.Context) {
+// POSTSetPassword handles changing password from POST request
+func (mh MainHandler) POSTSetPassword(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(UserKey).(database.User)
 	// Fetch username and password from POST data
@@ -188,8 +188,8 @@ func (mh MainHandler) HandlePOSTSetPassword(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/settings?setpassword=success")
 }
 
-// HandleGetCache serves the cached file
-func (mh MainHandler) HandleGetCache(c *gin.Context) {
+// GETCache serves the cached file
+func (mh MainHandler) GETCache(c *gin.Context) {
 	cachedFilePath := c.Param("path")
 	if cachedFilePath == "" {
 		c.AbortWithStatus(404)

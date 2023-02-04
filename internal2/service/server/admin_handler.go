@@ -42,8 +42,8 @@ func NewAdminHandler(as AdminStorer) *AdminHandler {
 	}
 }
 
-// GetAdmin displays the admin page
-func (ah AdminHandler) GetAdmin(c *gin.Context) {
+// GETAdmin displays the admin page
+func (ah AdminHandler) GETAdmin(c *gin.Context) {
 	var (
 		volumesWithStringID []gin.H
 		usersWithStringID   []gin.H
@@ -89,8 +89,8 @@ func (ah AdminHandler) GetAdmin(c *gin.Context) {
 	})
 }
 
-// GetAdminVolume displays the volume edit page
-func (ah AdminHandler) GetAdminVolume(c *gin.Context) {
+// GETAdminVolume displays the volume edit page
+func (ah AdminHandler) GETAdminVolume(c *gin.Context) {
 	volumeIdStr := c.Param("volumeId")
 
 	// If we're adding a new volume
@@ -126,8 +126,8 @@ func (ah AdminHandler) GetAdminVolume(c *gin.Context) {
 	})
 }
 
-// PostEditVolume handles editing (and adding) a volume from POST request
-func (ah AdminHandler) PostEditVolume(c *gin.Context) {
+// POSTEditVolume handles editing (and adding) a volume from POST request
+func (ah AdminHandler) POSTEditVolume(c *gin.Context) {
 	volumeIdStr := c.PostForm("id")
 	volumeName := strings.Trim(c.PostForm("name"), " ")
 	volumePath := strings.Trim(c.PostForm("path"), " ")
@@ -170,8 +170,8 @@ func (ah AdminHandler) PostEditVolume(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
-// PostDeleteVolume deletes a volume from a POST request
-func (ah AdminHandler) PostDeleteVolume(c *gin.Context) {
+// POSTDeleteVolume deletes a volume from a POST request
+func (ah AdminHandler) POSTDeleteVolume(c *gin.Context) {
 	volumeID := c.PostForm("volumeId")
 
 	err := ah.AdminStorer.DeleteVolume(volumeID)
@@ -182,8 +182,8 @@ func (ah AdminHandler) PostDeleteVolume(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Volume #%s deleted", volumeID)})
 }
 
-// GetAdminUser displays the user edit page
-func (ah AdminHandler) GetAdminUser(c *gin.Context) {
+// GETAdminUser displays the user edit page
+func (ah AdminHandler) GETAdminUser(c *gin.Context) {
 	userIdStr := c.Param("userId")
 
 	// If we're adding a new user
@@ -219,8 +219,8 @@ func (ah AdminHandler) GetAdminUser(c *gin.Context) {
 	})
 }
 
-// PostEditUser handles editing (and adding) a user from POST request
-func (ah AdminHandler) PostEditUser(c *gin.Context) {
+// POSTEditUser handles editing (and adding) a user from POST request
+func (ah AdminHandler) POSTEditUser(c *gin.Context) {
 	userIdStr := c.PostForm("id")
 	username := strings.Trim(c.PostForm("username"), " ")
 	password1 := strings.Trim(c.PostForm("password1"), " ")
@@ -255,8 +255,8 @@ func (ah AdminHandler) PostEditUser(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
-// PostDeleteVolume deletes a user from a POST request
-func (ah AdminHandler) PostDeleteUser(c *gin.Context) {
+// POSTDeleteUser deletes a user from a POST request
+func (ah AdminHandler) POSTDeleteUser(c *gin.Context) {
 	userID := c.PostForm("userId")
 
 	err := ah.AdminStorer.DeleteUser(userID)
@@ -267,8 +267,8 @@ func (ah AdminHandler) PostDeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("User #%s deleted", userID)})
 }
 
-// PostReloadCache reloads the cache
-func (ah AdminHandler) PostReloadCache(c *gin.Context) {
+// POSTReloadCache reloads the cache
+func (ah AdminHandler) POSTReloadCache(c *gin.Context) {
 	films := ah.AdminStorer.GetFilms()
 	for _, film := range films {
 		cachePosterAndBackdrop(&film)
@@ -281,8 +281,8 @@ func (ah AdminHandler) PostReloadCache(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-// PostEditFilmOnline handle editing a film from online link
-func (ah AdminHandler) PostEditFilmOnline(c *gin.Context) {
+// POSTEditFilmOnline handle editing a film from online link
+func (ah AdminHandler) POSTEditFilmOnline(c *gin.Context) {
 	inputUrl := c.PostForm("url")
 	filmID := c.PostForm("filmID")
 

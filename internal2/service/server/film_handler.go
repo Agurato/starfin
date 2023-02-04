@@ -28,8 +28,8 @@ func NewFilmHandler(fs FilmStorer) *FilmHandler {
 	}
 }
 
-// HandleGETFilm displays information about a film
-func (fh FilmHandler) GetFilm(c *gin.Context) {
+// GETFilm displays information about a film
+func (fh FilmHandler) GETFilm(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -97,8 +97,8 @@ func (fh FilmHandler) GetFilm(c *gin.Context) {
 	})
 }
 
-// DownloadFilm downloads a film file
-func (fh FilmHandler) DownloadFilm(c *gin.Context) {
+// GETFilmDownload downloads a film file
+func (fh FilmHandler) GETFilmDownload(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -124,8 +124,8 @@ func (fh FilmHandler) DownloadFilm(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, film.VolumeFiles[fileIndex].Path)
 }
 
-// DownloadSubtitle downloads a subtitle file
-func (fh FilmHandler) DownloadSubtitle(c *gin.Context) {
+// GETSubtitleDownload downloads a subtitle file
+func (fh FilmHandler) GETSubtitleDownload(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
@@ -165,8 +165,8 @@ func (fh FilmHandler) DownloadSubtitle(c *gin.Context) {
 	http.ServeFile(c.Writer, c.Request, extSubtitles[subFileIndex].Path)
 }
 
-// GetFilms displays the list of films
-func (fh FilmHandler) GetFilms(c *gin.Context) {
+// GETFilms displays the list of films
+func (fh FilmHandler) GETFilms(c *gin.Context) {
 	var (
 		inputSearch string
 		ok          bool
