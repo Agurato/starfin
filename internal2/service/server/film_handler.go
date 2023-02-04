@@ -18,6 +18,10 @@ type FilmStorer interface {
 	GetFilmsFiltered(years []int, genre, country string) (films []model.Film)
 }
 
+type FilmGetter interface {
+	GetFilm(id string) model.Film
+}
+
 type FilmHandler struct {
 	FilmStorer
 }

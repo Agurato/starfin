@@ -14,3 +14,7 @@ type FilmStorer interface {
 type FilmGetter struct {
 	FilmStorer
 }
+
+func (fg FilmGetter) GetFilm() {
+
+}

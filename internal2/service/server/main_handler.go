@@ -5,23 +5,26 @@ import (
 	"strings"
 
 	"github.com/Agurato/starfin/internal/cache"
-	"github.com/Agurato/starfin/internal/database"
+	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
-type MainStorer interface {
+type MainUserManager interface {
 	GetUserNb() (int64, error)
+	AddUser(username, password1, password2 string, isAdmin bool) (*model.User, error)
+	CheckLogin(username, password string) (user *model.User, err error)
+	SetUserPassword(username, oldPassword, password1, password2 string) error
 }
 
 type MainHandler struct {
-	MainStorer
+	MainUserManager
 }
 
-func NewMainHandler(ms MainStorer) *MainHandler {
+func NewMainHandler(mum MainUserManager) *MainHandler {
 	return &MainHandler{
-		MainStorer: ms,
+		MainUserManager: mum,
 	}
 }
 
@@ -41,7 +44,7 @@ func (mh MainHandler) GETIndex(c *gin.Context) {
 
 // GetStart allows regsitration of first user (admin & owner)
 func (mh MainHandler) GETStart(c *gin.Context) {
-	if userNb, err := mh.MainStorer.GetUserNb(); err != nil {
+	if userNb, err := mh.MainUserManager.GetUserNb(); err != nil {
 		log.Errorln(err)
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
@@ -57,7 +60,7 @@ func (mh MainHandler) GETStart(c *gin.Context) {
 // POSTStart handles registration (only available for first account)
 func (mh MainHandler) POSTStart(c *gin.Context) {
 	session := sessions.Default(c)
-	if userNb, err := mh.MainStorer.GetUserNb(); err != nil {
+	if userNb, err := mh.MainUserManager.GetUserNb(); err != nil {
 		log.Errorln(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "An error occured …"})
 		return
@@ -70,7 +73,7 @@ func (mh MainHandler) POSTStart(c *gin.Context) {
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	user, err := AddUser(username, password1, password2, true)
+	user, err := mh.MainUserManager.AddUser(username, password1, password2, true)
 	if err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
 			"title":    "Start",
@@ -110,10 +113,10 @@ func (mh MainHandler) POSTLogin(c *gin.Context) {
 	password := strings.Trim(c.PostForm("password"), " ")
 
 	var (
-		user *database.User
+		user *model.User
 		err  error
 	)
-	if user, err = CheckLogin(username, password); err != nil {
+	if user, err = mh.MainUserManager.CheckLogin(username, password); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    err.Error(),
@@ -171,13 +174,13 @@ func (mh MainHandler) GETSettings(c *gin.Context) {
 // POSTSetPassword handles changing password from POST request
 func (mh MainHandler) POSTSetPassword(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserKey).(database.User)
+	user := session.Get(UserKey).(model.User)
 	// Fetch username and password from POST data
 	oldPassword := strings.Trim(c.PostForm("old-password"), " ")
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	if err := SetUserPassword(user.Name, oldPassword, password1, password2); err != nil {
+	if err := mh.MainUserManager.SetUserPassword(user.Name, oldPassword, password1, password2); err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/settings.go.html", gin.H{
 			"title": "Settings",
 			"error": err.Error(),

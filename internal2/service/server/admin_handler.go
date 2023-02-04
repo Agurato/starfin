@@ -32,8 +32,15 @@ type AdminStorer interface {
 	GetPersonFromTMDBID(ID int64) (person model.Person, err error)
 }
 
+type AdminCacher interface {
+	CachePoster(key string) (bool, error)
+	CacheBackdrop(key string) (bool, error)
+	CachePhoto(key string) (bool, error)
+}
+
 type AdminHandler struct {
 	AdminStorer
+	AdminCacher
 }
 
 func NewAdminHandler(as AdminStorer) *AdminHandler {
@@ -271,10 +278,10 @@ func (ah AdminHandler) POSTDeleteUser(c *gin.Context) {
 func (ah AdminHandler) POSTReloadCache(c *gin.Context) {
 	films := ah.AdminStorer.GetFilms()
 	for _, film := range films {
-		cachePosterAndBackdrop(&film)
+		ah.cachePosterAndBackdrop(&film)
 		for _, personID := range film.GetCastAndCrewIDs() {
 			person, _ := ah.AdminStorer.GetPersonFromTMDBID(personID)
-			cachePersonPhoto(&person)
+			ah.cachePersonPhoto(&person)
 		}
 	}
 
@@ -395,4 +402,33 @@ func (ah AdminHandler) addVolume(volume *model.Volume) error {
 	addFileWatch(volume)
 
 	return nil
+}
+
+// cachePosterAndBackdrop caches the poster and the backdrop image of a film
+func (ah AdminHandler) cachePosterAndBackdrop(film *model.Film) {
+	hasToWait, err := ah.AdminCacher.CachePoster(film.PosterPath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
+	}
+	hasToWait, err = ah.AdminCacher.CacheBackdrop(film.BackdropPath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
+	}
+}
+
+// cacheCast caches the person's image
+func (ah AdminHandler) cachePersonPhoto(person *model.Person) {
+	hasToWait, err := ah.AdminCacher.CachePhoto(person.Photo)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
+	}
+	if hasToWait {
+		log.WithFields(log.Fields{"warning": err, "personTMDBID": person.TMDBID}).Errorln("Will try to cache photo later")
+	}
 }
