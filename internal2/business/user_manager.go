@@ -6,15 +6,22 @@ import (
 
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/matthewhartstonge/argon2"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserStorer interface {
-	IsOwnerPresent() bool
+	IsOwnerPresent() (bool, error)
 	IsUsernameAvailable(username string) (bool, error)
+
 	GetUserFromName(username string, user *model.User) error
+	GetUserFromID(id primitive.ObjectID) (*model.User, error)
 	GetUserNb() (int64, error)
-	AddUser(user *model.User) error
+	GetUsers() ([]model.User, error)
+
+	CreateUser(user *model.User) error
+	DeleteUser(userId primitive.ObjectID) error
+
 	SetUserPassword(userID primitive.ObjectID, newPassword string) error
 }
 
@@ -22,12 +29,36 @@ type UserManager struct {
 	UserStorer
 }
 
+// NewUserManager creates a new UserManager
+func NewUserManager(us UserStorer) *UserManager {
+	return &UserManager{
+		UserStorer: us,
+	}
+}
+
+func (um UserManager) CreateOwner(username, password1, password2 string) (*model.User, error) {
+	if ownerPresent, err := um.UserStorer.IsOwnerPresent(); err != nil {
+		log.Errorln(err)
+		return nil, errors.New("An error occured …")
+	} else if ownerPresent {
+		return nil, model.ErrOwnerAlreadyExists
+	}
+
+	user, err := um.CreateUser(username, password1, password2, true, true)
+	if err != nil {
+		return nil, fmt.Errorf("error adding user: %w", err)
+	}
+	user.Password = ""
+
+	return user, nil
+}
+
 func (um UserManager) GetUserNb() (int64, error) {
 	return um.UserStorer.GetUserNb()
 }
 
-// AddUser checks that the user and password follow specific rules and adds it to the database
-func (um UserManager) AddUser(username, password1, password2 string, isAdmin bool) (*model.User, error) {
+// CreateUser checks that the user and password follow specific rules and adds it to the database
+func (um UserManager) CreateUser(username, password1, password2 string, isAdmin, isOwner bool) (*model.User, error) {
 	argon := argon2.DefaultConfig()
 
 	// Check username length
@@ -63,16 +94,25 @@ func (um UserManager) AddUser(username, password1, password2 string, isAdmin boo
 		ID:       primitive.NewObjectID(),
 		Name:     username,
 		Password: string(encoded),
-		IsOwner:  !um.UserStorer.IsOwnerPresent(),
+		IsOwner:  isOwner,
 		IsAdmin:  isAdmin,
 	}
 
-	err = um.UserStorer.AddUser(user)
+	err = um.UserStorer.CreateUser(user)
 	if err != nil {
 		return nil, fmt.Errorf("error adding user: %w", err)
 	}
 
 	return user, nil
+}
+
+func (vm UserManager) DeleteUser(userHexID string) error {
+	userId, err := primitive.ObjectIDFromHex(userHexID)
+	if err != nil {
+		return fmt.Errorf("Incorrect user ID: %w", err)
+	}
+
+	return vm.UserStorer.DeleteUser(userId)
 }
 
 // CheckLogin checks that the login is correct and returns the user it corresponds to
@@ -138,4 +178,20 @@ func (um UserManager) SetUserPassword(username, oldPassword, password1, password
 	}
 
 	return nil
+}
+
+func (um UserManager) GetUser(userHexID string) (*model.User, error) {
+	userId, err := primitive.ObjectIDFromHex(userHexID)
+	if err != nil {
+		return nil, fmt.Errorf("Incorrect user ID: %w", err)
+	}
+	user, err := um.UserStorer.GetUserFromID(userId)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get user from ID '%s': %w", userHexID, err)
+	}
+	return user, nil
+}
+
+func (um UserManager) GetUsers() ([]model.User, error) {
+	return um.UserStorer.GetUsers()
 }

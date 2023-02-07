@@ -25,13 +25,13 @@
             </tr>
         </thead>
         <tbody>
-            {{ range .volumes }}
+            {{ range $index, $volume := .volumes }}
             <tr>
-                <td><a href="/admin/volume/{{ .id }}">{{ .obj.Name }}</a></td>
-                <td><code>{{ .obj.Path }}</code></td>
-                <td>{{if .obj.IsRecursive}}✓{{end}}</td>
-                <td><span class="media {{ .obj.MediaType }}">{{ .obj.MediaType }}</span></td>
-                <td><button class="btn p-0 text-white" onclick="deleteVolume(this)" volumeId="{{ .id }}"><i class="fas fa-trash-alt"></i></button></td>
+                <td><a href="/admin/volume/{{ hexID $volume.id }}">{{ $volume.Name }}</a></td>
+                <td><code>{{ $volume.Path }}</code></td>
+                <td>{{if $volume.IsRecursive}}✓{{end}}</td>
+                <td><span class="media {{ $volume.MediaType }}">{{ $volume.MediaType }}</span></td>
+                <td><button class="btn p-0 text-white" onclick="deleteVolume(this)" volumeId="{{ hexID .id }}"><i class="fas fa-trash-alt"></i></button></td>
             </tr>
             {{ end }}
             <tr>
@@ -54,14 +54,14 @@
         <tbody>
             {{ range $index, $user := .users }}
             <tr>
-                <td><a href="/admin/user/{{ $user.id }}">{{ $user.obj.Name }}</a></td>
-                <td>{{if $user.obj.IsAdmin}}✓{{end}}</td>
-                {{if $user.obj.IsOwner}}
+                <td><a href="/admin/user/{{ hexID $user.id }}">{{ $user.Name }}</a></td>
+                <td>{{if $user.IsAdmin}}✓{{end}}</td>
+                {{if $user.IsOwner}}
                 <td>✓</td>
                 <td></td>
                 {{else}}
                 <td></td>
-                <td><button class="btn p-0 text-white" onclick="deleteUser(this)" userId="{{ $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
+                <td><button class="btn p-0 text-white" onclick="deleteUser(this)" userId="{{ hexID $user.id }}"><i class="fas fa-trash-alt"></i></button></td>
                 {{end}}
             </tr>
             {{ end }}

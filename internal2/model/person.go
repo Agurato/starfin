@@ -7,17 +7,17 @@ import (
 )
 
 type Cast struct {
-	Character string
-	ActorID   int64
+	Character string `bson:"character"`
+	ActorID   int64  `bson:"actor_id"`
 }
 
 type Person struct {
 	ID       primitive.ObjectID `bson:"_id"`
-	TMDBID   int64
-	Name     string
-	Photo    string
-	Bio      template.HTML
-	Birthday string
-	Deathday string
-	IMDbID   string
+	TMDBID   int64              `bson:"tmdb_id"`
+	Name     string             `bson:"name"`
+	Photo    string             `bson:"photo"`
+	Bio      template.HTML      `bson:"bio"`
+	Birthday string             `bson:"birthday"`
+	Deathday string             `bson:"deathday"`
+	IMDbID   string             `bson:"imdb_id"`
 }

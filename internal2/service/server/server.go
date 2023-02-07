@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
 	"github.com/samber/lo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -75,6 +76,9 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 				return film.Name
 			}
 			return film.Title
+		},
+		"hexID": func(id primitive.ObjectID) string {
+			return id.Hex()
 		},
 		"lower": strings.ToLower,
 		"personID": func(person media.Person) string {

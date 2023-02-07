@@ -12,8 +12,8 @@ import (
 )
 
 type MainUserManager interface {
-	GetUserNb() (int64, error)
-	AddUser(username, password1, password2 string, isAdmin bool) (*model.User, error)
+	IsOwnerPresent() (bool, error)
+	CreateOwner(username, password1, password2 string) (*model.User, error)
 	CheckLogin(username, password string) (user *model.User, err error)
 	SetUserPassword(username, oldPassword, password1, password2 string) error
 }
@@ -44,11 +44,11 @@ func (mh MainHandler) GETIndex(c *gin.Context) {
 
 // GetStart allows regsitration of first user (admin & owner)
 func (mh MainHandler) GETStart(c *gin.Context) {
-	if userNb, err := mh.MainUserManager.GetUserNb(); err != nil {
+	if ownerPresent, err := mh.MainUserManager.IsOwnerPresent(); err != nil {
 		log.Errorln(err)
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
-	} else if userNb != 0 {
+	} else if ownerPresent {
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
 	}
@@ -60,32 +60,19 @@ func (mh MainHandler) GETStart(c *gin.Context) {
 // POSTStart handles registration (only available for first account)
 func (mh MainHandler) POSTStart(c *gin.Context) {
 	session := sessions.Default(c)
-	if userNb, err := mh.MainUserManager.GetUserNb(); err != nil {
-		log.Errorln(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "An error occured …"})
-		return
-	} else if userNb != 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Admin user has already been created"})
-		return
-	}
 	// Fetch username and passwords from POST data
 	username := strings.Trim(c.PostForm("username"), " ")
 	password1 := strings.Trim(c.PostForm("password1"), " ")
 	password2 := strings.Trim(c.PostForm("password2"), " ")
 
-	user, err := mh.MainUserManager.AddUser(username, password1, password2, true)
+	user, err := mh.MainUserManager.CreateOwner(username, password1, password2)
 	if err != nil {
-		RenderHTML(c, http.StatusUnauthorized, "pages/start.go.html", gin.H{
-			"title":    "Start",
-			"error":    err.Error(),
-			"username": username,
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	// TODO: always return a JSON response. Redirection will be handled client-side
 	setupDone = true
 	// Save cookie
-	user.Password = ""
 	session.Set(UserKey, user)
 	if err := session.Save(); err != nil {
 		RenderHTML(c, http.StatusInternalServerError, "pages/login.go.html", gin.H{
@@ -112,11 +99,9 @@ func (mh MainHandler) POSTLogin(c *gin.Context) {
 	username := strings.Trim(c.PostForm("username"), " ")
 	password := strings.Trim(c.PostForm("password"), " ")
 
-	var (
-		user *model.User
-		err  error
-	)
-	if user, err = mh.MainUserManager.CheckLogin(username, password); err != nil {
+	user, err := mh.MainUserManager.CheckLogin(username, password)
+	// TODO: always return a JSON response. Redirection will be handled client-side
+	if err != nil {
 		RenderHTML(c, http.StatusUnauthorized, "pages/login.go.html", gin.H{
 			"title":    "Login",
 			"error":    err.Error(),

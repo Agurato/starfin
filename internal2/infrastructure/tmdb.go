@@ -13,13 +13,19 @@ var (
 	TMDBClient *tmdb.Client
 )
 
-// InitTMDB initializes a tmdb client
-func InitTMDB() {
-	var err error
-	TMDBClient, err = tmdb.Init(os.Getenv(context.EnvTMDBAPIKey))
+type TMDB struct {
+	client *tmdb.Client
+}
+
+// NewTMDB initializes a tmdb client
+func NewTMDB() (*TMDB, error) {
+	client, err := tmdb.Init(os.Getenv(context.EnvTMDBAPIKey))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+	return &TMDB{
+		client: client,
+	}, nil
 }
 
 const (
@@ -29,8 +35,23 @@ const (
 	tmdbImageURL = "https://image.tmdb.org/t/p/"
 )
 
+// GetPosterLink caches a poster from TMDB using its id
+func (t TMDB) GetPosterLink(key string) string {
+	return tmdbImageURL + tmdb.W342 + key
+}
+
+// GetBackdropLink caches a backdrop from TMDB using its id
+func (t TMDB) GetBackdropLink(key string) string {
+	return tmdbImageURL + tmdb.W1280 + key
+}
+
+// GetPhotoLink caches a person's photo from TMDB using its id
+func (t TMDB) GetPhotoLink(key string) string {
+	return tmdbImageURL + tmdb.W342 + key
+}
+
 // CachePoster caches a poster from TMDB using its id
-func CachePoster(key string) (bool, error) {
+func (t TMDB) CachePoster(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, poster+key)
 	}
@@ -38,7 +59,7 @@ func CachePoster(key string) (bool, error) {
 }
 
 // CacheBackdrop caches a backdrop from TMDB using its id
-func CacheBackdrop(key string) (bool, error) {
+func (t TMDB) CacheBackdrop(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W1280+key, backdrop+key)
 	}
@@ -46,23 +67,11 @@ func CacheBackdrop(key string) (bool, error) {
 }
 
 // CachePhoto caches a person's photo from TMDB using its id
-func CachePhoto(key string) (bool, error) {
+func (t TMDB) CachePhoto(key string) (bool, error) {
 	if key != "" {
 		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, photo+key)
 	}
 	return false, nil
-}
-
-func GetPoster(key string) ([]byte, error) {
-	return cache.GetCachedFile(poster + key)
-}
-
-func GetBackdrop(key string) ([]byte, error) {
-	return cache.GetCachedFile(backdrop + key)
-}
-
-func GetPhoto(key string) ([]byte, error) {
-	return cache.GetCachedFile(photo + key)
 }
 
 // GetTMDBIDFromIMDBID retrieves the TMDB ID from an IMDb ID

@@ -14,13 +14,13 @@ type Volume struct {
 }
 
 type VolumeFile struct {
-	Path         string
-	FromVolume   primitive.ObjectID
-	Info         MediaInfo
-	ExtSubtitles []Subtitle
+	Path         string             `bson:"path"`
+	FromVolume   primitive.ObjectID `bson:"from_volume"`
+	Info         MediaInfo          `bson:"info"`
+	ExtSubtitles []Subtitle         `bson:"ext_subtitles"`
 }
 
 type Subtitle struct {
-	Language string
-	Path     string
+	Language string `bson:"language"`
+	Path     string `bson:"path"`
 }

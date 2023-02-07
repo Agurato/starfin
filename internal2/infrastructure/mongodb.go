@@ -55,26 +55,22 @@ func (m MongoDB) Close() {
 }
 
 // IsOwnerPresent checks if theres is an owner in the server
-func (m MongoDB) IsOwnerPresent() bool {
+func (m MongoDB) IsOwnerPresent() (bool, error) {
 	countOwners, err := m.usersColl.CountDocuments(m.ctx, bson.M{"is_owner": true})
 	if err != nil {
-		log.Errorln("Could not retrieve if owner is present in the database")
+		return false, err
 	}
-	return countOwners > 0
+	return countOwners > 0, nil
 }
 
-// AddUser adds a user to the database after checking parameter
-func (m MongoDB) AddUser(user *model.User) error {
+// CreateUser adds a user to the database after checking parameter
+func (m MongoDB) CreateUser(user *model.User) error {
 	_, err := m.usersColl.InsertOne(m.ctx, user)
 	return err
 }
 
 // DeleteUser deletes the user from the DB
-func (m MongoDB) DeleteUser(hexId string) error {
-	userId, err := primitive.ObjectIDFromHex(hexId)
-	if err != nil {
-		return errors.New("invalid volume id")
-	}
+func (m MongoDB) DeleteUser(userId primitive.ObjectID) error {
 	res, err := m.usersColl.DeleteOne(m.ctx, bson.M{"_id": userId})
 	if err != nil {
 		return err
@@ -96,8 +92,9 @@ func (m MongoDB) IsUsernameAvailable(username string) (bool, error) {
 }
 
 // GetUserFromID gets user from its ID
-func (m MongoDB) GetUserFromID(id primitive.ObjectID, user *model.User) error {
-	return m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(user)
+func (m MongoDB) GetUserFromID(id primitive.ObjectID) (user *model.User, err error) {
+	err = m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(user)
+	return user, err
 }
 
 // GetUserFromName gets user from it name
@@ -134,8 +131,9 @@ func (m MongoDB) SetUserPassword(userID primitive.ObjectID, newPassword string) 
 }
 
 // Fetches volume from DB using specified ID and returns it via pointer
-func (m MongoDB) GetVolumeFromID(id primitive.ObjectID, volume *model.Volume) error {
-	return m.volumesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&volume)
+func (m MongoDB) GetVolumeFromID(id primitive.ObjectID) (volume *model.Volume, err error) {
+	err = m.volumesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(volume)
+	return volume, err
 }
 
 // GetVolumes returns the list of volumes in the DB
@@ -162,12 +160,7 @@ func (m MongoDB) AddVolume(volume *model.Volume) error {
 }
 
 // DeleteVolume deletes the volume from the DB and all the film which originated only from this volume
-func (m MongoDB) DeleteVolume(hexId string) error {
-	volumeId, err := primitive.ObjectIDFromHex(hexId)
-	if err != nil {
-		return errors.New("invalid volume id")
-	}
-
+func (m MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 	// Remove specified volume from all film source
 	update, err := m.filmsColl.UpdateMany(m.ctx,
 		bson.M{},
@@ -177,12 +170,12 @@ func (m MongoDB) DeleteVolume(hexId string) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("volumeId", hexId).Infof("%d films are concerned with this volume deletion\n", update.ModifiedCount)
+	log.WithField("volumeId", volumeId).Infof("%d films are concerned with this volume deletion\n", update.ModifiedCount)
 	del, err := m.filmsColl.DeleteMany(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$size", Value: 0}}})
 	if err != nil {
 		return err
 	}
-	log.WithField("volumeId", hexId).Infof("%d films were removed from database\n", del.DeletedCount)
+	log.WithField("volumeId", volumeId).Infof("%d films were removed from database\n", del.DeletedCount)
 
 	// Remove specified volume from "volumes" collection
 	res, err := m.volumesColl.DeleteOne(m.ctx, bson.M{"_id": volumeId})
@@ -192,7 +185,7 @@ func (m MongoDB) DeleteVolume(hexId string) error {
 	if res.DeletedCount != 1 {
 		return errors.New("unable to delete volume")
 	}
-	log.WithField("volumeId", hexId).Infoln("Volume removed from database")
+	log.WithField("volumeId", volumeId).Infoln("Volume removed from database")
 
 	return nil
 }
@@ -398,8 +391,8 @@ func (m MongoDB) GetPeople() (people []model.Person) {
 }
 
 // GetFilmFromID returns a film from its TMDB ID
-func (m MongoDB) GetFilmFromID(id primitive.ObjectID) (film model.Film, err error) {
-	err = m.filmsColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&film)
+func (m MongoDB) GetFilmFromID(id primitive.ObjectID) (film *model.Film, err error) {
+	err = m.filmsColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(film)
 	return film, err
 }
 

@@ -4,95 +4,81 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-gonic/gin"
-	"github.com/matthewhartstonge/argon2"
 	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type AdminStorer interface {
-	AddVolume(volume *model.Volume) error
-	GetVolumes() (volumes []model.Volume, err error)
-	GetVolumeFromID(id primitive.ObjectID, volume *model.Volume) error
-	DeleteVolume(hexId string) error
+type AdminFilmManager interface {
+	CacheFilms()
 
-	IsOwnerPresent() bool
-	AddUser(user *model.User) error
-	GetUsers() (users []model.User, err error)
-	GetUserFromID(id primitive.ObjectID, user *model.User) error
-	IsUsernameAvailable(username string) (bool, error)
-	DeleteUser(hexId string) error
-
-	GetFilms() (films []model.Film)
-	GetFilmFromID(id primitive.ObjectID) (film model.Film, err error)
-	GetPersonFromTMDBID(ID int64) (person model.Person, err error)
+	GetFilm(filmHexID string) (*model.Film, error)
+	EditFilmWithLink(filmID, inputUrl string) error
 }
 
-type AdminCacher interface {
-	CachePoster(key string) (bool, error)
-	CacheBackdrop(key string) (bool, error)
-	CachePhoto(key string) (bool, error)
+type AdminUserManager interface {
+	GetUsers() ([]model.User, error)
+	GetUser(userHexID string) (*model.User, error)
+
+	CreateUser(username, password1, password2 string, isAdmin, isOwner bool) (*model.User, error)
+
+	DeleteUser(userHexID string) error
+}
+
+type AdminVolumeManager interface {
+	GetVolumes() ([]model.Volume, error)
+	GetVolume(volumeHexID string) (*model.Volume, error)
+
+	CreateVolume(name, path string, isRecursive bool, mediaType string) error
+
+	DeleteVolume(volumeHexID string) error
 }
 
 type AdminHandler struct {
-	AdminStorer
-	AdminCacher
+	AdminFilmManager
+	AdminUserManager
+	AdminVolumeManager
 }
 
-func NewAdminHandler(as AdminStorer) *AdminHandler {
+func NewAdminHandler(fm AdminFilmManager, um AdminUserManager, vm AdminVolumeManager) *AdminHandler {
 	return &AdminHandler{
-		AdminStorer: as,
+		AdminFilmManager:   fm,
+		AdminUserManager:   um,
+		AdminVolumeManager: vm,
 	}
 }
 
 // GETAdmin displays the admin page
 func (ah AdminHandler) GETAdmin(c *gin.Context) {
-	var (
-		volumesWithStringID []gin.H
-		usersWithStringID   []gin.H
-	)
-
-	volumes, err := ah.AdminStorer.GetVolumes()
+	var allErr error
+	volumes, err := ah.AdminVolumeManager.GetVolumes()
 	if err != nil {
-		log.Errorln(err)
-		RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
-			"title":   "Admin",
-			"volumes": volumesWithStringID,
-			"users":   usersWithStringID,
-			"error":   "An error occured …",
-		})
-	}
-	for _, vol := range volumes {
-		volumesWithStringID = append(volumesWithStringID, gin.H{
-			"id":  vol.ID.Hex(),
-			"obj": vol,
-		})
+		log.Errorln(fmt.Errorf("error while fetching volumes: %w", err))
+		allErr = errors.Join(allErr, err)
 	}
 
-	users, err := ah.AdminStorer.GetUsers()
+	users, err := ah.AdminUserManager.GetUsers()
 	if err != nil {
-		log.Errorln(err)
+		log.Errorln(fmt.Errorf("error while fetching users: %w", err))
+		allErr = errors.Join(allErr, err)
+	}
+
+	if allErr != nil {
 		RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
 			"title":   "Admin",
-			"volumes": volumesWithStringID,
-			"users":   usersWithStringID,
-			"error":   "An error occured …",
+			"volumes": volumes,
+			"users":   users,
+			"error":   allErr.Error(),
 		})
+		return
 	}
-	for _, user := range users {
-		usersWithStringID = append(usersWithStringID, gin.H{
-			"id":  user.ID.Hex(),
-			"obj": user,
-		})
-	}
+
 	RenderHTML(c, http.StatusOK, "pages/admin.go.html", gin.H{
 		"title":   "Admin",
-		"volumes": volumesWithStringID,
-		"users":   usersWithStringID,
+		"volumes": volumes,
+		"users":   users,
 	})
 }
 
@@ -110,21 +96,15 @@ func (ah AdminHandler) GETAdminVolume(c *gin.Context) {
 		return
 	}
 
-	volumeId, err := primitive.ObjectIDFromHex(volumeIdStr)
+	volume, err := ah.AdminVolumeManager.GetVolume(volumeIdStr)
 	if err != nil {
 		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 			"title": "Edit volume",
-			"error": "Incorrect volume ID!",
-		})
-	}
-	var volume model.Volume
-	if err := ah.AdminStorer.GetVolumeFromID(volumeId, &volume); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
-			"title": "Edit volume",
-			"error": "Volume does not exist!",
+			"error": err.Error(),
 		})
 		return
 	}
+
 	RenderHTML(c, http.StatusOK, "pages/admin_volume.go.html", gin.H{
 		"title":  "Edit volume",
 		"volume": volume,
@@ -142,15 +122,8 @@ func (ah AdminHandler) POSTEditVolume(c *gin.Context) {
 	volumeMediaType := c.PostForm("mediatype") // "Film" or "TV"
 
 	if volumeIdStr == "" {
-		volume := &model.Volume{
-			ID:          primitive.NewObjectID(),
-			Name:        volumeName,
-			Path:        volumePath,
-			IsRecursive: volumeIsRecursive,
-			MediaType:   volumeMediaType,
-		}
-		// Adding a volume
-		if err := ah.addVolume(volume); err != nil {
+		err := ah.AdminVolumeManager.CreateVolume(volumeName, volumePath, volumeIsRecursive, volumeMediaType)
+		if err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 				"title":  "Add new volume",
 				"volume": model.Volume{},
@@ -161,9 +134,7 @@ func (ah AdminHandler) POSTEditVolume(c *gin.Context) {
 		}
 	} else {
 		// TODO: editing a volume
-		var volume model.Volume
-		volumeID, _ := primitive.ObjectIDFromHex(volumeIdStr)
-		ah.AdminStorer.GetVolumeFromID(volumeID, &volume)
+		volume, _ := ah.AdminVolumeManager.GetVolume(volumeIdStr)
 		RenderHTML(c, http.StatusUnauthorized, "pages/admin_volume.go.html", gin.H{
 			"title":  "Edit volume",
 			"volume": volume,
@@ -181,7 +152,7 @@ func (ah AdminHandler) POSTEditVolume(c *gin.Context) {
 func (ah AdminHandler) POSTDeleteVolume(c *gin.Context) {
 	volumeID := c.PostForm("volumeId")
 
-	err := ah.AdminStorer.DeleteVolume(volumeID)
+	err := ah.AdminVolumeManager.DeleteVolume(volumeID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": err})
 	}
@@ -203,21 +174,15 @@ func (ah AdminHandler) GETAdminUser(c *gin.Context) {
 		return
 	}
 
-	userId, err := primitive.ObjectIDFromHex(userIdStr)
+	user, err := ah.AdminUserManager.GetUser(userIdStr)
 	if err != nil {
 		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 			"title": "Edit user",
-			"error": "Incorrect user ID!",
-		})
-	}
-	var user model.User
-	if err := ah.AdminStorer.GetUserFromID(userId, &user); err != nil {
-		RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
-			"title": "Edit user",
-			"error": "User does not exist!",
+			"error": err.Error(),
 		})
 		return
 	}
+
 	RenderHTML(c, http.StatusOK, "pages/admin_user.go.html", gin.H{
 		"title":    "Edit user",
 		"userEdit": user,
@@ -235,7 +200,8 @@ func (ah AdminHandler) POSTEditUser(c *gin.Context) {
 	isAdmin := c.PostForm("isadmin") == "isadmin"
 
 	if userIdStr == "" {
-		if _, err := ah.addUser(username, password1, password2, isAdmin); err != nil {
+		_, err := ah.AdminUserManager.CreateUser(username, password1, password2, isAdmin, false)
+		if err != nil {
 			RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 				"title":    "Add new user",
 				"userEdit": model.User{},
@@ -246,9 +212,7 @@ func (ah AdminHandler) POSTEditUser(c *gin.Context) {
 		}
 	} else {
 		// TODO: editing a user
-		var user model.User
-		userID, _ := primitive.ObjectIDFromHex(userIdStr)
-		ah.AdminStorer.GetUserFromID(userID, &user)
+		user, _ := ah.AdminUserManager.GetUser(userIdStr)
 		RenderHTML(c, http.StatusUnauthorized, "pages/admin_user.go.html", gin.H{
 			"title":    "Edit user",
 			"userEdit": user,
@@ -266,7 +230,7 @@ func (ah AdminHandler) POSTEditUser(c *gin.Context) {
 func (ah AdminHandler) POSTDeleteUser(c *gin.Context) {
 	userID := c.PostForm("userId")
 
-	err := ah.AdminStorer.DeleteUser(userID)
+	err := ah.AdminUserManager.DeleteUser(userID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"error": err})
 	}
@@ -276,14 +240,7 @@ func (ah AdminHandler) POSTDeleteUser(c *gin.Context) {
 
 // POSTReloadCache reloads the cache
 func (ah AdminHandler) POSTReloadCache(c *gin.Context) {
-	films := ah.AdminStorer.GetFilms()
-	for _, film := range films {
-		ah.cachePosterAndBackdrop(&film)
-		for _, personID := range film.GetCastAndCrewIDs() {
-			person, _ := ah.AdminStorer.GetPersonFromTMDBID(personID)
-			ah.cachePersonPhoto(&person)
-		}
-	}
+	ah.AdminFilmManager.CacheFilms()
 
 	c.JSON(http.StatusOK, gin.H{})
 }
@@ -293,142 +250,11 @@ func (ah AdminHandler) POSTEditFilmOnline(c *gin.Context) {
 	inputUrl := c.PostForm("url")
 	filmID := c.PostForm("filmID")
 
-	tmdbID, err := GetTMDBIDFromLink(inputUrl)
+	err := ah.AdminFilmManager.EditFilmWithLink(filmID, inputUrl)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Wrong URL format"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
-	objID, err := primitive.ObjectIDFromHex(filmID)
-	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Wrong film ID", "filmID": filmID})
-		return
-	}
-	film, err := ah.AdminStorer.GetFilmFromID(objID)
-	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not get film from database"})
-		return
-	}
-	film.TMDBID = int(tmdbID)
-	film.FetchDetails()
-	err = tryAddFilmToDB(&film, true)
-	if err != nil {
-		log.Warning(err)
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Could not update film in database"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"tmdbID": tmdbID})
-}
-
-// addUser checks that the user and password follow specific rules and adds it to the database
-func (ah AdminHandler) addUser(username, password1, password2 string, isAdmin bool) (*model.User, error) {
-	argon := argon2.DefaultConfig()
-
-	// Check username length
-	if len(username) < 2 || len(username) > 25 {
-		return nil, errors.New("username must be between 2 and 25 characters")
-	}
-
-	// Check if username is not already taken
-	if available, err := ah.AdminStorer.IsUsernameAvailable(username); err != nil {
-		log.Errorln(err)
-		return nil, errors.New("an error occured …")
-	} else if !available {
-		return nil, errors.New("this username is already taken")
-	}
-
-	// Check if both passwords are equal
-	if password1 != password2 {
-		return nil, errors.New("passwords don't match")
-	}
-
-	// Check if password is at least 8 characters
-	if len(password1) < 8 {
-		return nil, errors.New("passwords must be at least 8 characters long")
-	}
-
-	// Hash & encode password
-	encoded, err := argon.HashEncoded([]byte(password1))
-	if err != nil {
-		return nil, errors.New("an error occured while creating your account")
-	}
-
-	// Add user to DB
-	user := &model.User{
-		ID:       primitive.NewObjectID(),
-		Name:     username,
-		Password: string(encoded),
-		IsOwner:  !ah.AdminStorer.IsOwnerPresent(),
-		IsAdmin:  isAdmin,
-	}
-
-	err = ah.AdminStorer.AddUser(user)
-	if err != nil {
-		log.Errorln(err)
-		return nil, errors.New("user could not be added")
-	}
-
-	return user, nil
-}
-
-// addVolume checks that the volume follows specific rules and adds it to the database
-func (ah AdminHandler) addVolume(volume *model.Volume) error {
-	// Check volume name length
-	if len(volume.Name) < 3 {
-		return errors.New("volume name must be between 3")
-	}
-
-	// Check path is a directory
-	fileInfo, err := os.Stat(volume.Path)
-	if err != nil {
-		return errors.New("volume path does not exist")
-	}
-	if !fileInfo.IsDir() {
-		return errors.New("volume path is not a directory")
-	}
-
-	// Add volume to the database
-	err = ah.AdminStorer.AddVolume(volume)
-	if err != nil {
-		log.Errorln(err)
-		return errors.New("volume could not be added")
-	}
-
-	// Search for media files in a separate goroutine to return the page asap
-	go searchMediaFilesInVolume(volume)
-
-	// Add file watch to the volume
-	addFileWatch(volume)
-
-	return nil
-}
-
-// cachePosterAndBackdrop caches the poster and the backdrop image of a film
-func (ah AdminHandler) cachePosterAndBackdrop(film *model.Film) {
-	hasToWait, err := ah.AdminCacher.CachePoster(film.PosterPath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
-	}
-	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
-	}
-	hasToWait, err = ah.AdminCacher.CacheBackdrop(film.BackdropPath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
-	}
-	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
-	}
-}
-
-// cacheCast caches the person's image
-func (ah AdminHandler) cachePersonPhoto(person *model.Person) {
-	hasToWait, err := ah.AdminCacher.CachePhoto(person.Photo)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
-	}
-	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "personTMDBID": person.TMDBID}).Errorln("Will try to cache photo later")
-	}
+	c.JSON(http.StatusOK, gin.H{})
 }
