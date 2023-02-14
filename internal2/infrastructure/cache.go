@@ -38,14 +38,17 @@ func (c Cache) getCachedPath(filePath string) string {
 	return filepath.Join(c.cachePath, filePath)
 }
 
+// CachePoster caches a poster from a source URL and the unique key for this poster
 func (c Cache) CachePoster(sourceUrl, key string) (hasToWait bool, err error) {
 	return c.CacheFile(sourceUrl, "poster"+key)
 }
 
+// CachePoster caches a backdrop from a source URL and the unique key for this backdrop
 func (c Cache) CacheBackdrop(sourceUrl, key string) (hasToWait bool, err error) {
 	return c.CacheFile(sourceUrl, "backdrop"+key)
 }
 
+// CachePoster caches a photo from a source URL and the unique key for this photo
 func (c Cache) CachePhoto(sourceUrl, key string) (hasToWait bool, err error) {
 	return c.CacheFile(sourceUrl, "photo"+key)
 }

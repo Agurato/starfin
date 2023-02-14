@@ -70,7 +70,7 @@ func main2() {
 	mainHandler := server2.NewMainHandler(umw)
 	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)
 	filmHandler := server2.NewFilmHandler(fmw, pmw)
-	personHandler := server2.NewPersonHandler(pmw)
+	personHandler := server2.NewPersonHandler(pmw, fmw)
 
 	server := server2.NewServer(mainHandler, adminHandler, filmHandler, personHandler)
 	server.Run()

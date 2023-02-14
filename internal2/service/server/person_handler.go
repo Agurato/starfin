@@ -6,25 +6,29 @@ import (
 
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type PersonStorer interface {
-	GetPeople() (people []model.Person)
-	GetPersonFromID(ID primitive.ObjectID) (person model.Person, err error)
+type PersonManager interface {
+	GetPeople() []model.Person
 
+	GetPerson(personHexID string) (*model.Person, error)
+}
+
+type PersonFilmManager interface {
 	GetFilmsWithActor(actorID int64) (films []model.Film)
 	GetFilmsWithDirector(directorID int64) (films []model.Film)
 	GetFilmsWithWriter(writerID int64) (films []model.Film)
 }
 
 type PersonHandler struct {
-	PersonStorer
+	PersonManager
+	PersonFilmManager
 }
 
-func NewPersonHandler(ps PersonStorer) *PersonHandler {
+func NewPersonHandler(pm PersonManager, pfm PersonFilmManager) *PersonHandler {
 	return &PersonHandler{
-		PersonStorer: ps,
+		PersonManager:     pm,
+		PersonFilmManager: pfm,
 	}
 }
 
@@ -51,7 +55,7 @@ func (ph PersonHandler) GETPeople(c *gin.Context) {
 		}
 	}
 
-	people := ph.PersonStorer.GetPeople()
+	people := ph.PersonManager.GetPeople()
 
 	// Filter films from search
 	// if inputSearch, ok = c.GetQuery("search"); ok {
@@ -69,43 +73,14 @@ func (ph PersonHandler) GETPeople(c *gin.Context) {
 	})
 }
 
-// HandleGetActor displays the actor's bio and the films they star in
+// GETPerson displays the actor's bio and the films they star in
 func (ph PersonHandler) GETPerson(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	person, err := ph.PersonStorer.GetPersonFromID(id)
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-
-	films := ph.PersonStorer.GetFilmsWithActor(person.TMDBID)
-
-	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
-		"title":  person.Name,
-		"job":    "actor",
-		"person": person,
-		"films":  films,
-	})
+	ph.GETActor(c)
 }
 
-// HandleGetActor displays the actor's bio and the films they star in
+// GETActor displays the actor's bio and the films they star in
 func (ph PersonHandler) GETActor(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	person, err := ph.PersonStorer.GetPersonFromID(id)
+	person, err := ph.PersonManager.GetPerson(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -113,7 +88,7 @@ func (ph PersonHandler) GETActor(c *gin.Context) {
 		return
 	}
 
-	films := ph.PersonStorer.GetFilmsWithActor(person.TMDBID)
+	films := ph.PersonFilmManager.GetFilmsWithActor(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
@@ -125,14 +100,7 @@ func (ph PersonHandler) GETActor(c *gin.Context) {
 
 // HandleGetDirector displays the directors's bio and the films they directed
 func (ph PersonHandler) GETDirector(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	person, err := ph.PersonStorer.GetPersonFromID(id)
+	person, err := ph.PersonManager.GetPerson(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -140,7 +108,7 @@ func (ph PersonHandler) GETDirector(c *gin.Context) {
 		return
 	}
 
-	films := ph.PersonStorer.GetFilmsWithDirector(person.TMDBID)
+	films := ph.PersonFilmManager.GetFilmsWithDirector(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,
@@ -152,14 +120,7 @@ func (ph PersonHandler) GETDirector(c *gin.Context) {
 
 // HandleGetWriter displays the writer's bio and the films they wrote
 func (ph PersonHandler) GETWriter(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	person, err := ph.PersonStorer.GetPersonFromID(id)
+	person, err := ph.PersonManager.GetPerson(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -167,7 +128,7 @@ func (ph PersonHandler) GETWriter(c *gin.Context) {
 		return
 	}
 
-	films := ph.PersonStorer.GetFilmsWithWriter(person.TMDBID)
+	films := ph.PersonFilmManager.GetFilmsWithWriter(person.TMDBID)
 
 	RenderHTML(c, http.StatusOK, "pages/person.go.html", gin.H{
 		"title":  person.Name,

@@ -14,6 +14,9 @@ import (
 type FilmStorer interface {
 	GetFilms() []model.Film
 	GetFilmsFiltered(years []int, genre, country string) (films []model.Film)
+	GetFilmsWithActor(actorID int64) (films []model.Film)
+	GetFilmsWithDirector(directorID int64) (films []model.Film)
+	GetFilmsWithWriter(writerID int64) (films []model.Film)
 
 	GetFilmFromID(primitive.ObjectID) (*model.Film, error)
 	GetPersonFromTMDBID(int64) (*model.Person, error)
@@ -36,6 +39,9 @@ type FilmManager interface {
 
 	GetFilms() []model.Film
 	GetFilmsFiltered(years []int, genre, country, search string) (films []model.Film)
+	GetFilmsWithActor(actorID int64) (films []model.Film)
+	GetFilmsWithDirector(directorID int64) (films []model.Film)
+	GetFilmsWithWriter(writerID int64) (films []model.Film)
 
 	GetFilm(filmHexID string) (*model.Film, error)
 	GetFilmPath(filmHexID, filmIndex string) (string, error)
@@ -66,11 +72,12 @@ func (fmw FilmManagerWrapper) CacheFilms() {
 		fmw.cachePosterAndBackdrop(&film)
 		for _, personID := range film.GetCastAndCrewIDs() {
 			person, _ := fmw.GetPersonFromTMDBID(personID)
-			fmw.cachePersonPhoto(&person)
+			fmw.cachePersonPhoto(person)
 		}
 	}
 }
 
+// GetFilm returns a Film from its hexadecimal ID
 func (fmw FilmManagerWrapper) GetFilm(filmHexID string) (*model.Film, error) {
 	filmId, err := primitive.ObjectIDFromHex(filmHexID)
 	if err != nil {
@@ -83,6 +90,7 @@ func (fmw FilmManagerWrapper) GetFilm(filmHexID string) (*model.Film, error) {
 	return film, nil
 }
 
+// GetFilmPath returns the filepath to a film given its hexadecimal ID and its index in the volume file slice
 func (fmw FilmManagerWrapper) GetFilmPath(filmHexID, filmIndex string) (string, error) {
 	film, err := fmw.GetFilm(filmHexID)
 	if err != nil {
@@ -99,6 +107,7 @@ func (fmw FilmManagerWrapper) GetFilmPath(filmHexID, filmIndex string) (string, 
 	return film.VolumeFiles[fileIndex].Path, nil
 }
 
+// GetFilmSubtitlePath returns the filepath to a subtitle for a film given the film's hexadecimal ID, the film's index in the volume file slice, and the subtitle's index in the external subtitle slice
 func (fmw FilmManagerWrapper) GetFilmSubtitlePath(filmHexID, filmIndex, subtitleIndex string) (string, error) {
 	film, err := fmw.GetFilm(filmHexID)
 	if err != nil {
@@ -124,10 +133,12 @@ func (fmw FilmManagerWrapper) GetFilmSubtitlePath(filmHexID, filmIndex, subtitle
 	return extSubtitles[subFileIndex].Path, nil
 }
 
+// GetFilms returns the full slice of films in the database
 func (fmw FilmManagerWrapper) GetFilms() []model.Film {
 	return fmw.FilmStorer.GetFilms()
 }
 
+// GetFilmsFiltered returns a slice of films, filtered with years of release date, genre, country, and search terms
 func (fmw FilmManagerWrapper) GetFilmsFiltered(years []int, genre, country, search string) []model.Film {
 	films := fmw.FilmStorer.GetFilmsFiltered(years, genre, country)
 
@@ -145,6 +156,16 @@ func (fmw FilmManagerWrapper) GetFilmsFiltered(years []int, genre, country, sear
 	}
 
 	return filteredFilms
+}
+
+func (fmw FilmManagerWrapper) GetFilmsWithActor(actorID int64) (films []model.Film) {
+	return fmw.FilmStorer.GetFilmsWithActor(actorID)
+}
+func (fmw FilmManagerWrapper) GetFilmsWithDirector(directorID int64) (films []model.Film) {
+	return fmw.FilmStorer.GetFilmsWithDirector(directorID)
+}
+func (fmw FilmManagerWrapper) GetFilmsWithWriter(writerID int64) (films []model.Film) {
+	return fmw.FilmStorer.GetFilmsWithWriter(writerID)
 }
 
 func (fmw FilmManagerWrapper) EditFilmWithLink(filmID, inputUrl string) error {
