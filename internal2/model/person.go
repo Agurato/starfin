@@ -7,8 +7,8 @@ import (
 )
 
 type Cast struct {
-	Character string `bson:"character"`
-	ActorID   int64  `bson:"actor_id"`
+	CharacterName string
+	Actor         Person
 }
 
 type Person struct {

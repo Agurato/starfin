@@ -25,26 +25,37 @@ type UserStorer interface {
 	SetUserPassword(userID primitive.ObjectID, newPassword string) error
 }
 
-type UserManager struct {
+type UserManager interface {
+	CreateOwner(username, password1, password2 string) (*model.User, error)
+	GetUserNb() (int64, error)
+	CreateUser(username, password1, password2 string, isAdmin, isOwner bool) (*model.User, error)
+	DeleteUser(userHexID string) error
+	CheckLogin(username, password string) (user *model.User, err error)
+	SetUserPassword(username, oldPassword, password1, password2 string) error
+	GetUser(userHexID string) (*model.User, error)
+	GetUsers() ([]model.User, error)
+}
+
+type UserManagerWrapper struct {
 	UserStorer
 }
 
 // NewUserManager creates a new UserManager
-func NewUserManager(us UserStorer) *UserManager {
-	return &UserManager{
+func NewUserManagerWrapper(us UserStorer) *UserManagerWrapper {
+	return &UserManagerWrapper{
 		UserStorer: us,
 	}
 }
 
-func (um UserManager) CreateOwner(username, password1, password2 string) (*model.User, error) {
-	if ownerPresent, err := um.UserStorer.IsOwnerPresent(); err != nil {
+func (umw UserManagerWrapper) CreateOwner(username, password1, password2 string) (*model.User, error) {
+	if ownerPresent, err := umw.UserStorer.IsOwnerPresent(); err != nil {
 		log.Errorln(err)
 		return nil, errors.New("An error occured …")
 	} else if ownerPresent {
 		return nil, model.ErrOwnerAlreadyExists
 	}
 
-	user, err := um.CreateUser(username, password1, password2, true, true)
+	user, err := umw.CreateUser(username, password1, password2, true, true)
 	if err != nil {
 		return nil, fmt.Errorf("error adding user: %w", err)
 	}
@@ -53,12 +64,12 @@ func (um UserManager) CreateOwner(username, password1, password2 string) (*model
 	return user, nil
 }
 
-func (um UserManager) GetUserNb() (int64, error) {
-	return um.UserStorer.GetUserNb()
+func (umw UserManagerWrapper) GetUserNb() (int64, error) {
+	return umw.UserStorer.GetUserNb()
 }
 
 // CreateUser checks that the user and password follow specific rules and adds it to the database
-func (um UserManager) CreateUser(username, password1, password2 string, isAdmin, isOwner bool) (*model.User, error) {
+func (umw UserManagerWrapper) CreateUser(username, password1, password2 string, isAdmin, isOwner bool) (*model.User, error) {
 	argon := argon2.DefaultConfig()
 
 	// Check username length
@@ -67,7 +78,7 @@ func (um UserManager) CreateUser(username, password1, password2 string, isAdmin,
 	}
 
 	// Check if username is not already taken
-	if available, err := um.UserStorer.IsUsernameAvailable(username); err != nil {
+	if available, err := umw.UserStorer.IsUsernameAvailable(username); err != nil {
 		return nil, err
 	} else if !available {
 		return nil, errors.New("this username is already taken")
@@ -98,7 +109,7 @@ func (um UserManager) CreateUser(username, password1, password2 string, isAdmin,
 		IsAdmin:  isAdmin,
 	}
 
-	err = um.UserStorer.CreateUser(user)
+	err = umw.UserStorer.CreateUser(user)
 	if err != nil {
 		return nil, fmt.Errorf("error adding user: %w", err)
 	}
@@ -106,17 +117,17 @@ func (um UserManager) CreateUser(username, password1, password2 string, isAdmin,
 	return user, nil
 }
 
-func (vm UserManager) DeleteUser(userHexID string) error {
+func (umw UserManagerWrapper) DeleteUser(userHexID string) error {
 	userId, err := primitive.ObjectIDFromHex(userHexID)
 	if err != nil {
 		return fmt.Errorf("Incorrect user ID: %w", err)
 	}
 
-	return vm.UserStorer.DeleteUser(userId)
+	return umw.UserStorer.DeleteUser(userId)
 }
 
 // CheckLogin checks that the login is correct and returns the user it corresponds to
-func (um UserManager) CheckLogin(username, password string) (user *model.User, err error) {
+func (umw UserManagerWrapper) CheckLogin(username, password string) (user *model.User, err error) {
 	// Check username length
 	if len(username) < 2 || len(username) > 25 {
 		return nil, errors.New("username must be between 2 and 25 characters")
@@ -124,7 +135,7 @@ func (um UserManager) CheckLogin(username, password string) (user *model.User, e
 
 	// Fetch encoded password from DB
 	user = &model.User{}
-	if err := um.UserStorer.GetUserFromName(username, user); err != nil {
+	if err := umw.UserStorer.GetUserFromName(username, user); err != nil {
 		return nil, errors.New("authentication failed")
 	}
 
@@ -139,7 +150,7 @@ func (um UserManager) CheckLogin(username, password string) (user *model.User, e
 }
 
 // SetUserPassword checks that the password change follows specific rules and updates it in the database
-func (um UserManager) SetUserPassword(username, oldPassword, password1, password2 string) error {
+func (umw UserManagerWrapper) SetUserPassword(username, oldPassword, password1, password2 string) error {
 	argon := argon2.DefaultConfig()
 
 	// Check new passwords match
@@ -154,7 +165,7 @@ func (um UserManager) SetUserPassword(username, oldPassword, password1, password
 
 	// Fetch encoded password from DB
 	var userDB model.User
-	if err := um.UserStorer.GetUserFromName(username, &userDB); err != nil {
+	if err := umw.UserStorer.GetUserFromName(username, &userDB); err != nil {
 		return errors.New("an error occured while checking for your password")
 	}
 
@@ -173,25 +184,25 @@ func (um UserManager) SetUserPassword(username, oldPassword, password1, password
 		return errors.New("an error occured while saving your password")
 	}
 
-	if err := um.UserStorer.SetUserPassword(userDB.ID, string(encoded)); err != nil {
+	if err := umw.UserStorer.SetUserPassword(userDB.ID, string(encoded)); err != nil {
 		return errors.New("an error occured while saving your password")
 	}
 
 	return nil
 }
 
-func (um UserManager) GetUser(userHexID string) (*model.User, error) {
+func (umw UserManagerWrapper) GetUser(userHexID string) (*model.User, error) {
 	userId, err := primitive.ObjectIDFromHex(userHexID)
 	if err != nil {
 		return nil, fmt.Errorf("Incorrect user ID: %w", err)
 	}
-	user, err := um.UserStorer.GetUserFromID(userId)
+	user, err := umw.UserStorer.GetUserFromID(userId)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get user from ID '%s': %w", userHexID, err)
 	}
 	return user, nil
 }
 
-func (um UserManager) GetUsers() ([]model.User, error) {
-	return um.UserStorer.GetUsers()
+func (umw UserManagerWrapper) GetUsers() ([]model.User, error) {
+	return umw.UserStorer.GetUsers()
 }

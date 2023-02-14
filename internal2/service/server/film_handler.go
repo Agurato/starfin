@@ -3,45 +3,56 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
-	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type FilmStorer interface {
-	GetFilmFromID(primitive.ObjectID) (model.Film, error)
-	GetPersonFromTMDBID(int64) (model.Person, error)
-	GetFilmsFiltered(years []int, genre, country string) (films []model.Film)
+type FilmManager interface {
+	GetFilm(filmHexID string) (*model.Film, error)
+	GetFilmPath(filmHexID, filmIndex string) (string, error)
+	GetFilmSubtitlePath(filmHexID, filmIndex, subtitleIndex string) (string, error)
+
+	GetFilms() []model.Film
+	GetFilmsFiltered(years []int, genre, country, search string) (films []model.Film)
 }
 
-type FilmGetter interface {
-	GetFilm(id string) model.Film
+type FilmPersonManager interface {
+	GetFilmStaff(*model.Film) ([]model.Cast, []model.Person, []model.Person, error)
+}
+
+type countryMapping struct {
+	Value string
+	Code  string
 }
 
 type FilmHandler struct {
-	FilmStorer
+	FilmManager
+	FilmPersonManager
+	countries []countryMapping
+	Filters   *Filters
 }
 
-func NewFilmHandler(fs FilmStorer) *FilmHandler {
+func NewFilmHandler(fm FilmManager, fpm FilmPersonManager) *FilmHandler {
+	var countries []countryMapping
+	for code, country := range gountries.New().Countries {
+		countries = append(countries, countryMapping{
+			Value: country.Name.Common,
+			Code:  code,
+		})
+	}
 	return &FilmHandler{
-		FilmStorer: fs,
+		FilmManager:       fm,
+		FilmPersonManager: fpm,
+		countries:         countries,
+		Filters:           NewFilters(fm.GetFilms()),
 	}
 }
 
 // GETFilm displays information about a film
 func (fh FilmHandler) GETFilm(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	film, err := fh.FilmStorer.GetFilmFromID(id)
+	film, err := fh.FilmManager.GetFilm(c.Param("id"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -49,157 +60,67 @@ func (fh FilmHandler) GETFilm(c *gin.Context) {
 		return
 	}
 
-	var (
-		fullCast  []gin.H
-		directors []model.Person
-		writers   []model.Person
-	)
-	for _, cast := range film.Cast {
-		actor, err := fh.FilmStorer.GetPersonFromTMDBID(cast.ActorID)
-		if err != nil {
-			log.WithField("actorID", cast.ActorID).Errorln("Could not find actor")
-			actor = model.Person{}
-		}
-		fullCast = append(fullCast, gin.H{
-			"Character": cast.Character,
-			"ID":        actor.ID.Hex(),
-			"Name":      actor.Name,
-			"Photo":     actor.Photo,
-		})
-	}
-	for _, directorID := range film.Directors {
-		person, err := fh.FilmStorer.GetPersonFromTMDBID(directorID)
-		if err == nil {
-			directors = append(directors, person)
-		}
-	}
-	for _, writerID := range film.Writers {
-		person, err := fh.FilmStorer.GetPersonFromTMDBID(writerID)
-		if err == nil {
-			writers = append(writers, person)
-		}
-	}
-
-	var countries []gin.H
-	for code, country := range gountries.New().Countries {
-		countries = append(countries, gin.H{
-			"value": country.Name.Common,
-			"code":  code,
-		})
-	}
+	cast, directors, writers, err := fh.FilmPersonManager.GetFilmStaff(film)
 
 	RenderHTML(c, http.StatusOK, "pages/film.go.html", gin.H{
 		"title":     fmt.Sprintf("%s (%d)", film.Title, film.ReleaseYear),
 		"film":      film,
 		"directors": directors,
 		"writers":   writers,
-		"cast":      fullCast,
+		"cast":      cast,
 		"admin": gin.H{
-			"genres":    filters.Genres,
-			"countries": countries,
+			"genres":    fh.Filters.Genres,
+			"countries": fh.countries,
 		},
 	})
 }
 
 // GETFilmDownload downloads a film file
 func (fh FilmHandler) GETFilmDownload(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	filmPath, err := fh.FilmManager.GetFilmPath(c.Param("id"), c.Param("idx"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	fileIndex, err := strconv.Atoi(c.Param("idx"))
-	if err != nil {
-		fileIndex = 0
-	}
-
-	film, err := fh.FilmStorer.GetFilmFromID(id)
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	if fileIndex >= len(film.VolumeFiles) {
-		fileIndex = len(film.VolumeFiles) - 1
-	}
-	http.ServeFile(c.Writer, c.Request, film.VolumeFiles[fileIndex].Path)
+	http.ServeFile(c.Writer, c.Request, filmPath)
 }
 
 // GETSubtitleDownload downloads a subtitle file
 func (fh FilmHandler) GETSubtitleDownload(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	subPath, err := fh.FilmManager.GetFilmSubtitlePath(c.Param("id"), c.Param("idx"), c.Param("subIdx"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 		return
 	}
-	filmFileIndex, err := strconv.Atoi(c.Param("idx"))
-	if err != nil {
-		filmFileIndex = 0
-	}
-	subFileIndex, err := strconv.Atoi(c.Param("subIdx"))
-	if err != nil {
-		subFileIndex = 0
-	}
-
-	film, err := fh.FilmStorer.GetFilmFromID(id)
-	if err != nil {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	if filmFileIndex >= len(film.VolumeFiles) {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	extSubtitles := film.VolumeFiles[filmFileIndex].ExtSubtitles
-	if subFileIndex >= len(extSubtitles) {
-		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
-			"title": "404 - Not Found",
-		})
-		return
-	}
-	http.ServeFile(c.Writer, c.Request, extSubtitles[subFileIndex].Path)
+	http.ServeFile(c.Writer, c.Request, subPath)
 }
 
 // GETFilms displays the list of films
 func (fh FilmHandler) GETFilms(c *gin.Context) {
-	var (
-		inputSearch string
-		ok          bool
-	)
-
-	yearFilter, years, genre, country, page, err := ParseParamsFilters(c.Param("params"))
+	yearFilter, years, genre, country, page, err := fh.Filters.ParseParamsFilters(c.Param("params"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
 		})
 	}
 
-	films := fh.FilmStorer.GetFilmsFiltered(years, genre, country)
-
-	// Filter films from search
-	if inputSearch, ok = c.GetQuery("search"); ok {
-		films = SearchFilms(inputSearch, films)
-	}
+	search, _ := c.GetQuery("search")
+	films := fh.FilmManager.GetFilmsFiltered(years, genre, country, search)
 
 	films, pages := getPagination(int64(page), films)
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
 		"title":         "Films",
 		"films":         films,
-		"filters":       filters,
+		"filters":       fh.Filters,
 		"filterYear":    yearFilter,
 		"filterGenre":   genre,
 		"filterCountry": country,
-		"search":        inputSearch,
+		"search":        search,
 		"pages":         pages,
 	})
 }

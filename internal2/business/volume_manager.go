@@ -17,33 +17,40 @@ type VolumeStorer interface {
 	DeleteVolume(volumeId primitive.ObjectID) error
 }
 
-type VolumeManager struct {
+type VolumeManager interface {
+	GetVolumes() ([]model.Volume, error)
+	GetVolume(volumeHexID string) (*model.Volume, error)
+	CreateVolume(name, path string, isRecursive bool, mediaType string) error
+	DeleteVolume(volumeHexID string) error
+}
+
+type VolumeManagerWrapper struct {
 	VolumeStorer
 }
 
-func NewVolumeManager(vs VolumeStorer) *VolumeManager {
-	return &VolumeManager{
+func NewVolumeManagerWrapper(vs VolumeStorer) *VolumeManagerWrapper {
+	return &VolumeManagerWrapper{
 		VolumeStorer: vs,
 	}
 }
 
-func (vm VolumeManager) GetVolumes() ([]model.Volume, error) {
-	return vm.VolumeStorer.GetVolumes()
+func (vmw VolumeManagerWrapper) GetVolumes() ([]model.Volume, error) {
+	return vmw.VolumeStorer.GetVolumes()
 }
 
-func (vm VolumeManager) GetVolume(volumeHexID string) (*model.Volume, error) {
+func (vmw VolumeManagerWrapper) GetVolume(volumeHexID string) (*model.Volume, error) {
 	volumeId, err := primitive.ObjectIDFromHex(volumeHexID)
 	if err != nil {
 		return nil, fmt.Errorf("Incorrect volume ID: %w", err)
 	}
-	volume, err := vm.VolumeStorer.GetVolumeFromID(volumeId)
+	volume, err := vmw.VolumeStorer.GetVolumeFromID(volumeId)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get volume from ID '%s': %w", volumeHexID, err)
 	}
 	return volume, nil
 }
 
-func (vm VolumeManager) CreateVolume(name, path string, isRecursive bool, mediaType string) error {
+func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool, mediaType string) error {
 	volume := &model.Volume{
 		ID:          primitive.NewObjectID(),
 		Name:        name,
@@ -67,7 +74,7 @@ func (vm VolumeManager) CreateVolume(name, path string, isRecursive bool, mediaT
 	}
 
 	// Add volume to the database
-	err = vm.VolumeStorer.AddVolume(volume)
+	err = vmw.VolumeStorer.AddVolume(volume)
 	if err != nil {
 		log.Errorln(err)
 		return errors.New("volume could not be added")
@@ -82,11 +89,11 @@ func (vm VolumeManager) CreateVolume(name, path string, isRecursive bool, mediaT
 	return nil
 }
 
-func (vm VolumeManager) DeleteVolume(volumeHexID string) error {
+func (vmw VolumeManagerWrapper) DeleteVolume(volumeHexID string) error {
 	volumeId, err := primitive.ObjectIDFromHex(volumeHexID)
 	if err != nil {
 		return fmt.Errorf("Incorrect volume ID: %w", err)
 	}
 
-	return vm.VolumeStorer.DeleteVolume(volumeId)
+	return vmw.VolumeStorer.DeleteVolume(volumeId)
 }

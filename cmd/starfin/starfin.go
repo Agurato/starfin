@@ -61,14 +61,16 @@ func main2() {
 	if err != nil {
 		return
 	}
-	fm := business.NewFilmManager(db, c, tmdb)
-	um := business.NewUserManager(db)
-	vm := business.NewVolumeManager(db)
 
-	mainHandler := server2.NewMainHandler(um)
-	adminHandler := server2.NewAdminHandler(fm, um, vm)
-	filmHandler := server2.NewFilmHandler(db)
-	personHandler := server2.NewPersonHandler(db)
+	fmw := business.NewFilmManagerWrapper(db, c, tmdb)
+	pmw := business.NewPersonManagerWrapper(db)
+	umw := business.NewUserManagerWrapper(db)
+	vmw := business.NewVolumeManagerWrapper(db)
+
+	mainHandler := server2.NewMainHandler(umw)
+	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)
+	filmHandler := server2.NewFilmHandler(fmw, pmw)
+	personHandler := server2.NewPersonHandler(pmw)
 
 	server := server2.NewServer(mainHandler, adminHandler, filmHandler, personHandler)
 	server.Run()

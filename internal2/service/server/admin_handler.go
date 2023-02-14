@@ -14,7 +14,6 @@ import (
 type AdminFilmManager interface {
 	CacheFilms()
 
-	GetFilm(filmHexID string) (*model.Film, error)
 	EditFilmWithLink(filmID, inputUrl string) error
 }
 

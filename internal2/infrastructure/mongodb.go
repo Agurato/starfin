@@ -360,15 +360,15 @@ func (m MongoDB) AddActors(actors []model.Person) {
 }
 
 // GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (person model.Person, err error) {
-	err = m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(&person)
-	return
+func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (person *model.Person, err error) {
+	err = m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(person)
+	return person, err
 }
 
 // GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (person model.Person, err error) {
-	err = m.peopleColl.FindOne(m.ctx, bson.M{"tmdbid": TMDBID}).Decode(&person)
-	return
+func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (person *model.Person, err error) {
+	err = m.peopleColl.FindOne(m.ctx, bson.M{"tmdbid": TMDBID}).Decode(person)
+	return person, err
 }
 
 func (m MongoDB) GetPeople() (people []model.Person) {

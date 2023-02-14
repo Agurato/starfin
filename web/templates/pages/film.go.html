@@ -432,14 +432,14 @@
             <div class="cast">
                 {{range $idx, $actor := .cast}}
                 <div class="actor mx-2 text-center">
-                    <a href="/actor/{{$actor.ID}}">
+                    <a href="/actor/{{hexID $actor.Person.ID}}">
                         {{if $actor.Photo}}
-                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Photo}}" alt="{{$actor.Name}}" width="185" />
+                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Person.Photo}}" alt="{{$actor.Person.Name}}" width="185" />
                         {{else}}
-                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Name}}" width="185" />
+                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Person.Name}}" width="185" />
                         {{end}}
-                        <p class="fw-bold mt-2 mb-1">{{$actor.Name}}</p>
-                        {{if $actor.Character}}<p class="character">as {{$actor.Character}}</p>{{end}}
+                        <p class="fw-bold mt-2 mb-1">{{$actor.Person.Name}}</p>
+                        {{if $actor.CharacterName}}<p class="character">as {{$actor.CharacterName}}</p>{{end}}
                     </a>
                 </div>
                 {{end}}

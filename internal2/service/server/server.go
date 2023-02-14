@@ -13,7 +13,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/pariz/gountries"
 	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/text/cases"
@@ -53,12 +52,9 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 		"add": func(a int, b int) int {
 			return a + b
 		},
-		"basename": filepath.Base,
-		"countryName": func(code string) string {
-			country, _ := gountries.New().FindCountryByAlpha(code)
-			return country.Name.Common
-		},
-		"join": strings.Join,
+		"basename":    filepath.Base,
+		"countryName": filmHandler.Filters.GetCountryName,
+		"join":        strings.Join,
 		"joinStrings": func(sep string, elems ...string) string {
 			return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
 				return len(elem) > 0
