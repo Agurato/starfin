@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Agurato/starfin/internal2/model"
+	"github.com/alitto/pond"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -26,11 +27,13 @@ type VolumeManager interface {
 
 type VolumeManagerWrapper struct {
 	VolumeStorer
+	*FileWatcher
 }
 
-func NewVolumeManagerWrapper(vs VolumeStorer) *VolumeManagerWrapper {
+func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher) *VolumeManagerWrapper {
 	return &VolumeManagerWrapper{
 		VolumeStorer: vs,
+		FileWatcher:  fw,
 	}
 }
 
@@ -81,10 +84,24 @@ func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool
 	}
 
 	// Search for media files in a separate goroutine to return the page asap
-	go searchMediaFilesInVolume(volume)
+	go func() {
+		// Channel to add film to DB as they are fetched from TMDB
+		filmChan := make(chan *model.Film)
+
+		go vmw.scanVolume(volume, filmChan)
+
+		for {
+			film, more := <-filmChan
+			if more {
+				tryAddFilmToDB(film, false)
+			} else {
+				break
+			}
+		}
+	}()
 
 	// Add file watch to the volume
-	addFileWatch(volume)
+	vmw.FileWatcher.AddVolume(volume)
 
 	return nil
 }
@@ -96,4 +113,41 @@ func (vmw VolumeManagerWrapper) DeleteVolume(volumeHexID string) error {
 	}
 
 	return vmw.VolumeStorer.DeleteVolume(volumeId)
+}
+
+// scanVolume scan files from volume that have not been added to the db yet
+func (vmw VolumeManagerWrapper) scanVolume(v *model.Volume, mediaChan chan *model.Film) {
+	videoFiles, subFiles, err := v.ListVideoFiles()
+	if err != nil {
+		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
+	}
+
+	log.WithField("volumePath", v.Path).Debugln("Scanning volume")
+
+	// Create worker pool of size 20
+	pool := pond.New(20, 0, pond.MinWorkers(20))
+
+	// For each file
+	for _, file := range videoFiles {
+		file := file
+		pool.Submit(func() {
+			film := model.NewFilm(file, v.ID, subFiles)
+
+			// Search ID on TMDB
+			if err = film.FetchTMDBID(); err != nil {
+				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch film ID from TMDB")
+				film.Title = film.Name
+			} else {
+				log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
+				// Fill info from TMDB
+				film.FetchDetails()
+			}
+
+			// Send media to the channel
+			mediaChan <- film
+		})
+	}
+
+	pool.StopAndWait()
+	close(mediaChan)
 }

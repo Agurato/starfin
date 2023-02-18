@@ -8,7 +8,7 @@ import (
 )
 
 type PersonStorer interface {
-	GetPeople() []model.Person
+	GetPeople() ([]model.Person, error)
 	GetPersonFromID(ID primitive.ObjectID) (*model.Person, error)
 	GetPersonFromTMDBID(ID int64) (*model.Person, error)
 }
@@ -32,7 +32,8 @@ func NewPersonManagerWrapper(ps PersonStorer) *PersonManagerWrapper {
 }
 
 func (fmw PersonManagerWrapper) GetPeople() []model.Person {
-	return fmw.PersonStorer.GetPeople()
+	people, _ := fmw.PersonStorer.GetPeople()
+	return people
 }
 
 // GetPerson returns a Person from its hexadecimal ID

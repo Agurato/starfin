@@ -12,7 +12,7 @@ import (
 )
 
 type FilmStorer interface {
-	GetFilms() []model.Film
+	GetFilms() ([]model.Film, error)
 	GetFilmsFiltered(years []int, genre, country string) (films []model.Film)
 	GetFilmsWithActor(actorID int64) (films []model.Film)
 	GetFilmsWithDirector(directorID int64) (films []model.Film)
@@ -67,7 +67,7 @@ func NewFilmManagerWrapper(fs FilmStorer, fc FilmCacher, fdg FilmDataGetter) *Fi
 }
 
 func (fmw FilmManagerWrapper) CacheFilms() {
-	films := fmw.FilmStorer.GetFilms()
+	films, _ := fmw.FilmStorer.GetFilms()
 	for _, film := range films {
 		fmw.cachePosterAndBackdrop(&film)
 		for _, personID := range film.GetCastAndCrewIDs() {
@@ -135,7 +135,8 @@ func (fmw FilmManagerWrapper) GetFilmSubtitlePath(filmHexID, filmIndex, subtitle
 
 // GetFilms returns the full slice of films in the database
 func (fmw FilmManagerWrapper) GetFilms() []model.Film {
-	return fmw.FilmStorer.GetFilms()
+	films, _ := fmw.FilmStorer.GetFilms()
+	return films
 }
 
 // GetFilmsFiltered returns a slice of films, filtered with years of release date, genre, country, and search terms

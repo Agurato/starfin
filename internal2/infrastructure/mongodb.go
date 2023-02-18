@@ -111,13 +111,13 @@ func (m MongoDB) GetUserNb() (int64, error) {
 func (m MongoDB) GetUsers() (users []model.User, err error) {
 	usersCur, err := m.usersColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		return
+		return nil, fmt.Errorf("Error while retrieving users from DB: %w", err)
 	}
 	for usersCur.Next(m.ctx) {
 		var user model.User
 		err = usersCur.Decode(&user)
 		if err != nil {
-			return
+			return nil, fmt.Errorf("Error while decoding user from DB: %w", err)
 		}
 		users = append(users, user)
 	}
@@ -140,13 +140,13 @@ func (m MongoDB) GetVolumeFromID(id primitive.ObjectID) (volume *model.Volume, e
 func (m MongoDB) GetVolumes() (volumes []model.Volume, err error) {
 	volumeCur, err := m.volumesColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		return
+		return nil, fmt.Errorf("Error while retrieving volumes from DB: %w", err)
 	}
 	for volumeCur.Next(m.ctx) {
 		var vol model.Volume
 		err = volumeCur.Decode(&vol)
 		if err != nil {
-			return
+			return nil, fmt.Errorf("Error while decoding volume from DB: %w", err)
 		}
 		volumes = append(volumes, vol)
 	}
@@ -371,19 +371,18 @@ func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (person *model.Person, err er
 	return person, err
 }
 
-func (m MongoDB) GetPeople() (people []model.Person) {
+func (m MongoDB) GetPeople() (people []model.Person, err error) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	peopleCur, err := m.peopleColl.Find(m.ctx, bson.M{}, options)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve films from database")
-		return
+		return nil, fmt.Errorf("Error while retrieving people from DB: %w", err)
 	}
 	for peopleCur.Next(m.ctx) {
 		var person model.Person
 		err := peopleCur.Decode(&person)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			return nil, fmt.Errorf("Error while decoding person from DB: %w", err)
 		}
 		people = append(people, person)
 	}
@@ -405,19 +404,18 @@ func (m MongoDB) GetFilmCount() int64 {
 }
 
 // GetFilms returns a slice of Film
-func (m MongoDB) GetFilms() (films []model.Film) {
+func (m MongoDB) GetFilms() (films []model.Film, err error) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, options)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve films from database")
-		return
+		return nil, fmt.Errorf("Error while retrieving films from DB: %w", err)
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			return nil, fmt.Errorf("Error while decoding film from DB: %w", err)
 		}
 		films = append(films, film)
 	}

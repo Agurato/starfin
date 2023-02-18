@@ -49,6 +49,12 @@ func main() {
 }
 
 func main2() {
+	godotenv.Load()
+
+	log.SetOutput(os.Stdout)
+	// TODO: Set level via environment variable
+	log.SetLevel(log.DebugLevel)
+
 	db := infrastructure.NewMongoDB(
 		os.Getenv(EnvDBUser),
 		os.Getenv(EnvDBPassword),
@@ -62,10 +68,12 @@ func main2() {
 		return
 	}
 
+	fw := business.NewFileWatcher(db)
+
 	fmw := business.NewFilmManagerWrapper(db, c, tmdb)
 	pmw := business.NewPersonManagerWrapper(db)
 	umw := business.NewUserManagerWrapper(db)
-	vmw := business.NewVolumeManagerWrapper(db)
+	vmw := business.NewVolumeManagerWrapper(db, fw)
 
 	mainHandler := server2.NewMainHandler(umw)
 	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)
