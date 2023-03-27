@@ -51,7 +51,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $decade := .filters.Decades}}
+            {{range $decade := .filtererDecades}}
             <li>
                 <div class="btn-group dropdown">
                     <a class="dropdown-item"
@@ -78,7 +78,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $genre := .filters.Genres}}
+            {{range $genre := .filtererGenres}}
             <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/genre/{{lower $genre}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">{{$genre}}</a></li>
             {{end}}
         </ul>
@@ -93,7 +93,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $country := .filters.Countries}}
+            {{range $country := .filtererCountries}}
             <li><a class="dropdown-item"
                     href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/country/{{lower $country}}/{{if $.search}}?search={{$.search}}{{end}}">{{countryName $country}}</a>
             </li>

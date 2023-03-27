@@ -53,7 +53,7 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 			return a + b
 		},
 		"basename":    filepath.Base,
-		"countryName": filmHandler.Filters.GetCountryName,
+		"countryName": filmHandler.Filterer.GetCountryName,
 		"join":        strings.Join,
 		"joinStrings": func(sep string, elems ...string) string {
 			return strings.Join(lo.Filter(elems, func(elem string, i int) bool {

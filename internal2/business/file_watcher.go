@@ -32,14 +32,17 @@ type FileStorer interface {
 
 type FileWatcher struct {
 	FileStorer
+	FilmManager
+
 	*watcher.Watcher
 	watchedVolumes []*model.Volume
 }
 
-func NewFileWatcher(fs FileStorer) *FileWatcher {
+func NewFileWatcher(fs FileStorer, fm FilmManager) *FileWatcher {
 	fileWatcher := &FileWatcher{
-		FileStorer: fs,
-		Watcher:    watcher.New(),
+		FileStorer:  fs,
+		FilmManager: fm,
+		Watcher:     watcher.New(),
 	}
 
 	go fileWatcher.eventListener()
@@ -346,7 +349,7 @@ func (fw *FileWatcher) addFilmFromPath(path string, volumeID primitive.ObjectID)
 	}
 
 	// Add media to DB
-	if err = tryAddFilmToDB(film, false); err != nil {
+	if err = fw.FilmManager.AddFilm(film, false); err != nil {
 		log.WithField("path", film.VolumeFiles[0].Path).Errorln(err)
 	}
 

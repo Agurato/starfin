@@ -36,3 +36,13 @@ type Character struct {
 	CharacterName string `bson:"character_name"`
 	ActorID       int64  `bson:"actor_id"`
 }
+
+func (f Film) GetCastAndCrewIDs() (ids []int64) {
+	for _, cast := range f.Characters {
+		ids = append(ids, cast.ActorID)
+	}
+	ids = append(ids, f.Directors...)
+	ids = append(ids, f.Writers...)
+
+	return
+}

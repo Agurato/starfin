@@ -63,21 +63,24 @@ func main2() {
 		os.Getenv(EnvDBName))
 
 	c := infrastructure.NewCache(os.Getenv(EnvCachePath))
-	tmdb, err := infrastructure.NewTMDB()
+	metadata, err := infrastructure.NewMetadataWrapper(os.Getenv(EnvTMDBAPIKey))
 	if err != nil {
 		return
 	}
 
-	fw := business.NewFileWatcher(db)
+	filterer := business.NewFiltererWrapper()
+	fmw := business.NewFilmManagerWrapper(db, c, metadata, filterer)
+	filterer.AddFilms(fmw.GetFilms())
 
-	fmw := business.NewFilmManagerWrapper(db, c, tmdb)
+	fw := business.NewFileWatcher(db, fmw)
+
 	pmw := business.NewPersonManagerWrapper(db)
 	umw := business.NewUserManagerWrapper(db)
-	vmw := business.NewVolumeManagerWrapper(db, fw)
+	vmw := business.NewVolumeManagerWrapper(db, fw, fmw)
 
 	mainHandler := server2.NewMainHandler(umw)
 	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)
-	filmHandler := server2.NewFilmHandler(fmw, pmw)
+	filmHandler := server2.NewFilmHandler(fmw, pmw, filterer)
 	personHandler := server2.NewPersonHandler(pmw, fmw)
 
 	server := server2.NewServer(mainHandler, adminHandler, filmHandler, personHandler)

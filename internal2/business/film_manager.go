@@ -1,6 +1,7 @@
 package business
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -20,6 +21,14 @@ type FilmStorer interface {
 
 	GetFilmFromID(primitive.ObjectID) (*model.Film, error)
 	GetPersonFromTMDBID(int64) (*model.Person, error)
+
+	IsFilmPresent(film *model.Film) bool
+	AddFilm(film *model.Film) error
+
+	AddVolumeSourceToFilm(film *model.Film) error
+
+	IsPersonPresent(personID int64) bool
+	AddPerson(person *model.Person)
 }
 
 type FilmCacher interface {
@@ -28,10 +37,17 @@ type FilmCacher interface {
 	CachePhoto(link, key string) (bool, error)
 }
 
-type FilmDataGetter interface {
+type FilmMetadataGetter interface {
 	GetPosterLink(key string) string
 	GetBackdropLink(key string) string
 	GetPhotoLink(key string) string
+
+	GetTMDBIDFromLink(inputUrl string) (tmdbID int, err error)
+	GetPersonDetails(personID int64) *model.Person
+	UpdateFilmDetails(film *model.Film)
+}
+
+type TMDB interface {
 }
 
 type FilmManager interface {
@@ -48,21 +64,26 @@ type FilmManager interface {
 	GetFilmSubtitlePath(filmHexID, filmIndex, subtitleIndex string) (string, error)
 
 	EditFilmWithLink(filmID, inputUrl string) error
+
+	AddFilm(film *model.Film, update bool) error
 }
 
 type FilmManagerWrapper struct {
 	FilmStorer
 	FilmCacher
-	FilmDataGetter
+	FilmMetadataGetter
+	Filterer
+	TMDB
 	specialChars *regexp.Regexp
 }
 
-func NewFilmManagerWrapper(fs FilmStorer, fc FilmCacher, fdg FilmDataGetter) *FilmManagerWrapper {
+func NewFilmManagerWrapper(fs FilmStorer, fc FilmCacher, fdg FilmMetadataGetter, f Filterer) *FilmManagerWrapper {
 	return &FilmManagerWrapper{
-		FilmStorer:     fs,
-		FilmCacher:     fc,
-		FilmDataGetter: fdg,
-		specialChars:   regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]"),
+		FilmStorer:         fs,
+		FilmCacher:         fc,
+		FilmMetadataGetter: fdg,
+		Filterer:           f,
+		specialChars:       regexp.MustCompile("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()%\\s\\\\]"),
 	}
 }
 
@@ -170,7 +191,7 @@ func (fmw FilmManagerWrapper) GetFilmsWithWriter(writerID int64) (films []model.
 }
 
 func (fmw FilmManagerWrapper) EditFilmWithLink(filmID, inputUrl string) error {
-	tmdbID, err := GetTMDBIDFromLink(inputUrl)
+	tmdbID, err := fmw.FilmMetadataGetter.GetTMDBIDFromLink(inputUrl)
 	if err != nil {
 		return fmt.Errorf("Error getting TMDB ID from URL '%s': %w", inputUrl, err)
 	}
@@ -180,8 +201,8 @@ func (fmw FilmManagerWrapper) EditFilmWithLink(filmID, inputUrl string) error {
 		return fmt.Errorf("Error getting film: %w", err)
 	}
 	film.TMDBID = int(tmdbID)
-	film.FetchDetails()
-	err = tryAddFilmToDB(&film, true)
+	fmw.FilmMetadataGetter.UpdateFilmDetails(film)
+	err = fmw.AddFilm(film, true)
 	if err != nil {
 		return fmt.Errorf("Could not update film in database: %w", err)
 	}
@@ -189,16 +210,42 @@ func (fmw FilmManagerWrapper) EditFilmWithLink(filmID, inputUrl string) error {
 	return nil
 }
 
+func (fmw FilmManagerWrapper) AddFilm(film *model.Film, update bool) error {
+	if update || film.TMDBID == 0 || !fmw.FilmStorer.IsFilmPresent(film) {
+		if err := fmw.FilmStorer.AddFilm(film); err != nil {
+			return errors.New("cannot add film to database")
+		}
+		fmw.Filterer.AddFilm(film)
+		// Cache poster, backdrop
+		go fmw.cachePosterAndBackdrop(film)
+	} else {
+		if err := fmw.FilmStorer.AddVolumeSourceToFilm(film); err != nil {
+			return errors.New("cannot add volume source to film in database")
+		}
+	}
+
+	for _, personID := range film.GetCastAndCrewIDs() {
+		if !fmw.FilmStorer.IsPersonPresent(personID) {
+			person := fmw.FilmMetadataGetter.GetPersonDetails(personID)
+			fmw.FilmStorer.AddPerson(person)
+			// Cache photos
+			go fmw.cachePersonPhoto(person)
+		}
+	}
+
+	return nil
+}
+
 // cachePosterAndBackdrop caches the poster and the backdrop image of a film
 func (fmw FilmManagerWrapper) cachePosterAndBackdrop(film *model.Film) {
-	hasToWait, err := fmw.FilmCacher.CachePoster(fmw.FilmDataGetter.GetPosterLink(film.PosterPath), film.PosterPath)
+	hasToWait, err := fmw.FilmCacher.CachePoster(fmw.FilmMetadataGetter.GetPosterLink(film.PosterPath), film.PosterPath)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
 	}
 	if hasToWait {
 		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
 	}
-	hasToWait, err = fmw.FilmCacher.CacheBackdrop(fmw.FilmDataGetter.GetPosterLink(film.BackdropPath), film.BackdropPath)
+	hasToWait, err = fmw.FilmCacher.CacheBackdrop(fmw.FilmMetadataGetter.GetPosterLink(film.BackdropPath), film.BackdropPath)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
 	}
@@ -209,7 +256,7 @@ func (fmw FilmManagerWrapper) cachePosterAndBackdrop(film *model.Film) {
 
 // cacheCast caches the person's image
 func (fmw FilmManagerWrapper) cachePersonPhoto(person *model.Person) {
-	hasToWait, err := fmw.FilmCacher.CachePhoto(fmw.FilmDataGetter.GetPhotoLink(person.Photo), person.Photo)
+	hasToWait, err := fmw.FilmCacher.CachePhoto(fmw.FilmMetadataGetter.GetPhotoLink(person.Photo), person.Photo)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
 	}

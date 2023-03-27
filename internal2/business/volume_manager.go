@@ -27,13 +27,15 @@ type VolumeManager interface {
 
 type VolumeManagerWrapper struct {
 	VolumeStorer
+	FilmManager
 	*FileWatcher
 }
 
-func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher) *VolumeManagerWrapper {
+func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher, fm FilmManager) *VolumeManagerWrapper {
 	return &VolumeManagerWrapper{
 		VolumeStorer: vs,
 		FileWatcher:  fw,
+		FilmManager:  fm,
 	}
 }
 
@@ -93,7 +95,7 @@ func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool
 		for {
 			film, more := <-filmChan
 			if more {
-				tryAddFilmToDB(film, false)
+				vmw.FilmManager.AddFilm(film, false)
 			} else {
 				break
 			}

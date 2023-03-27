@@ -331,8 +331,8 @@ func (m MongoDB) IsPersonPresent(personID int64) bool {
 
 // AddPerson adds a person to the DB
 // TODO: upsert
-func (m MongoDB) AddPerson(person model.Person) {
-	_, err := m.peopleColl.InsertOne(m.ctx, person)
+func (m MongoDB) AddPerson(person *model.Person) {
+	_, err := m.peopleColl.InsertOne(m.ctx, *person)
 	if err != nil {
 		log.WithField("personID", person.TMDBID).Errorln(err)
 	}

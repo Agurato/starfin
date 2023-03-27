@@ -22,6 +22,15 @@ type FilmPersonManager interface {
 	GetFilmStaff(*model.Film) ([]model.Cast, []model.Person, []model.Person, error)
 }
 
+type Filterer interface {
+	ParseParamsFilters(params string) (yearFilter string, years []int, genre, country string, page int, err error)
+	GetCountryName(code string) string
+
+	GetCountries() []string
+	GetDecades() []model.Decade
+	GetGenres() []string
+}
+
 type countryMapping struct {
 	Value string
 	Code  string
@@ -31,10 +40,10 @@ type FilmHandler struct {
 	FilmManager
 	FilmPersonManager
 	countries []countryMapping
-	Filters   *Filters
+	Filterer
 }
 
-func NewFilmHandler(fm FilmManager, fpm FilmPersonManager) *FilmHandler {
+func NewFilmHandler(fm FilmManager, fpm FilmPersonManager, f Filterer) *FilmHandler {
 	var countries []countryMapping
 	for code, country := range gountries.New().Countries {
 		countries = append(countries, countryMapping{
@@ -46,7 +55,7 @@ func NewFilmHandler(fm FilmManager, fpm FilmPersonManager) *FilmHandler {
 		FilmManager:       fm,
 		FilmPersonManager: fpm,
 		countries:         countries,
-		Filters:           NewFilters(fm.GetFilms()),
+		Filterer:          f,
 	}
 }
 
@@ -69,7 +78,7 @@ func (fh FilmHandler) GETFilm(c *gin.Context) {
 		"writers":   writers,
 		"cast":      cast,
 		"admin": gin.H{
-			"genres":    fh.Filters.Genres,
+			"genres":    fh.Filterer.GetGenres(),
 			"countries": fh.countries,
 		},
 	})
@@ -101,7 +110,7 @@ func (fh FilmHandler) GETSubtitleDownload(c *gin.Context) {
 
 // GETFilms displays the list of films
 func (fh FilmHandler) GETFilms(c *gin.Context) {
-	yearFilter, years, genre, country, page, err := fh.Filters.ParseParamsFilters(c.Param("params"))
+	yearFilter, years, genre, country, page, err := fh.Filterer.ParseParamsFilters(c.Param("params"))
 	if err != nil {
 		RenderHTML(c, http.StatusNotFound, "pages/404.go.html", gin.H{
 			"title": "404 - Not Found",
@@ -114,13 +123,15 @@ func (fh FilmHandler) GETFilms(c *gin.Context) {
 	films, pages := getPagination(int64(page), films)
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
-		"title":         "Films",
-		"films":         films,
-		"filters":       fh.Filters,
-		"filterYear":    yearFilter,
-		"filterGenre":   genre,
-		"filterCountry": country,
-		"search":        search,
-		"pages":         pages,
+		"title":             "Films",
+		"films":             films,
+		"filtererCountries": fh.Filterer.GetCountries(),
+		"filtererDecades":   fh.Filterer.GetDecades(),
+		"filtererGenres":    fh.Filterer.GetGenres(),
+		"filterYear":        yearFilter,
+		"filterGenre":       genre,
+		"filterCountry":     country,
+		"search":            search,
+		"pages":             pages,
 	})
 }
