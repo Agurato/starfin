@@ -72,11 +72,11 @@ func main2() {
 	fmw := business.NewFilmManagerWrapper(db, c, metadata, filterer)
 	filterer.AddFilms(fmw.GetFilms())
 
-	fw := business.NewFileWatcher(db, fmw)
+	fw := business.NewFileWatcher(db, fmw, metadata)
 
 	pmw := business.NewPersonManagerWrapper(db)
 	umw := business.NewUserManagerWrapper(db)
-	vmw := business.NewVolumeManagerWrapper(db, fw, fmw)
+	vmw := business.NewVolumeManagerWrapper(db, fw, fmw, metadata)
 
 	mainHandler := server2.NewMainHandler(umw)
 	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)

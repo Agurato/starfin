@@ -18,6 +18,12 @@ type VolumeStorer interface {
 	DeleteVolume(volumeId primitive.ObjectID) error
 }
 
+type VolumeMetadataGetter interface {
+	CreateFilm(file string, volumeID primitive.ObjectID, subFiles []string) *model.Film
+	FetchFilmTMDBID(f *model.Film) error
+	UpdateFilmDetails(film *model.Film)
+}
+
 type VolumeManager interface {
 	GetVolumes() ([]model.Volume, error)
 	GetVolume(volumeHexID string) (*model.Volume, error)
@@ -27,15 +33,17 @@ type VolumeManager interface {
 
 type VolumeManagerWrapper struct {
 	VolumeStorer
+	VolumeMetadataGetter
 	FilmManager
 	*FileWatcher
 }
 
-func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher, fm FilmManager) *VolumeManagerWrapper {
+func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher, fm FilmManager, m VolumeMetadataGetter) *VolumeManagerWrapper {
 	return &VolumeManagerWrapper{
-		VolumeStorer: vs,
-		FileWatcher:  fw,
-		FilmManager:  fm,
+		VolumeStorer:         vs,
+		VolumeMetadataGetter: m,
+		FilmManager:          fm,
+		FileWatcher:          fw,
 	}
 }
 
@@ -133,16 +141,16 @@ func (vmw VolumeManagerWrapper) scanVolume(v *model.Volume, mediaChan chan *mode
 	for _, file := range videoFiles {
 		file := file
 		pool.Submit(func() {
-			film := model.NewFilm(file, v.ID, subFiles)
+			film := vmw.CreateFilm(file, v.ID, subFiles)
 
 			// Search ID on TMDB
-			if err = film.FetchTMDBID(); err != nil {
+			if err = vmw.VolumeMetadataGetter.FetchFilmTMDBID(film); err != nil {
 				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch film ID from TMDB")
 				film.Title = film.Name
 			} else {
 				log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
 				// Fill info from TMDB
-				film.FetchDetails()
+				vmw.VolumeMetadataGetter.UpdateFilmDetails(film)
 			}
 
 			// Send media to the channel

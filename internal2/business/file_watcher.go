@@ -30,19 +30,27 @@ type FileStorer interface {
 	GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film)
 }
 
+type WatcherMetadataGetter interface {
+	CreateFilm(file string, volumeID primitive.ObjectID, subFiles []string) *model.Film
+	FetchFilmTMDBID(f *model.Film) error
+	UpdateFilmDetails(film *model.Film)
+}
+
 type FileWatcher struct {
 	FileStorer
 	FilmManager
+	WatcherMetadataGetter
 
 	*watcher.Watcher
 	watchedVolumes []*model.Volume
 }
 
-func NewFileWatcher(fs FileStorer, fm FilmManager) *FileWatcher {
+func NewFileWatcher(fs FileStorer, fm FilmManager, wmg WatcherMetadataGetter) *FileWatcher {
 	fileWatcher := &FileWatcher{
-		FileStorer:  fs,
-		FilmManager: fm,
-		Watcher:     watcher.New(),
+		FileStorer:            fs,
+		FilmManager:           fm,
+		WatcherMetadataGetter: wmg,
+		Watcher:               watcher.New(),
 	}
 
 	go fileWatcher.eventListener()
@@ -170,8 +178,8 @@ func (fw *FileWatcher) handleFileRenamed(oldPath, newPath string) error {
 			log.WithField("path", newPath).Errorln("Error with file rename: could not get related subtitles")
 		}
 		// Create film
-		newFilm := model.NewFilm(newPath, volume.ID, subFiles)
-		err = newFilm.FetchTMDBID()
+		newFilm := fw.WatcherMetadataGetter.CreateFilm(newPath, volume.ID, subFiles)
+		err = fw.WatcherMetadataGetter.FetchFilmTMDBID(newFilm)
 		if err != nil {
 			log.WithFields(log.Fields{"path": newPath, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
 			// TODO
@@ -337,15 +345,15 @@ func (fw *FileWatcher) addFilmFromPath(path string, volumeID primitive.ObjectID)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
 	}
-	film := model.NewFilm(path, volumeID, subs)
+	film := fw.WatcherMetadataGetter.CreateFilm(path, volumeID, subs)
 	// Search ID on TMDB
-	if err := film.FetchTMDBID(); err != nil {
+	if err := fw.WatcherMetadataGetter.FetchFilmTMDBID(film); err != nil {
 		log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch film ID from TMDB")
 		film.Title = film.Name
 	} else {
 		log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
 		// Fill info from TMDB
-		film.FetchDetails()
+		fw.WatcherMetadataGetter.UpdateFilmDetails(film)
 	}
 
 	// Add media to DB

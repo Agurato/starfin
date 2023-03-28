@@ -1,19 +1,25 @@
 package infrastructure
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/cache"
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/agnivade/levenshtein"
 	tmdb "github.com/cyruzin/golang-tmdb"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/exp/slices"
 )
 
@@ -26,12 +32,11 @@ type Metadata interface {
 	GetPosterLink(key string) string
 	GetBackdropLink(key string) string
 	GetPhotoLink(key string) string
-	CachePoster(key string) (bool, error)
-	CacheBackdrop(key string) (bool, error)
-	CachePhoto(key string) (bool, error)
 
 	GetTMDBIDFromLink(inputUrl string) (tmdbID int, err error)
 	GetPersonDetails(personID int64) *model.Person
+	CreateFilm(file string, volumeID primitive.ObjectID, subFiles []string) *model.Film
+	FetchFilmTMDBID(f *model.Film) error
 	UpdateFilmDetails(film *model.Film)
 }
 
@@ -72,28 +77,96 @@ func (mw MetadataWrapper) GetPhotoLink(key string) string {
 	return tmdbImageURL + tmdb.W342 + key
 }
 
-// CachePoster caches a poster from TMDB using its id
-func (mw MetadataWrapper) CachePoster(key string) (bool, error) {
-	if key != "" {
-		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, poster+key)
+func (mw MetadataWrapper) CreateFilm(file string, volumeID primitive.ObjectID, subFiles []string) *model.Film {
+	filename := filepath.Base(file)
+	mediaInfo, err := mw.getMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
+	if err != nil {
+		log.WithField("file", file).Errorln("Could not get media info")
 	}
-	return false, nil
+	subtitles := model.GetExternalSubtitles(file, subFiles)
+	film := model.Film{
+		ID: primitive.NewObjectID(),
+		VolumeFiles: []model.VolumeFile{{
+			Path:         file,
+			FromVolume:   volumeID,
+			Info:         mediaInfo,
+			ExtSubtitles: subtitles,
+		}},
+	}
+	// Split on '.' and ' '
+	parts := strings.FieldsFunc(filename, func(r rune) bool {
+		return r == '.' || r == ' '
+	})
+	i := len(parts) - 1
+
+	// Iterate in reverse and stop at first year info
+	for ; i >= 0; i-- {
+		potentialYear := parts[i]
+		if len(potentialYear) == 4 {
+			year, err := strconv.Atoi(potentialYear)
+			if err == nil {
+				film.ReleaseYear = year
+				break
+			}
+		}
+		if len(potentialYear) == 6 && potentialYear[0] == '(' && potentialYear[5] == ')' {
+			year, err := strconv.Atoi(potentialYear[1:5])
+			if err == nil {
+				film.ReleaseYear = year
+				break
+			}
+		}
+	}
+	// The film name should be right before the film year
+	if film.ReleaseYear > 0 && i >= 0 {
+		film.Name = strings.Join(parts[:i], " ")
+	} else {
+		film.Name = strings.Join(parts, " ")
+	}
+
+	// Get resolution from name
+	resolutionPRegex, _ := regexp.Compile(`^\d\d\d\d?[pP]$`)
+	resolutionKRegex, _ := regexp.Compile(`^\d[kK]$`)
+	for i := len(parts) - 1; i >= 0; i-- {
+		potentialRes := parts[i]
+		if resolutionPRegex.MatchString(potentialRes) || resolutionKRegex.MatchString(potentialRes) {
+			film.Resolution = potentialRes
+			break
+		}
+	}
+	// If resolution not found, get it from MediaInfo video
+	if film.Resolution == "" {
+		film.Resolution = mediaInfo.Resolution
+	}
+
+	return &film
 }
 
-// CacheBackdrop caches a backdrop from TMDB using its id
-func (mw MetadataWrapper) CacheBackdrop(key string) (bool, error) {
-	if key != "" {
-		return cache.CacheFile(tmdbImageURL+tmdb.W1280+key, backdrop+key)
+// FetchMediaID fetches media ID from TMDB and stores it
+func (mw MetadataWrapper) FetchFilmTMDBID(f *model.Film) error {
+	urlOptions := make(map[string]string)
+	if f.ReleaseYear != 0 {
+		urlOptions["year"] = strconv.Itoa(f.ReleaseYear)
 	}
-	return false, nil
-}
+	tmdbSearchRes, err := TMDBClient.GetSearchMovies(f.Name, urlOptions)
+	if err != nil {
+		return err
+	}
+	if len(tmdbSearchRes.Results) == 0 {
+		return errors.New("film not found")
+	}
 
-// CachePhoto caches a person's photo from TMDB using its id
-func (mw MetadataWrapper) CachePhoto(key string) (bool, error) {
-	if key != "" {
-		return cache.CacheFile(tmdbImageURL+tmdb.W342+key, photo+key)
+	mostPopular := float32(0)
+	for _, res := range tmdbSearchRes.Results {
+		if res.Popularity > mostPopular {
+			// Levenshtein distance so that the name corresponds at least a little bit
+			if levenshtein.ComputeDistance(f.Name, res.Title) < len(f.Name)/3 || mostPopular == 0 {
+				f.TMDBID = int(res.ID)
+				mostPopular = res.Popularity
+			}
+		}
 	}
-	return false, nil
+	return nil
 }
 
 func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
@@ -161,6 +234,100 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	for _, country := range details.ProductionCountries {
 		film.ProdCountries = append(film.ProdCountries, country.Iso3166_1)
 	}
+}
+
+func (mw MetadataWrapper) getMediaInfo(mediaInfoPath, filePath string) (model.MediaInfo, error) {
+	var mediaInfo model.MediaInfo
+	var mediaInfoJSONOutput model.MediaInfoJSONOutput
+
+	out, err := exec.Command(mediaInfoPath, filePath).Output()
+	if err != nil {
+		return mediaInfo, err
+	}
+	fullOutput := strings.ReplaceAll(string(out), "\r\n", "\n")
+	fullOutput = strings.Trim(fullOutput, "\n")
+	var fullOutputLines []string
+	for _, line := range strings.Split(fullOutput, "\n") {
+		if strings.HasPrefix(line, "Complete name") {
+			fullOutputLines = append(fullOutputLines, fmt.Sprintf("Name : %s", filepath.Base(strings.Split(line, " : ")[1])))
+		} else {
+			fullOutputLines = append(fullOutputLines, line)
+		}
+	}
+	mediaInfo.FullOutput = template.HTML(strings.Join(fullOutputLines, "<br>"))
+
+	out, err = exec.Command(mediaInfoPath, "--Output=JSON", filePath).Output()
+	if err != nil {
+		return mediaInfo, err
+	}
+	json.Unmarshal(out, &mediaInfoJSONOutput)
+
+	// For every track
+	for _, track := range mediaInfoJSONOutput.Media.Track {
+		switch track["@type"] {
+		// Fill General info
+		case "General":
+			mediaInfo.Format = track["Format"]
+			totalSeconds, _ := strconv.ParseFloat(track["Duration"], 32)
+			hours := int(totalSeconds / 3600)
+			minutes := int(totalSeconds/60) % 60
+			seconds := int(totalSeconds) % 60
+			mediaInfo.Duration = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			totalSize, _ := strconv.Atoi(track["FileSize"])
+			if totalSize > 1_000_000_000 {
+				mediaInfo.FileSize = fmt.Sprintf("%.2f GB", float64(totalSize)/1_000_000_000)
+			} else if totalSize > 1_000_000 {
+				mediaInfo.FileSize = fmt.Sprintf("%.2f MB", float64(totalSize)/1_000_000)
+			} else if totalSize > 1_000 {
+				mediaInfo.FileSize = fmt.Sprintf("%.2f KB", float64(totalSize)/1_000)
+			}
+		// Fill Video info
+		case "Video":
+			mediaInfo.Video = append(mediaInfo.Video, model.VideoInfo{
+				CodecID:    track["CodecID"],
+				Profile:    track["Format_Profile"],
+				Resolution: fmt.Sprintf("%sx%s", track["Width"], track["Height"]),
+				FrameRate:  track["FrameRate"],
+				BitDepth:   track["BitDepth"],
+			})
+			// Compute resolution on first video stream
+			if mediaInfo.Resolution == "" {
+				// Switch on the width because film can have black horizontal bars
+				width, _ := strconv.Atoi(track["Width"])
+				switch width {
+				case 720:
+					mediaInfo.Resolution = "480p"
+				case 1280:
+					mediaInfo.Resolution = "720p"
+				case 1920:
+					mediaInfo.Resolution = "1080p"
+				case 2560:
+					mediaInfo.Resolution = "1440p"
+				case 3840:
+					mediaInfo.Resolution = "4K"
+				case 7680:
+					mediaInfo.Resolution = "8K"
+				}
+			}
+		// Fill Audio info
+		case "Audio":
+			mediaInfo.Audio = append(mediaInfo.Audio, model.AudioInfo{
+				CodecID:      track["CodecID"],
+				Channels:     track["Channels"],
+				Language:     track["Language"],
+				SamplingRate: track["SamplingRate"],
+			})
+		// Fill Text info
+		case "Text":
+			mediaInfo.Subs = append(mediaInfo.Subs, model.SubsInfo{
+				CodecID:  track["CodecID"],
+				Language: track["Language"],
+				Forced:   track["Forced"],
+			})
+		}
+	}
+
+	return mediaInfo, nil
 }
 
 // getIMDbRating fetchs rating from IMDbID
