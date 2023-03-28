@@ -4,12 +4,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/cache"
 	"github.com/Agurato/starfin/internal2/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
+
+type MainCacher interface {
+	GetCachedPath(filePath string) string
+}
 
 type MainUserManager interface {
 	IsOwnerPresent() (bool, error)
@@ -19,11 +22,13 @@ type MainUserManager interface {
 }
 
 type MainHandler struct {
+	MainCacher
 	MainUserManager
 }
 
-func NewMainHandler(mum MainUserManager) *MainHandler {
+func NewMainHandler(mc MainCacher, mum MainUserManager) *MainHandler {
 	return &MainHandler{
+		MainCacher:      mc,
 		MainUserManager: mum,
 	}
 }
@@ -183,5 +188,5 @@ func (mh MainHandler) GETCache(c *gin.Context) {
 		c.AbortWithStatus(404)
 		return
 	}
-	http.ServeFile(c.Writer, c.Request, cache.GetCachedPath(cachedFilePath))
+	http.ServeFile(c.Writer, c.Request, mh.MainCacher.GetCachedPath(cachedFilePath))
 }

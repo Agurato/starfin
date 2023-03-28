@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -14,13 +13,12 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/Agurato/starfin/internal/context"
-	"github.com/Agurato/starfin/internal/database"
-	"github.com/Agurato/starfin/internal/media"
+	"github.com/Agurato/starfin/internal2/model"
 )
 
 const (
@@ -32,8 +30,12 @@ var (
 	setupDone bool
 )
 
+type OwnerStorer interface {
+	IsOwnerPresent() (bool, error)
+}
+
 // NewServer initializes the server
-func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler) *gin.Engine {
+func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler, db OwnerStorer) *gin.Engine {
 	// Set Gin to production mode
 	// TODO: change to release for deployment
 	// gin.SetMode(gin.DebugMode)
@@ -43,8 +45,8 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 	router.SetTrustedProxies(nil)
 
 	// Cookies
-	store := cookie.NewStore([]byte(os.Getenv(context.EnvCookieSecret)))
-	gob.Register(database.User{})
+	store := cookie.NewStore([]byte(cookieSecret))
+	gob.Register(model.User{})
 	router.Use(sessions.Sessions("user-session", store))
 
 	// Add template functions
@@ -64,10 +66,10 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 			ret, _ := json.Marshal(input)
 			return string(ret)
 		},
-		"filmID": func(film media.Film) string {
+		"filmID": func(film model.Film) string {
 			return film.ID.Hex()
 		},
-		"filmName": func(film media.Film) string {
+		"filmName": func(film model.Film) string {
 			if film.Title == "" {
 				return film.Name
 			}
@@ -77,7 +79,7 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 			return id.Hex()
 		},
 		"lower": strings.ToLower,
-		"personID": func(person media.Person) string {
+		"personID": func(person model.Person) string {
 			return person.ID.Hex()
 		},
 		"replace":         strings.ReplaceAll,
@@ -134,6 +136,12 @@ func NewServer(mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler
 		POST("/admin/reloadcache", adminHandler.POSTReloadCache).
 		POST("/admin/editfilmonline", adminHandler.POSTEditFilmOnline)
 
+	var err error
+	setupDone, err = db.IsOwnerPresent()
+	if err != nil {
+		log.WithError(err).Fatal("error while checking for error")
+	}
+
 	return router
 }
 
@@ -148,7 +156,7 @@ func RenderHTML(c *gin.Context, code int, name string, obj gin.H) {
 			"name":       "",
 		}
 	} else {
-		realUser := user.(database.User)
+		realUser := user.(model.User)
 		obj["user"] = gin.H{
 			"isLoggedIn": true,
 			"isAdmin":    realUser.IsAdmin,
@@ -194,7 +202,7 @@ func adminRequired(c *gin.Context) {
 		})
 		return
 	}
-	if !user.(database.User).IsAdmin {
+	if !user.(model.User).IsAdmin {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		RenderHTML(c, http.StatusUnauthorized, "pages/index.go.html", gin.H{
 			"title": "starfin",

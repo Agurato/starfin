@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/Agurato/starfin/internal/cache"
+	"github.com/Agurato/starfin/internal/context"
 	"github.com/Agurato/starfin/internal/database"
 	"github.com/Agurato/starfin/internal/media"
 	"github.com/Agurato/starfin/internal/server"
@@ -26,7 +27,7 @@ const (
 	EnvCachePath    = "CACHE_PATH"
 )
 
-func main() {
+func main2() {
 	godotenv.Load()
 
 	log.SetOutput(os.Stdout)
@@ -48,7 +49,7 @@ func main() {
 	server.Run()
 }
 
-func main2() {
+func main() {
 	godotenv.Load()
 
 	log.SetOutput(os.Stdout)
@@ -73,16 +74,23 @@ func main2() {
 	filterer.AddFilms(fmw.GetFilms())
 
 	fw := business.NewFileWatcher(db, fmw, metadata)
+	go fw.Run()
 
 	pmw := business.NewPersonManagerWrapper(db)
 	umw := business.NewUserManagerWrapper(db)
 	vmw := business.NewVolumeManagerWrapper(db, fw, fmw, metadata)
 
-	mainHandler := server2.NewMainHandler(umw)
+	mainHandler := server2.NewMainHandler(c, umw)
 	adminHandler := server2.NewAdminHandler(fmw, umw, vmw)
 	filmHandler := server2.NewFilmHandler(fmw, pmw, filterer)
 	personHandler := server2.NewPersonHandler(pmw, fmw)
 
-	server := server2.NewServer(mainHandler, adminHandler, filmHandler, personHandler)
+	server := server2.NewServer(
+		os.Getenv(context.EnvCookieSecret),
+		mainHandler,
+		adminHandler,
+		filmHandler,
+		personHandler,
+		db)
 	server.Run()
 }

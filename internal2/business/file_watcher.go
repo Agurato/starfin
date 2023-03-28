@@ -41,7 +41,7 @@ type FileWatcher struct {
 	FilmManager
 	WatcherMetadataGetter
 
-	*watcher.Watcher
+	watcher        *watcher.Watcher
 	watchedVolumes []*model.Volume
 }
 
@@ -50,7 +50,7 @@ func NewFileWatcher(fs FileStorer, fm FilmManager, wmg WatcherMetadataGetter) *F
 		FileStorer:            fs,
 		FilmManager:           fm,
 		WatcherMetadataGetter: wmg,
-		Watcher:               watcher.New(),
+		watcher:               watcher.New(),
 	}
 
 	go fileWatcher.eventListener()
@@ -61,21 +61,27 @@ func NewFileWatcher(fs FileStorer, fm FilmManager, wmg WatcherMetadataGetter) *F
 		fileWatcher.synchronizeFilesAndDB(&v)
 	}
 
-	if err := fileWatcher.Start(1 * time.Second); err != nil {
+	return fileWatcher
+}
+
+func (fw *FileWatcher) Run() {
+	if err := fw.watcher.Start(1 * time.Second); err != nil {
 		log.Fatalln(err)
 	}
+}
 
-	return fileWatcher
+func (fw *FileWatcher) Stop() {
+	fw.watcher.Close()
 }
 
 func (fw *FileWatcher) AddVolume(v *model.Volume) {
 	if v.IsRecursive {
-		if err := fw.Watcher.AddRecursive(v.Path); err != nil {
+		if err := fw.watcher.AddRecursive(v.Path); err != nil {
 			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
 			return
 		}
 	} else {
-		if err := fw.Watcher.Add(v.Path); err != nil {
+		if err := fw.watcher.Add(v.Path); err != nil {
 			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
 			return
 		}
@@ -114,7 +120,7 @@ func (fw *FileWatcher) eventListener() {
 				}
 			}
 		// There is a new file event
-		case event := <-fw.Watcher.Event:
+		case event := <-fw.watcher.Event:
 			log.WithField("event", event).Debugln("New file event")
 			if event.Op == watcher.Create || event.Op == watcher.Write {
 				// Add file if not a video or sub and if not already in map
@@ -131,11 +137,11 @@ func (fw *FileWatcher) eventListener() {
 				fw.handleFileRemoved(event.Path)
 			}
 		// Error in file watching
-		case err := <-fw.Watcher.Error:
+		case err := <-fw.watcher.Error:
 			log.WithField("error", err).Errorln("Error event")
 			return
 		// Stop watching files
-		case <-fw.Watcher.Closed:
+		case <-fw.watcher.Closed:
 			return
 		}
 	}

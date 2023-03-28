@@ -33,8 +33,8 @@ func NewCache(cachePath string) *Cache {
 	}
 }
 
-// getCachedPath returns the full path from a filepath in the cache
-func (c Cache) getCachedPath(filePath string) string {
+// GetCachedPath returns the full path from a filepath in the cache
+func (c Cache) GetCachedPath(filePath string) string {
 	return filepath.Join(c.cachePath, filePath)
 }
 
@@ -58,7 +58,7 @@ func (c Cache) CachePhoto(sourceUrl, key string) (hasToWait bool, err error) {
 // Returns false if the file was immediately cached
 func (c Cache) CacheFile(sourceUrl string, filePath string) (hasToWait bool, err error) {
 	// Create directories in the requested path if needed
-	parent := c.getCachedPath(filepath.Dir(filePath))
+	parent := c.GetCachedPath(filepath.Dir(filePath))
 	if _, err := os.Stat(parent); errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(parent, 0755)
 		if err != nil {
@@ -85,7 +85,7 @@ func (c Cache) CacheFile(sourceUrl string, filePath string) (hasToWait bool, err
 		return false, errors.New("could not fetch source file")
 	}
 	// Write file
-	out, err := os.Create(c.getCachedPath(filePath))
+	out, err := os.Create(c.GetCachedPath(filePath))
 	if err != nil {
 		return false, err
 	}
@@ -101,11 +101,11 @@ func (c Cache) CacheFile(sourceUrl string, filePath string) (hasToWait bool, err
 
 // isCached returns true if a filepath is in the cache
 func (c Cache) isCached(filePath string) bool {
-	_, err := os.Stat(c.getCachedPath(filePath))
+	_, err := os.Stat(c.GetCachedPath(filePath))
 	return err == nil
 }
 
 // getCachedFile returns a buffer to the cached file
 func (c Cache) getCachedFile(filePath string) ([]byte, error) {
-	return os.ReadFile(c.getCachedPath(filePath))
+	return os.ReadFile(c.GetCachedPath(filePath))
 }
