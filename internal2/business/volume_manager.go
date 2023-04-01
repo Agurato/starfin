@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/Agurato/starfin/internal2/model"
-	"github.com/alitto/pond"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -94,19 +93,7 @@ func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool
 	}
 
 	// Search for media files in a separate goroutine to return the page asap
-	go func() {
-		// Channel to add film to DB as they are fetched from TMDB
-		filmChan := make(chan *model.Film)
-
-		go vmw.scanVolume(volume, filmChan)
-
-		for film := range filmChan {
-			vmw.FilmManager.AddFilm(film, false)
-		}
-
-		// Add file watch to the volume
-		vmw.FileWatcher.AddVolume(volume)
-	}()
+	go vmw.scanVolume(volume)
 
 	return nil
 }
@@ -120,39 +107,52 @@ func (vmw VolumeManagerWrapper) DeleteVolume(volumeHexID string) error {
 	return vmw.VolumeStorer.DeleteVolume(volumeId)
 }
 
-// scanVolume scan files from volume that have not been added to the db yet
-func (vmw VolumeManagerWrapper) scanVolume(v *model.Volume, mediaChan chan *model.Film) {
-	videoFiles, subFiles, err := v.ListVideoFiles()
+func (vmw VolumeManagerWrapper) scanVolume(volume *model.Volume) {
+	videoFiles, subFiles, err := volume.ListVideoFiles()
 	if err != nil {
-		log.WithField("volumePath", v.Path).Warningln("Unable to scan folder for video files")
+		log.WithField("volumePath", volume.Path).Warningln("Unable to scan folder for video files")
 	}
 
-	log.WithField("volumePath", v.Path).Debugln("Scanning volume")
+	log.WithField("volumePath", volume.Path).Debugln("Scanning volume")
 
-	// Create worker pool of size 20
-	pool := pond.New(20, 0, pond.MinWorkers(20))
-
-	// For each file
-	for _, file := range videoFiles {
-		file := file
-		pool.Submit(func() {
-			film := vmw.CreateFilm(file, v.ID, subFiles)
+	// Worker function
+	getFilmsFromFiles := func(files <-chan string, films chan<- *model.Film) {
+		for file := range files {
+			film := vmw.CreateFilm(file, volume.ID, subFiles)
 
 			// Search ID on TMDB
 			if err = vmw.VolumeMetadataGetter.FetchFilmTMDBID(film); err != nil {
 				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch film ID from TMDB")
 				film.Title = film.Name
 			} else {
-				log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
+				log.WithFields(log.Fields{"tmdb_id": film.TMDBID, "file": file}).Infoln("Found TMDB ID for file")
 				// Fill info from TMDB
 				vmw.VolumeMetadataGetter.UpdateFilmDetails(film)
 			}
 
-			// Send media to the channel
-			mediaChan <- film
-		})
+			films <- film
+		}
 	}
 
-	pool.StopAndWait()
-	close(mediaChan)
+	// Init channels
+	files := make(chan string, len(videoFiles))
+	films := make(chan *model.Film, len(videoFiles))
+
+	// Init workers
+	for w := 1; w <= 20; w++ {
+		go getFilmsFromFiles(files, films)
+	}
+
+	// Get films
+	for _, file := range videoFiles {
+		files <- file
+	}
+	close(files)
+
+	for film := range films {
+		vmw.FilmManager.AddFilm(film, false)
+	}
+
+	// Add file watch to the volume
+	vmw.FileWatcher.AddVolume(volume)
 }

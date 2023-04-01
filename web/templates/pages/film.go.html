@@ -404,7 +404,7 @@
                             <th>
                                 {{range $idx, $dir := .directors}}
                                 {{$idx := add $idx 1}}
-                                <a href="/director/{{$dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $directorsLength}}, {{end}}
+                                <a href="/director/{{hexID $dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $directorsLength}}, {{end}}
                                 {{end}}
                             </th>
                         </tr>
@@ -413,7 +413,7 @@
                             <th>
                                 {{range $idx, $dir := .writers}}
                                 {{$idx := add $idx 1}}
-                                <a href="/writer/{{$dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
+                                <a href="/writer/{{hexID $dir.ID}}">{{$dir.Name}}</a>{{if lt $idx $writersLength}}, {{end}}
                                 {{end}}
                             </th>
                         </tr>
@@ -430,16 +430,16 @@
             </div>
             <!-- Cast -->
             <div class="cast">
-                {{range $idx, $actor := .cast}}
+                {{range $idx, $character := .cast}}
                 <div class="actor mx-2 text-center">
-                    <a href="/actor/{{hexID $actor.Person.ID}}">
-                        {{if $actor.Photo}}
-                        <img class="img-fluid" src="{{getImageURL "photo" $actor.Person.Photo}}" alt="{{$actor.Person.Name}}" width="185" />
+                    <a href="/actor/{{hexID $character.Actor.ID}}">
+                        {{if $character.Actor.Photo}}
+                        <img class="img-fluid" src="{{getImageURL "photo" $character.Actor.Photo}}" alt="{{$character.Actor.Name}}" width="185" />
                         {{else}}
-                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$actor.Person.Name}}" width="185" />
+                        <img class="img-fluid" src="/static/images/no_profile.png" alt="{{$character.Actor.Name}}" width="185" />
                         {{end}}
-                        <p class="fw-bold mt-2 mb-1">{{$actor.Person.Name}}</p>
-                        {{if $actor.CharacterName}}<p class="character">as {{$actor.CharacterName}}</p>{{end}}
+                        <p class="fw-bold mt-2 mb-1">{{$character.Actor.Name}}</p>
+                        {{if $character.CharacterName}}<p class="character">as {{$character.CharacterName}}</p>{{end}}
                     </a>
                 </div>
                 {{end}}

@@ -6,7 +6,7 @@ import (
 
 type Film struct {
 	ID          primitive.ObjectID `bson:"_id"`
-	VolumeFiles []VolumeFile       `bson:"volume_file"`
+	VolumeFiles []VolumeFile       `bson:"volume_files"`
 	Name        string             `bson:"name"`         // Name fetched from filename
 	Resolution  string             `bson:"resolution"`   // Resolution fetched from filename
 	ReleaseYear int                `bson:"release_year"` // Release year fetched from filename

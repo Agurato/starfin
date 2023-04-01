@@ -46,7 +46,7 @@ func NewMongoDB(dbUser, dbPassword, dbURL, dbPort, dbName string) *MongoDB {
 }
 
 func getFilmPathFilter(path string) primitive.M {
-	return bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}}
+	return bson.M{"volume_files": bson.D{{Key: "$elemMatch", Value: bson.M{"path": path}}}}
 }
 
 // Close closes the MongoDB connection
@@ -92,9 +92,10 @@ func (m MongoDB) IsUsernameAvailable(username string) (bool, error) {
 }
 
 // GetUserFromID gets user from its ID
-func (m MongoDB) GetUserFromID(id primitive.ObjectID) (user *model.User, err error) {
-	err = m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(user)
-	return user, err
+func (m MongoDB) GetUserFromID(id primitive.ObjectID) (*model.User, error) {
+	var user model.User
+	err := m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&user)
+	return &user, err
 }
 
 // GetUserFromName gets user from it name
@@ -131,9 +132,10 @@ func (m MongoDB) SetUserPassword(userID primitive.ObjectID, newPassword string) 
 }
 
 // Fetches volume from DB using specified ID and returns it via pointer
-func (m MongoDB) GetVolumeFromID(id primitive.ObjectID) (volume *model.Volume, err error) {
-	err = m.volumesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(volume)
-	return volume, err
+func (m MongoDB) GetVolumeFromID(id primitive.ObjectID) (*model.Volume, error) {
+	var volume model.Volume
+	err := m.volumesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&volume)
+	return &volume, err
 }
 
 // GetVolumes returns the list of volumes in the DB
@@ -165,13 +167,13 @@ func (m MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 	update, err := m.filmsColl.UpdateMany(m.ctx,
 		bson.M{},
 		bson.D{
-			{Key: "$pull", Value: bson.D{{Key: "volumefiles", Value: bson.D{{Key: "fromvolume", Value: volumeId}}}}},
+			{Key: "$pull", Value: bson.D{{Key: "volume_files", Value: bson.D{{Key: "fromvolume", Value: volumeId}}}}},
 		})
 	if err != nil {
 		return err
 	}
 	log.WithField("volumeId", volumeId).Infof("%d films are concerned with this volume deletion\n", update.ModifiedCount)
-	del, err := m.filmsColl.DeleteMany(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$size", Value: 0}}})
+	del, err := m.filmsColl.DeleteMany(m.ctx, bson.M{"volume_files": bson.D{{Key: "$size", Value: 0}}})
 	if err != nil {
 		return err
 	}
@@ -204,7 +206,7 @@ func (m MongoDB) IsSubtitlePathPresent(subPath string) bool {
 
 // IsFilmInDB checks if a given film is already present in DB
 func (m MongoDB) IsFilmPresent(film *model.Film) bool {
-	res := m.filmsColl.FindOne(m.ctx, bson.M{"tmdbid": film.TMDBID})
+	res := m.filmsColl.FindOne(m.ctx, bson.M{"tmdb_id": film.TMDBID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
@@ -217,7 +219,7 @@ func (m MongoDB) AddFilm(film *model.Film) error {
 
 // AddVolumeSourceToFilm adds the volume as a source to the given media
 func (m MongoDB) AddVolumeSourceToFilm(film *model.Film) error {
-	res, err := m.filmsColl.UpdateOne(m.ctx, bson.M{"tmdbid": film.TMDBID}, bson.M{"$addToSet": bson.M{"volumefiles": film.VolumeFiles[0]}})
+	res, err := m.filmsColl.UpdateOne(m.ctx, bson.M{"tmdb_id": film.TMDBID}, bson.M{"$addToSet": bson.M{"volume_files": film.VolumeFiles[0]}})
 	if err != nil {
 		return err
 	} else if res.ModifiedCount == 0 {
@@ -245,7 +247,7 @@ func (m MongoDB) UpdateFilmVolumeFile(film *model.Film, oldPath string, newVolum
 	oldPathIndex := slices.IndexFunc(film.VolumeFiles, func(vf model.VolumeFile) bool {
 		return vf.Path == oldPath
 	})
-	update, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(oldPath), bson.M{"$set": bson.M{fmt.Sprintf("volumefiles.%d", oldPathIndex): newVolumeFile}})
+	update, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(oldPath), bson.M{"$set": bson.M{fmt.Sprintf("volume_files.%d", oldPathIndex): newVolumeFile}})
 	if err != nil {
 		return err
 	}
@@ -280,7 +282,7 @@ func (m MongoDB) DeleteFilmVolumeFile(path string) error {
 	} else {
 		update, err := m.filmsColl.UpdateOne(m.ctx,
 			getFilmPathFilter(path),
-			bson.D{{Key: "$pull", Value: bson.D{{Key: "volumefiles", Value: bson.D{{Key: "path", Value: path}}}}}})
+			bson.D{{Key: "$pull", Value: bson.D{{Key: "volume_files", Value: bson.D{{Key: "path", Value: path}}}}}})
 		if err != nil {
 			return err
 		}
@@ -313,7 +315,7 @@ func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 	}
 	film.VolumeFiles[volumeIndex].ExtSubtitles = slices.Delete(film.VolumeFiles[volumeIndex].ExtSubtitles, subtitleIndex, subtitleIndex+1)
 
-	updateRes, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(mediaPath), bson.M{"$set": bson.D{{Key: "volumefiles", Value: film.VolumeFiles}}})
+	updateRes, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(mediaPath), bson.M{"$set": bson.D{{Key: "volume_files", Value: film.VolumeFiles}}})
 	if err != nil {
 		return err
 	}
@@ -325,7 +327,7 @@ func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 
 // IsPersonPresent checks if a person is already registered in the DB
 func (m MongoDB) IsPersonPresent(personID int64) bool {
-	res := m.peopleColl.FindOne(m.ctx, bson.M{"tmdbid": personID})
+	res := m.peopleColl.FindOne(m.ctx, bson.M{"tmdb_id": personID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
@@ -341,7 +343,7 @@ func (m MongoDB) AddPerson(person *model.Person) {
 // AddActors upserts the actors of a film to the DB
 func (m MongoDB) AddActors(actors []model.Person) {
 	for _, actor := range actors {
-		res, err := m.peopleColl.UpdateOne(m.ctx, bson.M{"tmdbid": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
+		res, err := m.peopleColl.UpdateOne(m.ctx, bson.M{"tmdb_id": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
 		if err != nil {
 			log.WithField("actorName", actor.Name).Warningln("Unable to add actor to database:", err)
 		}
@@ -360,15 +362,17 @@ func (m MongoDB) AddActors(actors []model.Person) {
 }
 
 // GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (person *model.Person, err error) {
-	err = m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(person)
-	return person, err
+func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (*model.Person, error) {
+	var person model.Person
+	err := m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(&person)
+	return &person, err
 }
 
-// GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (person *model.Person, err error) {
-	err = m.peopleColl.FindOne(m.ctx, bson.M{"tmdbid": TMDBID}).Decode(person)
-	return person, err
+// GetPersonFromTMDBID returns the Person struct
+func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (*model.Person, error) {
+	var person model.Person
+	err := m.peopleColl.FindOne(m.ctx, bson.M{"tmdb_id": TMDBID}).Decode(&person)
+	return &person, err
 }
 
 func (m MongoDB) GetPeople() (people []model.Person, err error) {
@@ -390,9 +394,10 @@ func (m MongoDB) GetPeople() (people []model.Person, err error) {
 }
 
 // GetFilmFromID returns a film from its TMDB ID
-func (m MongoDB) GetFilmFromID(id primitive.ObjectID) (film *model.Film, err error) {
-	err = m.filmsColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(film)
-	return film, err
+func (m MongoDB) GetFilmFromID(id primitive.ObjectID) (*model.Film, error) {
+	var film model.Film
+	err := m.filmsColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&film)
+	return &film, err
 }
 
 func (m MongoDB) GetFilmCount() int64 {
@@ -480,7 +485,7 @@ func (m MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
 
 // GetFilmsFromVolume retrieves all films from a specific volume ID
 func (m MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) {
-	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"volumefiles": bson.D{{Key: "$elemMatch", Value: bson.M{"fromvolume": id}}}})
+	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"volume_files": bson.D{{Key: "$elemMatch", Value: bson.M{"fromvolume": id}}}})
 	if err != nil {
 		log.WithField("error", err).Errorln("Unable to retrieve films from database")
 	}
@@ -497,7 +502,7 @@ func (m MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) 
 
 // GetFilmsWithActor returns a list of films starring desired actor ID
 func (m MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
-	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"cast": bson.D{{Key: "$elemMatch", Value: bson.M{"actorid": actorID}}}})
+	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"characters": bson.D{{Key: "$elemMatch", Value: bson.M{"actor_id": actorID}}}})
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "actorID": actorID}).Errorln("Unable to retrieve films with actor from database")
 		return
@@ -566,7 +571,7 @@ func (m MongoDB) AddSubtitleToFilmPath(filmFilePath string, sub model.Subtitle) 
 		return errors.New("subtitle is already added to media")
 	}
 	film.VolumeFiles[i].ExtSubtitles = append(film.VolumeFiles[i].ExtSubtitles, sub)
-	updateRes, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(filmFilePath), bson.M{"$set": bson.D{{Key: "volumefiles", Value: film.VolumeFiles}}})
+	updateRes, err := m.filmsColl.UpdateOne(m.ctx, getFilmPathFilter(filmFilePath), bson.M{"$set": bson.D{{Key: "volume_files", Value: film.VolumeFiles}}})
 	if err != nil {
 		return err
 	}
@@ -582,7 +587,7 @@ func (m MongoDB) GetFilmFromExternalSubtitle(subtitlePath string) (model.Film, e
 	err := m.filmsColl.FindOne(
 		m.ctx,
 		bson.M{
-			"volumefiles": bson.D{{
+			"volume_files": bson.D{{
 				Key: "$elemMatch",
 				Value: bson.M{"extsubtitles": bson.D{{
 					Key:   "$elemMatch",
