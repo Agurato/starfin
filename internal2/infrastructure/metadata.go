@@ -23,11 +23,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var (
-	// TMDBClient holds the client for tmdb access
-	TMDBClient *tmdb.Client
-)
-
 type Metadata interface {
 	GetPosterLink(key string) string
 	GetBackdropLink(key string) string
@@ -148,7 +143,7 @@ func (mw MetadataWrapper) FetchFilmTMDBID(f *model.Film) error {
 	if f.ReleaseYear != 0 {
 		urlOptions["year"] = strconv.Itoa(f.ReleaseYear)
 	}
-	tmdbSearchRes, err := TMDBClient.GetSearchMovies(f.Name, urlOptions)
+	tmdbSearchRes, err := mw.client.GetSearchMovies(f.Name, urlOptions)
 	if err != nil {
 		return err
 	}
@@ -171,7 +166,7 @@ func (mw MetadataWrapper) FetchFilmTMDBID(f *model.Film) error {
 
 func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	// Get details
-	details, err := TMDBClient.GetMovieDetails(film.TMDBID, nil)
+	details, err := mw.client.GetMovieDetails(film.TMDBID, nil)
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film details from TMDB")
 	}
@@ -194,7 +189,7 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	}
 
 	// Set classification
-	releaseDates, err := TMDBClient.GetMovieReleaseDates(film.TMDBID)
+	releaseDates, err := mw.client.GetMovieReleaseDates(film.TMDBID)
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film release dates from TMDB")
 	} else {
@@ -207,7 +202,7 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	}
 
 	// Set cast and crew
-	credits, err := TMDBClient.GetMovieCredits(film.TMDBID, nil)
+	credits, err := mw.client.GetMovieCredits(film.TMDBID, nil)
 	if err != nil {
 		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film credits from TMDB")
 	} else {
@@ -332,23 +327,26 @@ func (mw MetadataWrapper) getMediaInfo(mediaInfoPath, filePath string) (model.Me
 
 // getIMDbRating fetchs rating from IMDbID
 func (mw MetadataWrapper) getIMDbRating(imdbId string) string {
-	res, err := http.Get(fmt.Sprintf("https://www.imdb.com/title/%s/", imdbId))
+	client := http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.imdb.com/title/%s/", imdbId), nil)
+	req.Header.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36")
+	resp, err := client.Do(req)
 	if err != nil {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
 		return ""
 	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
 		return ""
 	}
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
 		return ""
 	}
 
-	return doc.Find("#__next > main > div > section > section > div:nth-child(4) > section > section > div > div > div > div:nth-child(1) > a > div > div > div > div > span").First().Text()
+	return doc.Find("#__next > main > div > section.ipc-page-background.ipc-page-background--base > section > div:nth-child(4) > section > section > div > div > div > div > div > div:nth-child(1) > a > span > div > div > div > span:nth-child(1)").First().Text()
 }
 
 // getLetterboxdRating fetchs rating from letterboxd using IMDbID
@@ -400,11 +398,13 @@ func (mw MetadataWrapper) GetPersonDetails(personID int64) *model.Person {
 	if err != nil {
 		log.WithField("personID", personID).Errorln(err)
 		return &model.Person{
+			ID:     primitive.NewObjectID(),
 			TMDBID: personID,
 		}
 	}
 
 	return &model.Person{
+		ID:       primitive.NewObjectID(),
 		TMDBID:   personID,
 		Name:     details.Name,
 		Photo:    details.ProfilePath,
@@ -513,7 +513,7 @@ func (mw MetadataWrapper) getTMDBIDFromIMDB(inputUrl string) (TMDBID int, err er
 func (mw MetadataWrapper) getTMDBIDFromIMDBID(imdbID string) (TMDBID int64, err error) {
 	urlOptions := make(map[string]string)
 	urlOptions["external_source"] = "imdb_id"
-	res, err := TMDBClient.GetFindByID(imdbID, urlOptions)
+	res, err := mw.client.GetFindByID(imdbID, urlOptions)
 	if err != nil {
 		return TMDBID, err
 	}

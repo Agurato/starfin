@@ -100,18 +100,13 @@ func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool
 
 		go vmw.scanVolume(volume, filmChan)
 
-		for {
-			film, more := <-filmChan
-			if more {
-				vmw.FilmManager.AddFilm(film, false)
-			} else {
-				break
-			}
+		for film := range filmChan {
+			vmw.FilmManager.AddFilm(film, false)
 		}
-	}()
 
-	// Add file watch to the volume
-	vmw.FileWatcher.AddVolume(volume)
+		// Add file watch to the volume
+		vmw.FileWatcher.AddVolume(volume)
+	}()
 
 	return nil
 }

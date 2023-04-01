@@ -90,11 +90,10 @@ func (c Cache) CacheFile(sourceUrl string, filePath string) (hasToWait bool, err
 		return false, err
 	}
 	defer out.Close()
-	n, err := io.Copy(out, resp.Body)
+	_, err = io.Copy(out, resp.Body)
 	if err != nil {
 		return false, err
 	}
-	log.WithFields(log.Fields{"url": sourceUrl, "size": n}).Debugln("Cached file")
 
 	return false, nil
 }

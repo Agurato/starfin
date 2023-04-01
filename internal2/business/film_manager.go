@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Agurato/starfin/internal2/model"
-	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -240,17 +239,17 @@ func (fmw FilmManagerWrapper) AddFilm(film *model.Film, update bool) error {
 func (fmw FilmManagerWrapper) cachePosterAndBackdrop(film *model.Film) {
 	hasToWait, err := fmw.FilmCacher.CachePoster(fmw.FilmMetadataGetter.GetPosterLink(film.PosterPath), film.PosterPath)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
+		// log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache poster")
 	}
 	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
+		// log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache poster later")
 	}
 	hasToWait, err = fmw.FilmCacher.CacheBackdrop(fmw.FilmMetadataGetter.GetPosterLink(film.BackdropPath), film.BackdropPath)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
+		// log.WithFields(log.Fields{"error": err, "filmID": film.ID}).Errorln("Could not cache backdrop")
 	}
 	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
+		// log.WithFields(log.Fields{"warning": err, "filmID": film.ID}).Errorln("Will try to cache backdrop later")
 	}
 }
 
@@ -258,9 +257,9 @@ func (fmw FilmManagerWrapper) cachePosterAndBackdrop(film *model.Film) {
 func (fmw FilmManagerWrapper) cachePersonPhoto(person *model.Person) {
 	hasToWait, err := fmw.FilmCacher.CachePhoto(fmw.FilmMetadataGetter.GetPhotoLink(person.Photo), person.Photo)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
+		// log.WithFields(log.Fields{"error": err, "personTMDBID": person.TMDBID}).Errorln("Could not cache photo")
 	}
 	if hasToWait {
-		log.WithFields(log.Fields{"warning": err, "personTMDBID": person.TMDBID}).Errorln("Will try to cache photo later")
+		// log.WithFields(log.Fields{"warning": err, "personTMDBID": person.TMDBID}).Errorln("Will try to cache photo later")
 	}
 }
