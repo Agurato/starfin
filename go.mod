@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/agnivade/levenshtein v1.1.1
-	github.com/alitto/pond v1.8.3
 	github.com/cyruzin/golang-tmdb v1.4.5
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.9.0

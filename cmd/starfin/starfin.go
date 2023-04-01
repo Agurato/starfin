@@ -3,14 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/Agurato/starfin/internal/cache"
-	"github.com/Agurato/starfin/internal/context"
-	"github.com/Agurato/starfin/internal/database"
-	"github.com/Agurato/starfin/internal/media"
-	"github.com/Agurato/starfin/internal/server"
-	"github.com/Agurato/starfin/internal2/business"
-	"github.com/Agurato/starfin/internal2/infrastructure"
-	server2 "github.com/Agurato/starfin/internal2/service/server"
+	"github.com/Agurato/starfin/internal/business"
+	"github.com/Agurato/starfin/internal/infrastructure"
+	server2 "github.com/Agurato/starfin/internal/service/server"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,28 +21,6 @@ const (
 	EnvTMDBAPIKey   = "TMDB_API_KEY" // This may be configurable via admin panel in the future
 	EnvCachePath    = "CACHE_PATH"
 )
-
-func main2() {
-	godotenv.Load()
-
-	log.SetOutput(os.Stdout)
-	// TODO: Set level via environment variable
-	log.SetLevel(log.DebugLevel)
-	// log.SetReportCaller(true)
-
-	db := database.InitMongoDB()
-	defer db.Close()
-
-	cache.InitCache()
-
-	go server.InitFileWatching()
-	defer server.CloseFileWatching()
-
-	media.InitTMDB()
-
-	server := server.InitServer(db)
-	server.Run()
-}
 
 func main() {
 	godotenv.Load()
@@ -86,7 +59,7 @@ func main() {
 	personHandler := server2.NewPersonHandler(pmw, fmw)
 
 	server := server2.NewServer(
-		os.Getenv(context.EnvCookieSecret),
+		os.Getenv(EnvCookieSecret),
 		mainHandler,
 		adminHandler,
 		filmHandler,
