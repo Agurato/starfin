@@ -59,11 +59,11 @@
     <hr>
     <div id="films" class="container text-center mb-2">
         {{if eq .job "actor"}}
-        <span class="job selected">Films starring {{.person.Name}}</span><span class="job"> | <a href="/director/{{.person.TMDBID}}#films">Directed by</a> | <a href="/writer/{{.person.TMDBID}}#films">Written by</a></span>
+        <span class="job selected">Films starring {{.person.Name}}</span><span class="job"> | <a href="/director/{{personID .person}}#films">Directed by</a> | <a href="/writer/{{personID .person}}#films">Written by</a></span>
         {{else if eq .job "director"}}
-        <span class="job"><a href="/actor/{{.person.TMDBID}}#films">Starring</a> | </span><span class="job selected">Films directed by {{.person.Name}}</span> | <span class="job"><a href="/writer/{{.person.TMDBID}}#films">Written by</a></span>
+        <span class="job"><a href="/actor/{{personID .person}}#films">Starring</a> | </span><span class="job selected">Films directed by {{.person.Name}}</span> | <span class="job"><a href="/writer/{{personID .person}}#films">Written by</a></span>
         {{else if eq .job "writer"}}
-        <span class="job"><a href="/actor/{{.person.TMDBID}}#films">Starring</a> | <a href="/director/{{.person.TMDBID}}#films">Directed by</a> | </span><span>Films written by {{.person.Name}}</span>
+        <span class="job"><a href="/actor/{{personID .person}}#films">Starring</a> | <a href="/director/{{personID .person}}#films">Directed by</a> | </span><span>Films written by {{.person.Name}}</span>
         {{end}}
     </div>
     <div class="row row-cols-auto gx-0 justify-content-center">

@@ -81,39 +81,6 @@ table a:hover {
     height: 100%;
 }
 
-.filter .dropdown-toggle {
-    background-color: transparent;
-    border-color: transparent;
-}
-
-.filter .dropdown-toggle:hover,
-.filter .dropdown-toggle:active,
-.filter .dropdown-toggle:focus,
-.filter .dropdown-toggle:focus:not(.focus-visible) {
-    background-color: transparent;
-    outline: none;
-    border: none;
-    border-color: transparent;
-    box-shadow: none;
-    transition: none;
-}
-
-.filter span.dropdown-item:hover {
-    color: #dee2e6;
-    background-color: transparent;
-}
-
-.filter .subdropdown {
-    position: absolute;
-    left:100%;
-    top:-7px;
-}
-
-.filter .dropdown-menu {
-    min-width: 0;
-    top: -6px;
-}
-
 .film-container {
     min-height: 720px;
     background-size: 100%;

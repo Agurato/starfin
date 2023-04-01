@@ -1,5 +1,39 @@
 {{ define "pages/films.go.html" }}
 {{ template "partials/header.go.html" . }}
+<style>
+    .filter .dropdown-toggle {
+        background-color: transparent;
+        border-color: transparent;
+    }
+
+    .filter .dropdown-toggle:hover,
+    .filter .dropdown-toggle:active,
+    .filter .dropdown-toggle:focus,
+    .filter .dropdown-toggle:focus:not(.focus-visible) {
+        background-color: transparent;
+        outline: none;
+        border: none;
+        border-color: transparent;
+        box-shadow: none;
+        transition: none;
+    }
+
+    .filter span.dropdown-item:hover {
+        color: #dee2e6;
+        background-color: transparent;
+    }
+
+    .filter .subdropdown {
+        position: absolute;
+        left: 100%;
+        top: -7px;
+    }
+
+    .filter .dropdown-menu {
+        min-width: 0;
+        top: -6px;
+    }
+</style>
 <section>
     {{ if .error }}
     <p style="color:red">{{ .error }}</p>
@@ -17,7 +51,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $decade := .filters.Decades}}
+            {{range $decade := .filtererDecades}}
             <li>
                 <div class="btn-group dropdown">
                     <a class="dropdown-item"
@@ -44,7 +78,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $genre := .filters.Genres}}
+            {{range $genre := .filtererGenres}}
             <li><a class="dropdown-item" href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}/genre/{{lower $genre}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/{{if $.search}}?search={{$.search}}{{end}}">{{$genre}}</a></li>
             {{end}}
         </ul>
@@ -59,7 +93,7 @@
             <li>
                 <hr class="dropdown-divider">
             </li>
-            {{range $country := .filters.Countries}}
+            {{range $country := .filtererCountries}}
             <li><a class="dropdown-item"
                     href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}/country/{{lower $country}}/{{if $.search}}?search={{$.search}}{{end}}">{{countryName $country}}</a>
             </li>

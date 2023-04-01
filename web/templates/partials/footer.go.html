@@ -1,38 +1,142 @@
 {{ define "partials/footer.go.html" }}
-<script src="/static/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/libs/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
 <script src="/static/libs/jquery-3.6.0.min.js"></script>
-<script type="text/javascript" src="/static/libs/slick/slick.min.js"></script>
+<script type="text/javascript" src="/static/libs/slick-1.8.1/slick.min.js"></script>
+<script src="/static/libs/tagify-4.16.4/tagify.min.js"></script>
+<script src="/static/libs/tagify-4.16.4/tagify.polyfills.min.js"></script>
 
 <script type="text/javascript">
-    // Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-
-    // Carousel
+    var filmEditGenreTags;
+    var filmEditCountryTags;
+    var directorLineToBeCloned = $("#filmDirectorLineToBeCloned");
 
     $(document).ready(function () {
+        // Bootstrap tooltips for film production countries
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // Carousel for film cast
         $('.cast').slick({
             infinite: false,
             variableWidth: true,
             swipeToSlide: true,
         });
-    });
 
-    $(function () {
-        $('.btn-group').hover(function () {
-                let button = $(this).find('.btn')
-                button.addClass('show');
-                button.attr('aria-expanded', 'true')
-                $(this).children('.dropdown-menu').addClass('show');
-            },
-            function () {
-                let button = $(this).find('.btn')
-                button.removeClass('show');
-                button.attr('aria-expanded', 'false')
-                $(this).children('.dropdown-menu').removeClass('show');
+        // Films filters dropdown
+        $(function () {
+            $('.btn-group').hover(function () {
+                    let button = $(this).find('.btn')
+                    button.addClass('show');
+                    button.attr('aria-expanded', 'true')
+                    $(this).children('.dropdown-menu').addClass('show');
+                },
+                function () {
+                    let button = $(this).find('.btn')
+                    button.removeClass('show');
+                    button.attr('aria-expanded', 'false')
+                    $(this).children('.dropdown-menu').removeClass('show');
+                });
+        });
+
+        // Film edit forms prevent return key
+        $("#editFilmOnlineForm").keypress(function (e) {
+            if (e.target.localName != "textarea" && e.keyCode == 13) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        $("#editFilmManualForm").keypress(function (e) {
+            console.log(e);
+            if (e.target.localName != "textarea" && e.keyCode == 13) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Film edit genre tags
+        let genreTagsInput = document.querySelector('input[name="genreTagsInput"]');
+        if (genreTagsInput != null) {
+            // Init Tagify script on the above inputs
+            filmEditGenreTags = new Tagify(genreTagsInput, {
+                whitelist: eval(genreTagsInput.getAttribute("whitelist")),
+                dropdown: {
+                    maxItems: 20, // <- mixumum allowed rendered suggestions
+                    classname: "genreTagsLookup", // <- custom classname for this dropdown, so it could be targeted
+                    enabled: 0, // <- show suggestions on focus
+                    closeOnSelect: false // <- do not hide the suggestions dropdown once an item has been selected
+                }
             });
+            let tags = eval(genreTagsInput.getAttribute("tags"));
+            for (tag of tags) {
+                for (genre of filmEditGenreTags.whitelist) {
+                    if (genre == tag) {
+                        filmEditGenreTags.addTags([genre]);
+                    }
+                }
+            }
+        }
+
+        let countryTagsInput = document.querySelector('input[name="countriesTagsInput"]');
+        if (countryTagsInput != null) {
+            filmEditCountryTags = new Tagify(countryTagsInput, {
+                delimiters: null,
+                templates: {
+                    tag: function (tagData) {
+                        try {
+                            return `<tag title='${tagData.value}' contenteditable='false' spellcheck="false" class='tagify__tag ${tagData.class ? tagData.class : ""}' ${this.getAttributes(tagData)}>
+                        <x title='remove tag' class='tagify__tag__removeBtn'></x>
+                        <div>
+                            ${tagData.code ?
+                            `<img onerror="this.style.visibility='hidden'" src='/static/libs/flag-icons-6.6.5/flags/4x3/${tagData.code}.svg'>` : ''
+                            }
+                            <span class='tagify__tag-text'>${tagData.value}</span>
+                        </div>
+                    </tag>`
+                        } catch (err) {}
+                    },
+
+                    dropdownItem: function (tagData) {
+                        try {
+                            return `<div ${this.getAttributes(tagData)} class='tagify__dropdown__item ${tagData.class ? tagData.class : ""}' >
+                            <img onerror="this.style.visibility = 'hidden'"
+                                src='/static/libs/flag-icons-6.6.5/flags/4x3/${tagData.code}.svg'>
+                            <span>${tagData.value}</span>
+                        </div>`
+                        } catch (err) {
+                            console.error(err)
+                        }
+                    }
+                },
+                enforceWhitelist: true,
+                whitelist: eval(countryTagsInput.getAttribute("whitelist")),
+                dropdown: {
+                    enabled: 1, // suggest tags after a single character input
+                    classname: "countryTagsLookup" // custom class for the suggestions dropdown
+                } // map tags' values to this property name, so this property will be the actual value and not the printed value on the screen
+            });
+            let tags = eval(countryTagsInput.getAttribute("tags"));
+            for (tag of tags) {
+                for (country of filmEditCountryTags.whitelist) {
+                    if (country.code == tag) {
+                        filmEditCountryTags.addTags([country]);
+                    }
+                }
+            }
+        }
+
+        let directorsTable = $("#filmDirectorsTable");
+        if (directorsTable != null) {
+            let initDirectors = eval(directorsTable.attr("initValue"));
+            for (let dir of initDirectors) {
+                let dirLine = directorLineToBeCloned.clone();
+                dirLine.id = "";
+                dirLine.removeClass("d-none");
+                dirLine.find("input").attr("value", dir["Name"]);
+                $("#filmDirectorsAddNewLine").before(dirLine);
+            }
+        }
     });
 </script>
 
