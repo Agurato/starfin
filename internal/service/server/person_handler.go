@@ -20,15 +20,21 @@ type PersonFilmManager interface {
 	GetFilmsWithWriter(writerID int64) (films []model.Film)
 }
 
+type PersonPaginater[T model.Person] interface {
+	GetPagination(currentPage int64, items []T) ([]T, []model.Pagination)
+}
+
 type PersonHandler struct {
 	PersonManager
 	PersonFilmManager
+	PersonPaginater[model.Person]
 }
 
-func NewPersonHandler(pm PersonManager, pfm PersonFilmManager) *PersonHandler {
+func NewPersonHandler(pm PersonManager, pfm PersonFilmManager, pp PersonPaginater[model.Person]) *PersonHandler {
 	return &PersonHandler{
 		PersonManager:     pm,
 		PersonFilmManager: pfm,
+		PersonPaginater:   pp,
 	}
 }
 
@@ -62,7 +68,7 @@ func (ph PersonHandler) GETPeople(c *gin.Context) {
 	// 	films, searchTerm, searchYear = SearchFilms(inputSearch, people)
 	// }
 
-	people, pages := getPagination(int64(page), people)
+	people, pages := ph.PersonPaginater.GetPagination(int64(page), people)
 
 	RenderHTML(c, http.StatusOK, "pages/people.go.html", gin.H{
 		"title":      "People",

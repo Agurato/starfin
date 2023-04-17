@@ -31,6 +31,10 @@ type Filterer interface {
 	GetGenres() []string
 }
 
+type FilmPaginater[T model.Film] interface {
+	GetPagination(currentPage int64, items []T) ([]T, []model.Pagination)
+}
+
 type countryMapping struct {
 	Value string
 	Code  string
@@ -41,9 +45,10 @@ type FilmHandler struct {
 	FilmPersonManager
 	countries []countryMapping
 	Filterer
+	FilmPaginater[model.Film]
 }
 
-func NewFilmHandler(fm FilmManager, fpm FilmPersonManager, f Filterer) *FilmHandler {
+func NewFilmHandler(fm FilmManager, fpm FilmPersonManager, f Filterer, fp FilmPaginater[model.Film]) *FilmHandler {
 	var countries []countryMapping
 	for code, country := range gountries.New().Countries {
 		countries = append(countries, countryMapping{
@@ -56,6 +61,7 @@ func NewFilmHandler(fm FilmManager, fpm FilmPersonManager, f Filterer) *FilmHand
 		FilmPersonManager: fpm,
 		countries:         countries,
 		Filterer:          f,
+		FilmPaginater:     fp,
 	}
 }
 
@@ -120,7 +126,7 @@ func (fh FilmHandler) GETFilms(c *gin.Context) {
 	search, _ := c.GetQuery("search")
 	films := fh.FilmManager.GetFilmsFiltered(years, genre, country, search)
 
-	films, pages := getPagination(int64(page), films)
+	films, pages := fh.FilmPaginater.GetPagination(int64(page), films)
 
 	RenderHTML(c, http.StatusOK, "pages/films.go.html", gin.H{
 		"title":             "Films",

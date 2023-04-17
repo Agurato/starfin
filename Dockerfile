@@ -25,6 +25,7 @@ ENV MEDIAINFO_PATH=/usr/bin/mediainfo
 ENV GIN_MODE=release
 ENV PORT=8080
 ENV CACHE_PATH=/cache
+ENV ITEMS_PER_PAGE=60
 
 EXPOSE ${PORT}
 CMD [ "./starfin" ]
