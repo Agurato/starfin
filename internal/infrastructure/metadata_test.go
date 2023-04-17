@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
-func Test_getIMDbRating(t *testing.T) {
+func TestGetIMDbRating(t *testing.T) {
 	value, err := strconv.ParseFloat(mw.getIMDbRating("tt0183649"), 32)
 	assert.Nil(t, err)
 	assert.Greater(t, value, float64(0))
