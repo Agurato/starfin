@@ -9,19 +9,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// Filterer holds the different filters that can be applied
-type Filterer interface {
-	AddFilms(films []model.Film)
-	AddFilm(films *model.Film)
-	ParseParamsFilters(params string) (yearFilter string, years []int, genre, country string, page int, err error)
-	GetCountryName(code string) string
-
-	GetCountries() []string
-	GetDecades() []model.Decade
-	GetGenres() []string
-}
-
-type FiltererWrapper struct {
+type Filterer struct {
 	minReleaseYear int
 	maxReleaseYear int
 	Decades        []model.Decade
@@ -32,23 +20,23 @@ type FiltererWrapper struct {
 	paramsRegex *regexp.Regexp
 }
 
-func NewFiltererWrapper() *FiltererWrapper {
+func NewFilterer() *Filterer {
 	var (
-		paramsYearRegex    string = `(\/year\/(?P<year>\d{4}s?))?`
-		paramsGenreRegex   string = `(\/genre\/(?P<genre>[a-zA-Z\s]+))?`
-		paramsCountryRegex string = `(\/country\/(?P<country>[a-zA-Z\s]+))?`
-		paramsPageRegex    string = `(\/page\/(?P<page>\d{1,}))?`
+		paramsYearRegex    = `(\/year\/(?P<year>\d{4}s?))?`
+		paramsGenreRegex   = `(\/genre\/(?P<genre>[a-zA-Z\s]+))?`
+		paramsCountryRegex = `(\/country\/(?P<country>[a-zA-Z\s]+))?`
+		paramsPageRegex    = `(\/page\/(?P<page>\d{1,}))?`
 	)
 
-	fw := &FiltererWrapper{
+	fw := &Filterer{
 		paramsRegex: regexp.MustCompile(paramsYearRegex + paramsGenreRegex + paramsCountryRegex + paramsPageRegex),
 	}
 
 	return fw
 }
 
-// AddFilm adds release year if new min or max, and missing genres to the filter
-func (f *FiltererWrapper) AddFilms(films []model.Film) {
+// AddFilms adds release year if new min or max, and missing genres to the filter
+func (f *Filterer) AddFilms(films []model.Film) {
 	for _, film := range films {
 		f.addToYears(film.ReleaseYear)
 		f.addToGenres(film.Genres)
@@ -62,7 +50,7 @@ func (f *FiltererWrapper) AddFilms(films []model.Film) {
 }
 
 // AddFilm adds release year if new min or max, and missing genres to the filter
-func (f *FiltererWrapper) AddFilm(film *model.Film) {
+func (f *Filterer) AddFilm(film *model.Film) {
 	if f.addToYears(film.ReleaseYear) {
 		f.computeDecades()
 	}
@@ -75,7 +63,7 @@ func (f *FiltererWrapper) AddFilm(film *model.Film) {
 }
 
 // ParseParamsFilters parses a params string and returns the filtered years, genre, country and page number
-func (f *FiltererWrapper) ParseParamsFilters(params string) (yearFilter string, years []int, genre, country string, page int, err error) {
+func (f *Filterer) ParseParamsFilters(params string) (yearFilter string, years []int, genre, country string, page int, err error) {
 	submatches := f.paramsRegex.FindStringSubmatch(params)
 	for i, captureName := range f.paramsRegex.SubexpNames() {
 		if captureName == "year" {
@@ -108,24 +96,24 @@ func (f *FiltererWrapper) ParseParamsFilters(params string) (yearFilter string, 
 	return yearFilter, years, genre, country, page, nil
 }
 
-func (f *FiltererWrapper) GetCountryName(code string) string {
+func (f *Filterer) GetCountryName(code string) string {
 	country, _ := gountries.New().FindCountryByAlpha(code)
 	return country.Name.Common
 }
 
-func (f *FiltererWrapper) GetCountries() []string {
+func (f *Filterer) GetCountries() []string {
 	return f.Countries
 }
 
-func (f *FiltererWrapper) GetDecades() []model.Decade {
+func (f *Filterer) GetDecades() []model.Decade {
 	return f.Decades
 }
 
-func (f *FiltererWrapper) GetGenres() []string {
+func (f *Filterer) GetGenres() []string {
 	return f.Genres
 }
 
-func (f *FiltererWrapper) computeDecades() {
+func (f *Filterer) computeDecades() {
 	var decade model.Decade
 	for i := f.maxReleaseYear; i >= f.minReleaseYear; i-- {
 		decade.DecadeYear = (i / 10) * 10
@@ -137,7 +125,7 @@ func (f *FiltererWrapper) computeDecades() {
 	}
 }
 
-func (f *FiltererWrapper) addToYears(filmReleaseYear int) bool {
+func (f *Filterer) addToYears(filmReleaseYear int) bool {
 	computeDecades := false
 	if f.minReleaseYear == 0 || f.minReleaseYear > filmReleaseYear {
 		f.minReleaseYear = filmReleaseYear
@@ -150,7 +138,7 @@ func (f *FiltererWrapper) addToYears(filmReleaseYear int) bool {
 	return computeDecades
 }
 
-func (f *FiltererWrapper) addToGenres(filmGenres []string) {
+func (f *Filterer) addToGenres(filmGenres []string) {
 	for _, genre := range filmGenres {
 		if !slices.Contains(f.Genres, genre) {
 			f.Genres = append(f.Genres, genre)
@@ -158,7 +146,7 @@ func (f *FiltererWrapper) addToGenres(filmGenres []string) {
 	}
 }
 
-func (f *FiltererWrapper) addToCountries(filmProdCountries []string) {
+func (f *Filterer) addToCountries(filmProdCountries []string) {
 	for _, country := range filmProdCountries {
 		if !slices.Contains(f.Countries, country) {
 			f.Countries = append(f.Countries, country)

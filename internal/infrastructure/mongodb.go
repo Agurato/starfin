@@ -25,7 +25,7 @@ type MongoDB struct {
 	peopleColl  *mongo.Collection
 }
 
-// InitMongoDB init mongo db
+// NewMongoDB initializes a mongo db client
 func NewMongoDB(dbUser, dbPassword, dbURL, dbPort, dbName string) *MongoDB {
 	mongoCtx := context.Background()
 	// defer cancel()
@@ -50,11 +50,11 @@ func getFilmPathFilter(path string) primitive.M {
 }
 
 // Close closes the MongoDB connection
-func (m MongoDB) Close() {
-	m.client.Disconnect(m.ctx)
+func (m MongoDB) Close() error {
+	return m.client.Disconnect(m.ctx)
 }
 
-// IsOwnerPresent checks if theres is an owner in the server
+// IsOwnerPresent checks if there is an owner in the server
 func (m MongoDB) IsOwnerPresent() (bool, error) {
 	countOwners, err := m.usersColl.CountDocuments(m.ctx, bson.M{"is_owner": true})
 	if err != nil {

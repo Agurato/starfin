@@ -23,46 +23,44 @@ type VolumeMetadataGetter interface {
 	UpdateFilmDetails(film *model.Film)
 }
 
-type VolumeManager interface {
-	GetVolumes() ([]model.Volume, error)
-	GetVolume(volumeHexID string) (*model.Volume, error)
-	CreateVolume(name, path string, isRecursive bool, mediaType string) error
-	DeleteVolume(volumeHexID string) error
+type VolumeFilmManager interface {
+	AddFilm(film *model.Film, update bool) error
 }
 
-type VolumeManagerWrapper struct {
+type VolumeManager struct {
 	VolumeStorer
 	VolumeMetadataGetter
-	FilmManager
+	VolumeFilmManager
 	*FileWatcher
 }
 
-func NewVolumeManagerWrapper(vs VolumeStorer, fw *FileWatcher, fm FilmManager, m VolumeMetadataGetter) *VolumeManagerWrapper {
-	return &VolumeManagerWrapper{
+// NewVolumeManager instantiates a new VolumeManager
+func NewVolumeManager(vs VolumeStorer, fw *FileWatcher, fm VolumeFilmManager, m VolumeMetadataGetter) *VolumeManager {
+	return &VolumeManager{
 		VolumeStorer:         vs,
 		VolumeMetadataGetter: m,
-		FilmManager:          fm,
+		VolumeFilmManager:    fm,
 		FileWatcher:          fw,
 	}
 }
 
-func (vmw VolumeManagerWrapper) GetVolumes() ([]model.Volume, error) {
-	return vmw.VolumeStorer.GetVolumes()
+func (vm VolumeManager) GetVolumes() ([]model.Volume, error) {
+	return vm.VolumeStorer.GetVolumes()
 }
 
-func (vmw VolumeManagerWrapper) GetVolume(volumeHexID string) (*model.Volume, error) {
+func (vm VolumeManager) GetVolume(volumeHexID string) (*model.Volume, error) {
 	volumeId, err := primitive.ObjectIDFromHex(volumeHexID)
 	if err != nil {
-		return nil, fmt.Errorf("Incorrect volume ID: %w", err)
+		return nil, fmt.Errorf("incorrect volume ID: %w", err)
 	}
-	volume, err := vmw.VolumeStorer.GetVolumeFromID(volumeId)
+	volume, err := vm.VolumeStorer.GetVolumeFromID(volumeId)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get volume from ID '%s': %w", volumeHexID, err)
+		return nil, fmt.Errorf("could not get volume from ID '%s': %w", volumeHexID, err)
 	}
 	return volume, nil
 }
 
-func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool, mediaType string) error {
+func (vm VolumeManager) CreateVolume(name, path string, isRecursive bool, mediaType string) error {
 	volume := &model.Volume{
 		ID:          primitive.NewObjectID(),
 		Name:        name,
@@ -86,28 +84,28 @@ func (vmw VolumeManagerWrapper) CreateVolume(name, path string, isRecursive bool
 	}
 
 	// Add volume to the database
-	err = vmw.VolumeStorer.AddVolume(volume)
+	err = vm.VolumeStorer.AddVolume(volume)
 	if err != nil {
 		log.Errorln(err)
 		return errors.New("volume could not be added")
 	}
 
 	// Search for media files in a separate goroutine to return the page asap
-	go vmw.scanVolume(volume)
+	go vm.scanVolume(volume)
 
 	return nil
 }
 
-func (vmw VolumeManagerWrapper) DeleteVolume(volumeHexID string) error {
+func (vm VolumeManager) DeleteVolume(volumeHexID string) error {
 	volumeId, err := primitive.ObjectIDFromHex(volumeHexID)
 	if err != nil {
-		return fmt.Errorf("Incorrect volume ID: %w", err)
+		return fmt.Errorf("incorrect volume ID: %w", err)
 	}
 
-	return vmw.VolumeStorer.DeleteVolume(volumeId)
+	return vm.VolumeStorer.DeleteVolume(volumeId)
 }
 
-func (vmw VolumeManagerWrapper) scanVolume(volume *model.Volume) {
+func (vm VolumeManager) scanVolume(volume *model.Volume) {
 	videoFiles, subFiles, err := volume.ListVideoFiles()
 	if err != nil {
 		log.WithField("volumePath", volume.Path).Warningln("Unable to scan folder for video files")
@@ -118,16 +116,16 @@ func (vmw VolumeManagerWrapper) scanVolume(volume *model.Volume) {
 	// Worker function
 	getFilmsFromFiles := func(files <-chan string, films chan<- *model.Film) {
 		for file := range files {
-			film := vmw.CreateFilm(file, volume.ID, subFiles)
+			film := vm.CreateFilm(file, volume.ID, subFiles)
 
 			// Search ID on TMDB
-			if err = vmw.VolumeMetadataGetter.FetchFilmTMDBID(film); err != nil {
+			if err = vm.VolumeMetadataGetter.FetchFilmTMDBID(film); err != nil {
 				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch film ID from TMDB")
 				film.Title = film.Name
 			} else {
 				log.WithFields(log.Fields{"tmdb_id": film.TMDBID, "file": file}).Infoln("Found TMDB ID for file")
 				// Fill info from TMDB
-				vmw.VolumeMetadataGetter.UpdateFilmDetails(film)
+				vm.VolumeMetadataGetter.UpdateFilmDetails(film)
 			}
 
 			films <- film
@@ -150,9 +148,9 @@ func (vmw VolumeManagerWrapper) scanVolume(volume *model.Volume) {
 	close(files)
 
 	for film := range films {
-		vmw.FilmManager.AddFilm(film, false)
+		vm.VolumeFilmManager.AddFilm(film, false)
 	}
 
 	// Add file watch to the volume
-	vmw.FileWatcher.AddVolume(volume)
+	vm.FileWatcher.AddVolume(volume)
 }
