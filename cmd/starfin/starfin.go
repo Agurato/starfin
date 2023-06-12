@@ -39,9 +39,6 @@ func main() {
 
 func initApp() error {
 	err := godotenv.Load()
-	if err != nil {
-		return err
-	}
 
 	log.SetOutput(os.Stdout)
 	// TODO: Set level via environment variable
