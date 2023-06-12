@@ -20,10 +20,11 @@ type TorrentStorer interface {
 
 type RarbgHandler struct {
 	TorrentStorer
-	template *template.Template
+	torznabAPIKey string
+	template      *template.Template
 }
 
-func NewRarbgHandler(ts TorrentStorer) *RarbgHandler {
+func NewRarbgHandler(ts TorrentStorer, torznabAPIKey string) *RarbgHandler {
 	funcMap := template.FuncMap{
 		"torznabID": func(category string) int {
 			return model.GetTorznabID(model.RarbgCategory(category))
@@ -32,6 +33,7 @@ func NewRarbgHandler(ts TorrentStorer) *RarbgHandler {
 	tmpl := template.Must(template.New("").Funcs(funcMap).ParseGlob("web/templates/torznab/*.go.xml"))
 	return &RarbgHandler{
 		TorrentStorer: ts,
+		torznabAPIKey: torznabAPIKey,
 		template:      tmpl,
 	}
 }
@@ -72,8 +74,23 @@ func (rh RarbgHandler) GETTorrents(c *gin.Context) {
 }
 
 func (rh RarbgHandler) GETTorznab(c *gin.Context) {
-	topic := c.Query("t")
 	var buf bytes.Buffer
+
+	if rh.torznabAPIKey != c.Query("apikey") {
+		err := rh.template.ExecuteTemplate(&buf, "torznab/error.go.xml", gin.H{
+			"code":  100,
+			"error": "Invalid API Key",
+		})
+		if err != nil {
+			log.Errorln(err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		c.Data(http.StatusOK, "application/xml", buf.Bytes())
+		return
+	}
+
+	topic := c.Query("t")
 	var err error
 	switch topic {
 	case "caps":

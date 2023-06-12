@@ -26,6 +26,7 @@ const (
 	EnvItemsPerPage = "ITEMS_PER_PAGE"
 
 	EnvEnableRarbg     = "ENABLE_RARBG"
+	EnvTorznabAPIKey   = "TORZNAB_API_KEY"
 	EnvRarbgSqliteFile = "RARBG_SQLITE_FILE"
 )
 
@@ -91,7 +92,7 @@ func initApp() error {
 	var rarbgHandler *server.RarbgHandler = nil
 	if enableRarbg {
 		db.InitRarbg("rarbg")
-		rarbgHandler = server.NewRarbgHandler(db)
+		rarbgHandler = server.NewRarbgHandler(db, os.Getenv(EnvTorznabAPIKey))
 	}
 
 	srv := server.NewServer(
