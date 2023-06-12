@@ -57,16 +57,16 @@ func (m *MongoDB) SearchTorrents(ctx context.Context, search, category string, p
 	return
 }
 
-func (m *MongoDB) GetTorrents(ctx context.Context, imdbid string, offset, limit int64) (torrents []model.RarbgTorrent, err error) {
+func (m *MongoDB) GetTorrents(ctx context.Context, imdbID string, offset, limit int64) (torrents []model.RarbgTorrent, err error) {
 	opt := options.Find().
 		SetSkip(offset).
 		SetLimit(limit)
 
 	filter := bson.M{}
-	if imdbid == "" {
+	if imdbID == "" {
 		filter["imdb"] = bson.M{"$ne": nil}
 	} else {
-		filter["imdb"] = imdbid
+		filter["imdb"] = fmt.Sprintf("tt%s", imdbID)
 	}
 	torrentsCur, err := m.rarbgColl.Find(ctx, filter, opt)
 	if err != nil {

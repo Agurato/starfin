@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -15,7 +14,7 @@ import (
 
 type TorrentStorer interface {
 	SearchTorrents(ctx context.Context, search, category string, page uint) ([]model.RarbgTorrent, error)
-	GetTorrents(ctx context.Context, imdbid string, offset, limit int64) ([]model.RarbgTorrent, error)
+	GetTorrents(ctx context.Context, imdbID string, offset, limit int64) ([]model.RarbgTorrent, error)
 }
 
 type RarbgHandler struct {
@@ -103,7 +102,7 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 		limit, _ := strconv.ParseInt(c.Query("limit"), 10, 64)
 
 		var torrents []model.RarbgTorrent
-		torrents, err = rh.TorrentStorer.GetTorrents(c, fmt.Sprintf("tt%s", imdbID), offset, limit)
+		torrents, err = rh.TorrentStorer.GetTorrents(c, imdbID, offset, limit)
 
 		if err != nil {
 			log.Errorln(err)
