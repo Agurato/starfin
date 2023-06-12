@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -23,10 +24,23 @@ const (
 	EnvTMDBAPIKey   = "TMDB_API_KEY" // This may be configurable via admin panel in the future
 	EnvCachePath    = "CACHE_PATH"
 	EnvItemsPerPage = "ITEMS_PER_PAGE"
+
+	EnvEnableRarbg     = "ENABLE_RARBG"
+	EnvRarbgSqliteFile = "RARBG_SQLITE_FILE"
 )
 
 func main() {
-	godotenv.Load()
+	err := initApp()
+	if err != nil {
+		log.WithError(err).Errorln("Error during initialization")
+	}
+}
+
+func initApp() error {
+	err := godotenv.Load()
+	if err != nil {
+		return err
+	}
 
 	log.SetOutput(os.Stdout)
 	// TODO: Set level via environment variable
@@ -40,9 +54,15 @@ func main() {
 		os.Getenv(EnvDBName))
 
 	c := infrastructure.NewCache(os.Getenv(EnvCachePath))
+
 	metadata, err := infrastructure.NewMetadataWrapper(os.Getenv(EnvTMDBAPIKey))
 	if err != nil {
-		return
+		return err
+	}
+
+	enableRarbg, err := strconv.ParseBool(os.Getenv(EnvEnableRarbg))
+	if err != nil {
+		return fmt.Errorf("error parsing env var %q: %w", EnvEnableRarbg, err)
 	}
 
 	filterer := business.NewFilterer()
@@ -58,8 +78,7 @@ func main() {
 
 	itemsPerPage, err := strconv.ParseInt(os.Getenv(EnvItemsPerPage), 10, 64)
 	if err != nil {
-		log.Fatalf("error getting ITEMS_PER_PAGE: %v", err)
-		return
+		return fmt.Errorf("error getting ITEMS_PER_PAGE: %w", err)
 	}
 	fp := business.NewPaginater[model.Film](itemsPerPage)
 	pp := business.NewPaginater[model.Person](itemsPerPage)
@@ -69,12 +88,24 @@ func main() {
 	filmHandler := server.NewFilmHandler(fm, pm, filterer, fp)
 	personHandler := server.NewPersonHandler(pm, fm, pp)
 
+	var rarbgHandler *server.RarbgHandler = nil
+	if enableRarbg {
+		db.InitRarbg("rarbg")
+		rarbgHandler = server.NewRarbgHandler(db)
+	}
+
 	srv := server.NewServer(
 		os.Getenv(EnvCookieSecret),
 		mainHandler,
 		adminHandler,
 		filmHandler,
 		personHandler,
+		rarbgHandler,
 		db)
-	srv.Run()
+	err = srv.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

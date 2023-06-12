@@ -1,0 +1,30 @@
+{{define "torznab/movie.go.xml"}}<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+    <channel>
+        <atom:link href="https://starfin.vmonot.dev/" rel="self" type="application/rss+xml" />
+        <title>Starfin</title>
+        <description>Starfin Torznab API</description>
+        <link>https://starfin.vmonot.dev</link>
+        <language>en-us</language>
+        <category>movie</category>
+
+        {{range $torrent := .}}
+        <item>
+            <title>{{$torrent.Title}}</title>
+            <pubDate>{{$torrent.DT}}</pubDate>
+            <category>{{torznabID $torrent.Category}}</category>
+            <size>{{$torrent.Size}}</size>
+            <description>{{$torrent.Title}}</description>
+            <link>magnet:?xt=urn:btih:{{$torrent.Hash}}&amp;dn={{$torrent.Title}}</link>
+            <enclosure url="magnet:?xt=urn:btih:{{$torrent.Hash}}&amp;dn={{$torrent.Title}}"
+                       length="{{$torrent.Size}}"
+                       type="application/x-bittorrent;x-scheme-handler/magnet" />
+
+            <torznab:attr name="imdb" value="{{$torrent.IMDbID}}" />
+            <torznab:attr name="size" value="{{$torrent.Size}}" />
+            <torznab:attr name="category" value="{{torznabID $torrent.Category}}" />
+        </item>
+        {{end}}
+    </channel>
+</rss>
+{{end}}

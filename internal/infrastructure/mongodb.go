@@ -23,6 +23,7 @@ type MongoDB struct {
 	volumesColl *mongo.Collection
 	filmsColl   *mongo.Collection
 	peopleColl  *mongo.Collection
+	rarbgColl   *mongo.Collection
 }
 
 // NewMongoDB initializes a mongo db client
@@ -50,12 +51,12 @@ func getFilmPathFilter(path string) primitive.M {
 }
 
 // Close closes the MongoDB connection
-func (m MongoDB) Close() error {
+func (m *MongoDB) Close() error {
 	return m.client.Disconnect(m.ctx)
 }
 
 // IsOwnerPresent checks if there is an owner in the server
-func (m MongoDB) IsOwnerPresent() (bool, error) {
+func (m *MongoDB) IsOwnerPresent() (bool, error) {
 	countOwners, err := m.usersColl.CountDocuments(m.ctx, bson.M{"is_owner": true})
 	if err != nil {
 		return false, err
@@ -64,13 +65,13 @@ func (m MongoDB) IsOwnerPresent() (bool, error) {
 }
 
 // CreateUser adds a user to the database after checking parameter
-func (m MongoDB) CreateUser(user *model.User) error {
+func (m *MongoDB) CreateUser(user *model.User) error {
 	_, err := m.usersColl.InsertOne(m.ctx, user)
 	return err
 }
 
 // DeleteUser deletes the user from the DB
-func (m MongoDB) DeleteUser(userId primitive.ObjectID) error {
+func (m *MongoDB) DeleteUser(userId primitive.ObjectID) error {
 	res, err := m.usersColl.DeleteOne(m.ctx, bson.M{"_id": userId})
 	if err != nil {
 		return err
@@ -83,7 +84,7 @@ func (m MongoDB) DeleteUser(userId primitive.ObjectID) error {
 }
 
 // IsUsernameAvailable returns true if the username (case insensitive) is not in use yet
-func (m MongoDB) IsUsernameAvailable(username string) (bool, error) {
+func (m *MongoDB) IsUsernameAvailable(username string) (bool, error) {
 	count, err := m.usersColl.CountDocuments(m.ctx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
 	if err != nil {
 		return false, err
@@ -92,33 +93,33 @@ func (m MongoDB) IsUsernameAvailable(username string) (bool, error) {
 }
 
 // GetUserFromID gets user from its ID
-func (m MongoDB) GetUserFromID(id primitive.ObjectID) (*model.User, error) {
+func (m *MongoDB) GetUserFromID(id primitive.ObjectID) (*model.User, error) {
 	var user model.User
 	err := m.usersColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&user)
 	return &user, err
 }
 
 // GetUserFromName gets user from it name
-func (m MongoDB) GetUserFromName(username string, user *model.User) error {
+func (m *MongoDB) GetUserFromName(username string, user *model.User) error {
 	return m.usersColl.FindOne(m.ctx, bson.M{"name": username}).Decode(user)
 }
 
 // GetUserNb returns the number of users from the DB
-func (m MongoDB) GetUserNb() (int64, error) {
+func (m *MongoDB) GetUserNb() (int64, error) {
 	return m.usersColl.CountDocuments(m.ctx, bson.M{})
 }
 
 // GetUsers returns the list of users in the DB
-func (m MongoDB) GetUsers() (users []model.User, err error) {
+func (m *MongoDB) GetUsers() (users []model.User, err error) {
 	usersCur, err := m.usersColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		return nil, fmt.Errorf("Error while retrieving users from DB: %w", err)
+		return nil, fmt.Errorf("error while retrieving users from DB: %w", err)
 	}
 	for usersCur.Next(m.ctx) {
 		var user model.User
 		err = usersCur.Decode(&user)
 		if err != nil {
-			return nil, fmt.Errorf("Error while decoding user from DB: %w", err)
+			return nil, fmt.Errorf("error while decoding user from DB: %w", err)
 		}
 		users = append(users, user)
 	}
@@ -126,29 +127,29 @@ func (m MongoDB) GetUsers() (users []model.User, err error) {
 }
 
 // SetUserPassword set a new password for a specific user
-func (m MongoDB) SetUserPassword(userID primitive.ObjectID, newPassword string) error {
+func (m *MongoDB) SetUserPassword(userID primitive.ObjectID, newPassword string) error {
 	_, err := m.usersColl.UpdateOne(m.ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"password": newPassword}})
 	return err
 }
 
-// Fetches volume from DB using specified ID and returns it via pointer
-func (m MongoDB) GetVolumeFromID(id primitive.ObjectID) (*model.Volume, error) {
+// GetVolumeFromID fetches volume from DB using specified ID and returns it via pointer
+func (m *MongoDB) GetVolumeFromID(id primitive.ObjectID) (*model.Volume, error) {
 	var volume model.Volume
 	err := m.volumesColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&volume)
 	return &volume, err
 }
 
 // GetVolumes returns the list of volumes in the DB
-func (m MongoDB) GetVolumes() (volumes []model.Volume, err error) {
+func (m *MongoDB) GetVolumes() (volumes []model.Volume, err error) {
 	volumeCur, err := m.volumesColl.Find(m.ctx, bson.M{})
 	if err != nil {
-		return nil, fmt.Errorf("Error while retrieving volumes from DB: %w", err)
+		return nil, fmt.Errorf("error while retrieving volumes from DB: %w", err)
 	}
 	for volumeCur.Next(m.ctx) {
 		var vol model.Volume
 		err = volumeCur.Decode(&vol)
 		if err != nil {
-			return nil, fmt.Errorf("Error while decoding volume from DB: %w", err)
+			return nil, fmt.Errorf("error while decoding volume from DB: %w", err)
 		}
 		volumes = append(volumes, vol)
 	}
@@ -156,13 +157,13 @@ func (m MongoDB) GetVolumes() (volumes []model.Volume, err error) {
 }
 
 // AddVolume adds a volume to the DB and start scanning the volume
-func (m MongoDB) AddVolume(volume *model.Volume) error {
+func (m *MongoDB) AddVolume(volume *model.Volume) error {
 	_, err := m.volumesColl.InsertOne(m.ctx, *volume)
 	return err
 }
 
 // DeleteVolume deletes the volume from the DB and all the film which originated only from this volume
-func (m MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
+func (m *MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 	// Remove specified volume from all film source
 	update, err := m.filmsColl.UpdateMany(m.ctx,
 		bson.M{},
@@ -193,32 +194,32 @@ func (m MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 }
 
 // IsFilmPathPresent checks if a film path is present in the database
-func (m MongoDB) IsFilmPathPresent(filmPath string) bool {
+func (m *MongoDB) IsFilmPathPresent(filmPath string) bool {
 	film := model.Film{}
 	return m.filmsColl.FindOne(m.ctx, getFilmPathFilter(filmPath)).Decode(&film) == nil
 }
 
 // IsSubtitlePathPresent checks if a subtitle path is present in the database
-func (m MongoDB) IsSubtitlePathPresent(subPath string) bool {
+func (m *MongoDB) IsSubtitlePathPresent(subPath string) bool {
 	_, err := m.GetFilmFromExternalSubtitle(subPath)
 	return err == nil
 }
 
-// IsFilmInDB checks if a given film is already present in DB
-func (m MongoDB) IsFilmPresent(film *model.Film) bool {
+// IsFilmPresent checks if a given film is already present in DB
+func (m *MongoDB) IsFilmPresent(film *model.Film) bool {
 	res := m.filmsColl.FindOne(m.ctx, bson.M{"tmdb_id": film.TMDBID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
-// AddFilmToDB adds a given film to the DB
+// AddFilm adds a given film to the DB
 // If the film is already in the database, updates it
-func (m MongoDB) AddFilm(film *model.Film) error {
+func (m *MongoDB) AddFilm(film *model.Film) error {
 	_, err := m.filmsColl.UpdateOne(m.ctx, bson.M{"_id": film.ID}, bson.M{"$set": film}, options.Update().SetUpsert(true))
 	return err
 }
 
 // AddVolumeSourceToFilm adds the volume as a source to the given media
-func (m MongoDB) AddVolumeSourceToFilm(film *model.Film) error {
+func (m *MongoDB) AddVolumeSourceToFilm(film *model.Film) error {
 	res, err := m.filmsColl.UpdateOne(m.ctx, bson.M{"tmdb_id": film.TMDBID}, bson.M{"$addToSet": bson.M{"volume_files": film.VolumeFiles[0]}})
 	if err != nil {
 		return err
@@ -230,7 +231,7 @@ func (m MongoDB) AddVolumeSourceToFilm(film *model.Film) error {
 }
 
 // GetFilmFromPath retrieves a film from a path
-func (m MongoDB) GetFilmFromPath(filmPath string) (film *model.Film, err error) {
+func (m *MongoDB) GetFilmFromPath(filmPath string) (film *model.Film, err error) {
 	film = &model.Film{}
 	err = m.filmsColl.FindOne(m.ctx, getFilmPathFilter(filmPath)).Decode(film)
 	if err != nil {
@@ -239,11 +240,11 @@ func (m MongoDB) GetFilmFromPath(filmPath string) (film *model.Film, err error) 
 	return film, nil
 }
 
-// UpdateFilmVolumeFile updates the path to a film
+// UpdateFilmVolumeFile updates the path to a film.
 // film: Film struct that has its path changed
-// oldPath: file path of the volumefile that will be changed
+// oldPath: file path of the volumeFile that will be changed
 // newVolumeFile: VolumeFile struct that replaces the previous one
-func (m MongoDB) UpdateFilmVolumeFile(film *model.Film, oldPath string, newVolumeFile model.VolumeFile) error {
+func (m *MongoDB) UpdateFilmVolumeFile(film *model.Film, oldPath string, newVolumeFile model.VolumeFile) error {
 	oldPathIndex := slices.IndexFunc(film.VolumeFiles, func(vf model.VolumeFile) bool {
 		return vf.Path == oldPath
 	})
@@ -258,7 +259,7 @@ func (m MongoDB) UpdateFilmVolumeFile(film *model.Film, oldPath string, newVolum
 }
 
 // DeleteFilm deletes a film
-func (m MongoDB) DeleteFilm(ID primitive.ObjectID) error {
+func (m *MongoDB) DeleteFilm(ID primitive.ObjectID) error {
 	del, err := m.filmsColl.DeleteOne(m.ctx, bson.M{"_id": ID})
 	if err != nil {
 		return err
@@ -269,9 +270,9 @@ func (m MongoDB) DeleteFilm(ID primitive.ObjectID) error {
 	return nil
 }
 
-// DeleteFilmFromPath removes a film from the database
+// DeleteFilmVolumeFile removes a film from the database
 // If the film has only 1 volume file, then the film is entirely deleted
-func (m MongoDB) DeleteFilmVolumeFile(path string) error {
+func (m *MongoDB) DeleteFilmVolumeFile(path string) error {
 	film, err := m.GetFilmFromPath(path)
 	if err != nil {
 		return err
@@ -294,7 +295,7 @@ func (m MongoDB) DeleteFilmVolumeFile(path string) error {
 }
 
 // RemoveSubtitleFile removes a film subtitle from the database
-func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
+func (m *MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 	var film model.Film
 	err := m.filmsColl.FindOne(m.ctx, getFilmPathFilter(mediaPath)).Decode(&film)
 	if err != nil {
@@ -326,14 +327,14 @@ func (m MongoDB) RemoveSubtitleFile(mediaPath, subtitlePath string) error {
 }
 
 // IsPersonPresent checks if a person is already registered in the DB
-func (m MongoDB) IsPersonPresent(personID int64) bool {
+func (m *MongoDB) IsPersonPresent(personID int64) bool {
 	res := m.peopleColl.FindOne(m.ctx, bson.M{"tmdb_id": personID})
 	return res.Err() != mongo.ErrNoDocuments
 }
 
 // AddPerson adds a person to the DB
 // TODO: upsert
-func (m MongoDB) AddPerson(person *model.Person) {
+func (m *MongoDB) AddPerson(person *model.Person) {
 	_, err := m.peopleColl.InsertOne(m.ctx, *person)
 	if err != nil {
 		log.WithField("personID", person.TMDBID).Errorln(err)
@@ -341,7 +342,7 @@ func (m MongoDB) AddPerson(person *model.Person) {
 }
 
 // AddActors upserts the actors of a film to the DB
-func (m MongoDB) AddActors(actors []model.Person) {
+func (m *MongoDB) AddActors(actors []model.Person) {
 	for _, actor := range actors {
 		res, err := m.peopleColl.UpdateOne(m.ctx, bson.M{"tmdb_id": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
 		if err != nil {
@@ -362,20 +363,20 @@ func (m MongoDB) AddActors(actors []model.Person) {
 }
 
 // GetPersonFromID returns the Person struct
-func (m MongoDB) GetPersonFromID(ID primitive.ObjectID) (*model.Person, error) {
+func (m *MongoDB) GetPersonFromID(ID primitive.ObjectID) (*model.Person, error) {
 	var person model.Person
 	err := m.peopleColl.FindOne(m.ctx, bson.M{"_id": ID}).Decode(&person)
 	return &person, err
 }
 
 // GetPersonFromTMDBID returns the Person struct
-func (m MongoDB) GetPersonFromTMDBID(TMDBID int64) (*model.Person, error) {
+func (m *MongoDB) GetPersonFromTMDBID(TMDBID int64) (*model.Person, error) {
 	var person model.Person
 	err := m.peopleColl.FindOne(m.ctx, bson.M{"tmdb_id": TMDBID}).Decode(&person)
 	return &person, err
 }
 
-func (m MongoDB) GetPeople() (people []model.Person, err error) {
+func (m *MongoDB) GetPeople() (people []model.Person, err error) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	peopleCur, err := m.peopleColl.Find(m.ctx, bson.M{}, options)
@@ -394,13 +395,13 @@ func (m MongoDB) GetPeople() (people []model.Person, err error) {
 }
 
 // GetFilmFromID returns a film from its TMDB ID
-func (m MongoDB) GetFilmFromID(id primitive.ObjectID) (*model.Film, error) {
+func (m *MongoDB) GetFilmFromID(id primitive.ObjectID) (*model.Film, error) {
 	var film model.Film
 	err := m.filmsColl.FindOne(m.ctx, bson.M{"_id": id}).Decode(&film)
 	return &film, err
 }
 
-func (m MongoDB) GetFilmCount() int64 {
+func (m *MongoDB) GetFilmCount() int64 {
 	count, err := m.filmsColl.CountDocuments(m.ctx, bson.M{})
 	if err != nil {
 		return 0
@@ -409,7 +410,7 @@ func (m MongoDB) GetFilmCount() int64 {
 }
 
 // GetFilms returns a slice of Film
-func (m MongoDB) GetFilms() (films []model.Film, err error) {
+func (m *MongoDB) GetFilms() (films []model.Film, err error) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, options)
@@ -427,9 +428,9 @@ func (m MongoDB) GetFilms() (films []model.Film, err error) {
 	return
 }
 
-func (m MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []model.Film) {
-	options := options.Find()
-	options.SetSort(bson.M{"title": 1})
+func (m *MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []model.Film) {
+	opt := options.Find()
+	opt.SetSort(bson.M{"title": 1})
 	filter := bson.M{}
 	if len(years) > 0 {
 		var orYears []bson.M
@@ -445,7 +446,7 @@ func (m MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []m
 		filter["prodcountries"] = primitive.Regex{Pattern: fmt.Sprintf("^%s$", country), Options: "i"}
 	}
 
-	filmsCur, err := m.filmsColl.Find(m.ctx, filter, options)
+	filmsCur, err := m.filmsColl.Find(m.ctx, filter, opt)
 	if err != nil {
 		log.WithField("error", err).Errorln("Unable to retrieve films from database")
 		return
@@ -462,7 +463,7 @@ func (m MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []m
 }
 
 // GetFilmsRange returns a slice of Film from start to number
-func (m MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
+func (m *MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
 	options := options.Find()
 	options.SetSort(bson.M{"title": 1})
 	options.SetSkip(int64(start))
@@ -484,7 +485,7 @@ func (m MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
 }
 
 // GetFilmsFromVolume retrieves all films from a specific volume ID
-func (m MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) {
+func (m *MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"volume_files": bson.D{{Key: "$elemMatch", Value: bson.M{"fromvolume": id}}}})
 	if err != nil {
 		log.WithField("error", err).Errorln("Unable to retrieve films from database")
@@ -501,7 +502,7 @@ func (m MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) 
 }
 
 // GetFilmsWithActor returns a list of films starring desired actor ID
-func (m MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
+func (m *MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"characters": bson.D{{Key: "$elemMatch", Value: bson.M{"actor_id": actorID}}}})
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "actorID": actorID}).Errorln("Unable to retrieve films with actor from database")
@@ -519,7 +520,7 @@ func (m MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
 }
 
 // GetFilmsWithDirector returns a list of films directed by desired director ID
-func (m MongoDB) GetFilmsWithDirector(directorID int64) (films []model.Film) {
+func (m *MongoDB) GetFilmsWithDirector(directorID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"directors": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": directorID}}}})
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "actorID": directorID}).Errorln("Unable to retrieve films with actor from database")
@@ -537,7 +538,7 @@ func (m MongoDB) GetFilmsWithDirector(directorID int64) (films []model.Film) {
 }
 
 // GetFilmsWithWriter returns a list of films written by desired writer ID
-func (m MongoDB) GetFilmsWithWriter(writerID int64) (films []model.Film) {
+func (m *MongoDB) GetFilmsWithWriter(writerID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"writers": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": writerID}}}})
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "actorID": writerID}).Errorln("Unable to retrieve films with actor from database")
@@ -555,7 +556,7 @@ func (m MongoDB) GetFilmsWithWriter(writerID int64) (films []model.Film) {
 }
 
 // AddSubtitleToFilmPath adds the subtitle to a film given the film path
-func (m MongoDB) AddSubtitleToFilmPath(filmFilePath string, sub model.Subtitle) error {
+func (m *MongoDB) AddSubtitleToFilmPath(filmFilePath string, sub model.Subtitle) error {
 	var film model.Film
 	err := m.filmsColl.FindOne(m.ctx, getFilmPathFilter(filmFilePath)).Decode(&film)
 	if err != nil {
@@ -582,7 +583,7 @@ func (m MongoDB) AddSubtitleToFilmPath(filmFilePath string, sub model.Subtitle) 
 }
 
 // GetFilmFromExternalSubtitle returns a film from its external subtitle path
-func (m MongoDB) GetFilmFromExternalSubtitle(subtitlePath string) (model.Film, error) {
+func (m *MongoDB) GetFilmFromExternalSubtitle(subtitlePath string) (model.Film, error) {
 	var film model.Film
 	err := m.filmsColl.FindOne(
 		m.ctx,

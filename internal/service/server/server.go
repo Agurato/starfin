@@ -3,10 +3,12 @@ package server
 import (
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/gin-contrib/sessions"
@@ -35,7 +37,7 @@ type OwnerStorer interface {
 }
 
 // NewServer initializes the server
-func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler, db OwnerStorer) *gin.Engine {
+func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *AdminHandler, filmHandler *FilmHandler, personHandler *PersonHandler, rarbgHandler *RarbgHandler, db OwnerStorer) *gin.Engine {
 	// Set Gin to production mode
 	// TODO: change to release for deployment
 	// gin.SetMode(gin.DebugMode)
@@ -56,7 +58,10 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 		},
 		"basename":    filepath.Base,
 		"countryName": filmHandler.Filterer.GetCountryName,
-		"join":        strings.Join,
+		"dispDate": func(dt time.Time) string {
+			return dt.Format("02 Jan 2006")
+		},
+		"join": strings.Join,
 		"joinStrings": func(sep string, elems ...string) string {
 			return strings.Join(lo.Filter(elems, func(elem string, i int) bool {
 				return len(elem) > 0
@@ -65,6 +70,18 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 		"json": func(input any) string {
 			ret, _ := json.Marshal(input)
 			return string(ret)
+		},
+		"fileSize": func(size int64) string {
+			const unit = 1000
+			if size < unit {
+				return fmt.Sprintf("%d B", size)
+			}
+			div, exp := int64(unit), 0
+			for n := size / unit; n >= unit; n /= unit {
+				div *= unit
+				exp++
+			}
+			return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 		},
 		"filmID": func(film model.Film) string {
 			return film.ID.Hex()
@@ -91,7 +108,7 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 	}
 
 	// Load templates
-	router.LoadHTMLGlob("web/templates/**/*")
+	router.LoadHTMLGlob("web/templates/**/*.go.html")
 
 	// Static files
 	router.Static("/static", "./web/static")
@@ -102,8 +119,10 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 	router.GET("/start", mainHandler.GETStart)
 	router.POST("/start", mainHandler.POSTStart)
 
+	mainRouter := router.Group("/")
+
 	// Authentication actions
-	mainRouter := router.Use(checkSetupDone).
+	mainRouter.Use(checkSetupDone).
 		GET("/login", mainHandler.GETLogin).
 		POST("/login", mainHandler.POSTLogin).
 		GET("/logout", mainHandler.GETLogout)
@@ -123,6 +142,14 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 		GET("/settings", mainHandler.GETSettings).
 		POST("/setpassword", mainHandler.POSTSetPassword).
 		GET("/cache/*path", mainHandler.GETCache)
+
+	if rarbgHandler != nil {
+		mainRouter.Use(authRequired).
+			GET("/torrents", rarbgHandler.GETTorrents)
+
+		torznab := router.Group("/torznab")
+		torznab.GET("/api", rarbgHandler.GETTorznab)
+	}
 
 	// User needs to be admin to access these pages
 	mainRouter.Use(adminRequired).

@@ -4,3 +4,5 @@ vendor/
 *.code-workspace
 mediaInfo_test.go
 /cache/
+
+.idea/

@@ -46,24 +46,6 @@ type FilmMetadataGetter interface {
 	UpdateFilmDetails(film *model.Film)
 }
 
-//type FilmManager interface {
-//	CacheFilms()
-//
-//	GetFilms() []model.Film
-//	GetFilmsFiltered(years []int, genre, country, search string) (films []model.Film)
-//	GetFilmsWithActor(actorID int64) (films []model.Film)
-//	GetFilmsWithDirector(directorID int64) (films []model.Film)
-//	GetFilmsWithWriter(writerID int64) (films []model.Film)
-//
-//	GetFilm(filmHexID string) (*model.Film, error)
-//	GetFilmPath(filmHexID, filmIndex string) (string, error)
-//	GetFilmSubtitlePath(filmHexID, filmIndex, subtitleIndex string) (string, error)
-//
-//	EditFilmWithLink(filmID, inputUrl string) error
-//
-//	AddFilm(film *model.Film, update bool) error
-//}
-
 // FilmFilterer holds the different filters that can be applied
 type FilmFilterer interface {
 	AddFilm(films *model.Film)

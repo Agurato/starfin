@@ -1,0 +1,67 @@
+{{ define "pages/torrents.go.html" }}
+{{ template "partials/header.go.html" . }}
+<section>
+    {{ if .error }}
+    <p style="color:red">{{ .error }}</p>
+    {{ end }}
+</section>
+<!-- Filter bar -->
+<div class="container d-flex justify-content-center mt-2 mb-3" style="max-width:50%;">
+    <form action="" method="get" class="d-inline-flex mx-2">
+        <div class="input-group">
+            <input type="text" class="form-control bg-dark text-white border-secondary" placeholder="Search" aria-label="Search" aria-describedby="search-button" name="search" value="{{.search}}" size="200" />
+            <button type="submit" class="btn btn-outline-secondary" id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+    </form>
+</div>
+<div class="container py-5">
+    <table class="table table-dark mx-auto">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Title</th>
+                <th>Size</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>IMDb</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $index, $torrent := .torrents}}
+            <tr>
+                <td><a href="magnet:?xt=urn:btih:{{$torrent.Hash}}&dn={{$torrent.Title}}"><i class="fa-solid fa-magnet"></i></a></td>
+                <td>{{$torrent.Title}}</td>
+                <td class="text-nowrap">{{if $torrent.Size}}{{fileSize $torrent.Size}}{{end}}</td>
+                <td>{{$torrent.Category}}</td>
+                <td class="text-nowrap">{{dispDate $torrent.DT}}</td>
+                <td>{{if $torrent.IMDbID}}<a href="https://www.imdb.com/title/{{$torrent.IMDbID}}">IMDb</a>{{end}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+<nav class="mt-3" aria-label="Page navigation">
+    <ul class="pagination pagination-sm justify-content-center">
+        {{range $index, $page := .pages}}
+        {{if $page.Active}}
+        <li class="page-item active">
+            <a class="page-link"
+               href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/{{if $.search}}?search={{$.search}}{{end}}">
+                {{$page.Number}}<span class="sr-only">(current)</span>
+            </a>
+        </li>
+        {{else if $page.Dots}}
+        <li class="page-item dots">…</li>
+        {{else}}
+        <li class="page-item">
+            <a class="page-link"
+               href="/films{{if $.filterYear}}/year/{{$.filterYear}}{{end}}{{if $.filterGenre}}/genre/{{lower $.filterGenre}}{{end}}{{if $.filterCountry}}/country/{{lower $.filterCountry}}{{end}}/page/{{$page.Number}}/{{if $.search}}?search={{$.search}}{{end}}">
+                {{$page.Number}}
+            </a>
+        </li>
+        {{end}}
+        {{end}}
+    </ul>
+</nav>
+{{ template "partials/footer.go.html" . }}
+{{ end }}

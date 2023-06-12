@@ -6,8 +6,9 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/cyruzin/golang-tmdb v1.4.5
-	github.com/gin-contrib/sessions v0.0.5
+	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.9.0
+	github.com/glebarez/go-sqlite v1.21.1
 	github.com/joho/godotenv v1.5.1
 	github.com/pariz/gountries v0.1.6
 	github.com/radovskyb/watcher v1.0.7
@@ -16,6 +17,20 @@ require (
 	github.com/stretchr/testify v1.8.2
 	go.mongodb.org/mongo-driver v1.11.3
 	golang.org/x/text v0.8.0
+)
+
+require (
+	github.com/Masterminds/squirrel v1.5.4 // indirect
+	github.com/doug-martin/goqu/v9 v9.18.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	modernc.org/libc v1.22.3 // indirect
+	modernc.org/mathutil v1.5.0 // indirect
+	modernc.org/memory v1.5.0 // indirect
+	modernc.org/sqlite v1.21.1 // indirect
 )
 
 require (
@@ -34,7 +49,7 @@ require (
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
-	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/leodido/go-urn v1.2.2 // indirect
 	github.com/matthewhartstonge/argon2 v0.3.2
 	github.com/mattn/go-isatty v0.0.18 // indirect
