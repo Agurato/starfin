@@ -5,8 +5,8 @@
     <retention days="0" />
 
     <searching>
-        <search available="no" supportedParams="q" />
-        <tv-search available="no" supportedParams="q,rid,tvdbid,season,ep" />
+        <search available="yes" supportedParams="q" />
+        <tv-search available="yes" supportedParams="imdbid,season,ep" />
         <movie-search available="yes" supportedParams="imdbid" />
         <audio-search available="no" supportedParams="q" />
         <book-search available="no" supportedParams="q" />

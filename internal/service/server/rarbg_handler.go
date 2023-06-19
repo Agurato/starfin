@@ -15,6 +15,8 @@ import (
 type TorrentStorer interface {
 	SearchTorrents(ctx context.Context, search, category string, page uint) ([]model.RarbgTorrent, error)
 	GetTorrents(ctx context.Context, imdbID string, offset, limit int64) ([]model.RarbgTorrent, error)
+	GetAllTVTorrents(ctx context.Context, offset, limit int64) (torrents []model.RarbgTorrent, err error)
+	GetTVTorrents(ctx context.Context, imdbID, season, episode string, offset, limit int64) (torrents []model.RarbgTorrent, err error)
 }
 
 type RarbgHandler struct {
@@ -110,6 +112,37 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 			return
 		}
 		err = rh.template.ExecuteTemplate(&buf, "torznab/movie.go.xml", torrents)
+	case "tvsearch":
+		imdbID := c.Query("imdbid")
+		query := c.Query("q")
+		season := c.Query("season")
+		episode := c.Query("ep")
+		offset, _ := strconv.ParseInt(c.Query("offset"), 10, 64)
+		limit, _ := strconv.ParseInt(c.Query("limit"), 10, 64)
+
+		var torrents []model.RarbgTorrent
+		if imdbID == "" && query == "" {
+			torrents, err = rh.TorrentStorer.GetAllTVTorrents(c, offset, limit)
+		} else {
+			torrents, err = rh.TorrentStorer.GetTVTorrents(c, imdbID, season, episode, offset, limit)
+		}
+
+		if err != nil {
+			log.Errorln(err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		err = rh.template.ExecuteTemplate(&buf, "torznab/tvsearch.go.xml", gin.H{
+			"torrents": torrents,
+			"season":   season,
+		})
+	default:
+		err = rh.template.ExecuteTemplate(&buf, "torznab/error.go.xml", gin.H{
+			"code":  203,
+			"error": "Function not available",
+		})
+		c.Data(http.StatusBadRequest, "application/xml", buf.Bytes())
+		return
 	}
 
 	if err != nil {
