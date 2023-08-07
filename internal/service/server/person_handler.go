@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/gin-gonic/gin"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type PersonManager interface {

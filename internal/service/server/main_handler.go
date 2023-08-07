@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type MainCacher interface {
@@ -50,7 +51,7 @@ func (mh MainHandler) GETIndex(c *gin.Context) {
 // GetStart allows regsitration of first user (admin & owner)
 func (mh MainHandler) GETStart(c *gin.Context) {
 	if ownerPresent, err := mh.MainUserManager.IsOwnerPresent(); err != nil {
-		log.Errorln(err)
+		log.Error().Err(err).Send()
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 		return
 	} else if ownerPresent {

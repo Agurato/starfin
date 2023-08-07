@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 type Cache struct {
@@ -20,13 +20,13 @@ type Cache struct {
 func NewCache(cachePath string) *Cache {
 	err := os.MkdirAll(cachePath, 0755)
 	if err != nil {
-		log.WithField("error", err).Fatalln("Could not create cache directory")
+		log.Fatal().Err(err).Msg("Could not create cache directory")
 	}
 	cachePath, err = filepath.Abs(cachePath)
 	if err != nil {
-		log.WithField("error", err).Fatalln("Could not create cache directory")
+		log.Fatal().Err(err).Msg("Could not create cache directory")
 	}
-	log.WithField("path", cachePath).Infoln("Using cache directory")
+	log.Info().Str("path", cachePath).Msg("Using cache directory")
 
 	return &Cache{
 		cachePath: cachePath,

@@ -6,7 +6,7 @@ import (
 
 	"github.com/Agurato/starfin/internal/model"
 	"github.com/matthewhartstonge/argon2"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -38,7 +38,7 @@ func NewUserManager(us UserStorer) *UserManager {
 
 func (um UserManager) CreateOwner(username, password1, password2 string) (*model.User, error) {
 	if ownerPresent, err := um.UserStorer.IsOwnerPresent(); err != nil {
-		log.Errorln(err)
+		log.Error().Err(err).Send()
 		return nil, errors.New("an error occurred …")
 	} else if ownerPresent {
 		return nil, model.ErrOwnerAlreadyExists

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/model"
 	_ "github.com/glebarez/go-sqlite"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 func (m *MongoDB) InitRarbg(dbName string) {
@@ -43,14 +44,14 @@ func (m *MongoDB) SearchTorrents(ctx context.Context, search, category string, p
 
 	torrentsCur, err := m.rarbgColl.Find(ctx, filter, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve torrents from database")
+		log.Error().Err(err).Msg("Unable to retrieve torrents from database")
 		return
 	}
 	for torrentsCur.Next(m.ctx) {
 		var rt model.RarbgTorrent
 		err := torrentsCur.Decode(&rt)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch torrent from database")
+			log.Error().Err(err).Msg("Unable to fetch torrent from database")
 		}
 		torrents = append(torrents, rt)
 	}
@@ -72,14 +73,14 @@ func (m *MongoDB) GetTorrents(ctx context.Context, imdbID string, offset, limit 
 	}
 	torrentsCur, err := m.rarbgColl.Find(ctx, filter, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve torrents from database")
+		log.Error().Err(err).Msg("Unable to retrieve torrents from database")
 		return
 	}
 	for torrentsCur.Next(m.ctx) {
 		var rt model.RarbgTorrent
 		err := torrentsCur.Decode(&rt)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch torrent from database")
+			log.Error().Err(err).Msg("Unable to fetch torrent from database")
 		}
 		torrents = append(torrents, rt)
 	}
@@ -95,14 +96,14 @@ func (m *MongoDB) GetAllTVTorrents(ctx context.Context, offset, limit int64) (to
 
 	torrentsCur, err := m.rarbgColl.Find(ctx, filter, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve torrents from database")
+		log.Error().Err(err).Msg("Unable to retrieve torrents from database")
 		return
 	}
 	for torrentsCur.Next(m.ctx) {
 		var rt model.RarbgTorrent
 		err := torrentsCur.Decode(&rt)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch torrent from database")
+			log.Error().Err(err).Msg("Unable to fetch torrent from database")
 		}
 		torrents = append(torrents, rt)
 	}
@@ -131,14 +132,14 @@ func (m *MongoDB) GetTVTorrents(ctx context.Context, imdbID, season, episode str
 
 	torrentsCur, err := m.rarbgColl.Find(ctx, filter, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve torrents from database")
+		log.Error().Err(err).Msg("Unable to retrieve torrents from database")
 		return
 	}
 	for torrentsCur.Next(m.ctx) {
 		var rt model.RarbgTorrent
 		err := torrentsCur.Decode(&rt)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch torrent from database")
+			log.Error().Err(err).Msg("Unable to fetch torrent from database")
 		}
 		torrents = append(torrents, rt)
 	}

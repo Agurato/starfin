@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/Agurato/starfin/internal/model"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -86,7 +86,7 @@ func (vm VolumeManager) CreateVolume(name, path string, isRecursive bool, mediaT
 	// Add volume to the database
 	err = vm.VolumeStorer.AddVolume(volume)
 	if err != nil {
-		log.Errorln(err)
+		log.Error().Err(err).Send()
 		return errors.New("volume could not be added")
 	}
 
@@ -108,10 +108,10 @@ func (vm VolumeManager) DeleteVolume(volumeHexID string) error {
 func (vm VolumeManager) scanVolume(volume *model.Volume) {
 	videoFiles, subFiles, err := volume.ListVideoFiles()
 	if err != nil {
-		log.WithField("volumePath", volume.Path).Warningln("Unable to scan folder for video files")
+		log.Warn().Str("volumePath", volume.Path).Msg("Unable to scan folder for video files")
 	}
 
-	log.WithField("volumePath", volume.Path).Debugln("Scanning volume")
+	log.Debug().Str("volumePath", volume.Path).Msg("Scanning volume")
 
 	// Worker function
 	getFilmsFromFiles := func(files <-chan string, films chan<- *model.Film) {
@@ -120,10 +120,10 @@ func (vm VolumeManager) scanVolume(volume *model.Volume) {
 
 			// Search ID on TMDB
 			if err = vm.VolumeMetadataGetter.FetchFilmTMDBID(film); err != nil {
-				log.WithFields(log.Fields{"file": file, "err": err}).Warningln("Unable to fetch film ID from TMDB")
+				log.Warn().Str("file", file).Err(err).Msg("Unable to fetch film ID from TMDB")
 				film.Title = film.Name
 			} else {
-				log.WithFields(log.Fields{"tmdb_id": film.TMDBID, "file": file}).Infoln("Found TMDB ID for file")
+				log.Info().Str("file", file).Int("tmdb_id", film.TMDBID).Msg("Found TMDB ID for file")
 				// Fill info from TMDB
 				vm.VolumeMetadataGetter.UpdateFilmDetails(film)
 			}

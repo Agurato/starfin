@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type AdminFilmManager interface {
@@ -54,13 +55,13 @@ func (ah AdminHandler) GETAdmin(c *gin.Context) {
 	var allErr error
 	volumes, err := ah.AdminVolumeManager.GetVolumes()
 	if err != nil {
-		log.Errorln(fmt.Errorf("error while fetching volumes: %w", err))
+		log.Error().Err(err).Msg("error while fetching volumes")
 		allErr = errors.Join(allErr, err)
 	}
 
 	users, err := ah.AdminUserManager.GetUsers()
 	if err != nil {
-		log.Errorln(fmt.Errorf("error while fetching users: %w", err))
+		log.Error().Err(err).Msg("error while fetching users")
 		allErr = errors.Join(allErr, err)
 	}
 

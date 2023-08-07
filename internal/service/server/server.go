@@ -14,8 +14,8 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
-	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -44,7 +44,7 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 
 	router := gin.Default()
 
-	router.SetTrustedProxies(nil)
+	_ = router.SetTrustedProxies(nil)
 
 	// Cookies
 	store := cookie.NewStore([]byte(cookieSecret))
@@ -166,7 +166,7 @@ func NewServer(cookieSecret string, mainHandler *MainHandler, adminHandler *Admi
 	var err error
 	setupDone, err = db.IsOwnerPresent()
 	if err != nil {
-		log.WithError(err).Fatal("error while checking for error")
+		log.Fatal().Err(err).Msg("error while checking for owner")
 	}
 
 	return router

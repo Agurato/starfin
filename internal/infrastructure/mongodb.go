@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Agurato/starfin/internal/model"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/slices"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type MongoDB struct {
@@ -32,7 +33,7 @@ func NewMongoDB(dbUser, dbPassword, dbURL, dbPort, dbName string) *MongoDB {
 	// defer cancel()
 	mongoClient, err := mongo.Connect(mongoCtx, options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%s", dbUser, dbPassword, dbURL, dbPort)))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 
 	mongoDb := mongoClient.Database(dbName)
@@ -83,7 +84,7 @@ func (m *MongoDB) DeleteUser(userId primitive.ObjectID) error {
 	return nil
 }
 
-// IsUsernameAvailable returns true if the username (case insensitive) is not in use yet
+// IsUsernameAvailable returns true if the username (case-insensitive) is not in use yet
 func (m *MongoDB) IsUsernameAvailable(username string) (bool, error) {
 	count, err := m.usersColl.CountDocuments(m.ctx, bson.M{"name": primitive.Regex{Pattern: fmt.Sprintf("^%s$", username), Options: "i"}})
 	if err != nil {
@@ -173,12 +174,12 @@ func (m *MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("volumeId", volumeId).Infof("%d films are concerned with this volume deletion\n", update.ModifiedCount)
+	log.Info().Any("volumeId", volumeId).Msgf("%d films are concerned with this volume deletion\n", update.ModifiedCount)
 	del, err := m.filmsColl.DeleteMany(m.ctx, bson.M{"volume_files": bson.D{{Key: "$size", Value: 0}}})
 	if err != nil {
 		return err
 	}
-	log.WithField("volumeId", volumeId).Infof("%d films were removed from database\n", del.DeletedCount)
+	log.Info().Any("volumeId", volumeId).Msgf("%d films were removed from database\n", del.DeletedCount)
 
 	// Remove specified volume from "volumes" collection
 	res, err := m.volumesColl.DeleteOne(m.ctx, bson.M{"_id": volumeId})
@@ -188,7 +189,7 @@ func (m *MongoDB) DeleteVolume(volumeId primitive.ObjectID) error {
 	if res.DeletedCount != 1 {
 		return errors.New("unable to delete volume")
 	}
-	log.WithField("volumeId", volumeId).Infoln("Volume removed from database")
+	log.Info().Any("volumeId", volumeId).Msg("Volume removed from database")
 
 	return nil
 }
@@ -226,7 +227,7 @@ func (m *MongoDB) AddVolumeSourceToFilm(film *model.Film) error {
 	} else if res.ModifiedCount == 0 {
 		return errors.New("unable to add volume as source of film to database")
 	}
-	log.WithField("path", film.VolumeFiles[0].Path).Debugln("Added volume as source of film to database")
+	log.Debug().Str("path", film.VolumeFiles[0].Path).Msg("Added volume as source of film to database")
 	return nil
 }
 
@@ -279,7 +280,10 @@ func (m *MongoDB) DeleteFilmVolumeFile(path string) error {
 	}
 	// If it only had 1 volumeFile, remove the film entirely
 	if len(film.VolumeFiles) == 1 {
-		m.DeleteFilm(film.ID)
+		err = m.DeleteFilm(film.ID)
+		if err != nil {
+			return err
+		}
 	} else {
 		update, err := m.filmsColl.UpdateOne(m.ctx,
 			getFilmPathFilter(path),
@@ -337,7 +341,7 @@ func (m *MongoDB) IsPersonPresent(personID int64) bool {
 func (m *MongoDB) AddPerson(person *model.Person) {
 	_, err := m.peopleColl.InsertOne(m.ctx, *person)
 	if err != nil {
-		log.WithField("personID", person.TMDBID).Errorln(err)
+		log.Error().Int64("personID", person.TMDBID).Err(err).Send()
 	}
 }
 
@@ -346,18 +350,18 @@ func (m *MongoDB) AddActors(actors []model.Person) {
 	for _, actor := range actors {
 		res, err := m.peopleColl.UpdateOne(m.ctx, bson.M{"tmdb_id": actor.TMDBID}, bson.M{"$set": actor}, options.Update().SetUpsert(true))
 		if err != nil {
-			log.WithField("actorName", actor.Name).Warningln("Unable to add actor to database:", err)
+			log.Warn().Str("actorName", actor.Name).Err(err).Msg("Unable to add actor to database")
 		}
 		if res.MatchedCount > 0 {
 			if res.ModifiedCount > 0 {
-				log.WithField("actorName", actor.Name).Debugln("Actor updated in database")
+				log.Debug().Str("actorName", actor.Name).Msg("Actor updated in database")
 			} else if res.UpsertedCount > 0 {
-				log.WithField("actorName", actor.Name).Debugln("Actor added to database")
+				log.Debug().Str("actorName", actor.Name).Msg("Actor added to database")
 			} else {
-				log.WithField("actorName", actor.Name).Debugln("Actor already in database")
+				log.Debug().Str("actorName", actor.Name).Msg("Actor already in database")
 			}
 		} else {
-			log.WithField("actorName", actor.Name).Debugln("Actor added to database")
+			log.Debug().Str("actorName", actor.Name).Msg("Actor added to database")
 		}
 	}
 }
@@ -377,17 +381,17 @@ func (m *MongoDB) GetPersonFromTMDBID(TMDBID int64) (*model.Person, error) {
 }
 
 func (m *MongoDB) GetPeople() (people []model.Person, err error) {
-	options := options.Find()
-	options.SetSort(bson.M{"title": 1})
-	peopleCur, err := m.peopleColl.Find(m.ctx, bson.M{}, options)
+	opt := options.Find()
+	opt.SetSort(bson.M{"title": 1})
+	peopleCur, err := m.peopleColl.Find(m.ctx, bson.M{}, opt)
 	if err != nil {
-		return nil, fmt.Errorf("Error while retrieving people from DB: %w", err)
+		return nil, fmt.Errorf("error while retrieving people from DB: %w", err)
 	}
 	for peopleCur.Next(m.ctx) {
 		var person model.Person
 		err := peopleCur.Decode(&person)
 		if err != nil {
-			return nil, fmt.Errorf("Error while decoding person from DB: %w", err)
+			return nil, fmt.Errorf("error while decoding person from DB: %w", err)
 		}
 		people = append(people, person)
 	}
@@ -411,17 +415,17 @@ func (m *MongoDB) GetFilmCount() int64 {
 
 // GetFilms returns a slice of Film
 func (m *MongoDB) GetFilms() (films []model.Film, err error) {
-	options := options.Find()
-	options.SetSort(bson.M{"title": 1})
-	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, options)
+	opt := options.Find()
+	opt.SetSort(bson.M{"title": 1})
+	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, opt)
 	if err != nil {
-		return nil, fmt.Errorf("Error while retrieving films from DB: %w", err)
+		return nil, fmt.Errorf("error while retrieving films from DB: %w", err)
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			return nil, fmt.Errorf("Error while decoding film from DB: %w", err)
+			return nil, fmt.Errorf("error while decoding film from DB: %w", err)
 		}
 		films = append(films, film)
 	}
@@ -448,14 +452,14 @@ func (m *MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []
 
 	filmsCur, err := m.filmsColl.Find(m.ctx, filter, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve films from database")
+		log.Error().Err(err).Msg("Unable to retrieve films from database")
 		return
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}
@@ -464,20 +468,20 @@ func (m *MongoDB) GetFilmsFiltered(years []int, genre, country string) (films []
 
 // GetFilmsRange returns a slice of Film from start to number
 func (m *MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
-	options := options.Find()
-	options.SetSort(bson.M{"title": 1})
-	options.SetSkip(int64(start))
-	options.SetLimit(int64(number))
-	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, options)
+	opt := options.Find()
+	opt.SetSort(bson.M{"title": 1})
+	opt.SetSkip(int64(start))
+	opt.SetLimit(int64(number))
+	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{}, opt)
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve films from database")
+		log.Error().Err(err).Msg("Unable to retrieve films from database")
 		return
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}
@@ -488,13 +492,13 @@ func (m *MongoDB) GetFilmsRange(start, number int) (films []model.Film) {
 func (m *MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"volume_files": bson.D{{Key: "$elemMatch", Value: bson.M{"fromvolume": id}}}})
 	if err != nil {
-		log.WithField("error", err).Errorln("Unable to retrieve films from database")
+		log.Error().Err(err).Msg("Unable to retrieve films from database")
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}
@@ -505,14 +509,14 @@ func (m *MongoDB) GetFilmsFromVolume(id primitive.ObjectID) (films []model.Film)
 func (m *MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"characters": bson.D{{Key: "$elemMatch", Value: bson.M{"actor_id": actorID}}}})
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "actorID": actorID}).Errorln("Unable to retrieve films with actor from database")
+		log.Error().Err(err).Int64("actorID", actorID).Msg("Unable to retrieve films with actor from database")
 		return
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}
@@ -523,14 +527,14 @@ func (m *MongoDB) GetFilmsWithActor(actorID int64) (films []model.Film) {
 func (m *MongoDB) GetFilmsWithDirector(directorID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"directors": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": directorID}}}})
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "actorID": directorID}).Errorln("Unable to retrieve films with actor from database")
+		log.Error().Err(err).Int64("directorID", directorID).Msg("Unable to retrieve films with actor from database")
 		return
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}
@@ -541,14 +545,14 @@ func (m *MongoDB) GetFilmsWithDirector(directorID int64) (films []model.Film) {
 func (m *MongoDB) GetFilmsWithWriter(writerID int64) (films []model.Film) {
 	filmsCur, err := m.filmsColl.Find(m.ctx, bson.M{"writers": bson.D{{Key: "$elemMatch", Value: bson.M{"$eq": writerID}}}})
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "actorID": writerID}).Errorln("Unable to retrieve films with actor from database")
+		log.Error().Err(err).Int64("writerID", writerID).Msg("Unable to retrieve films with actor from database")
 		return
 	}
 	for filmsCur.Next(m.ctx) {
 		var film model.Film
 		err := filmsCur.Decode(&film)
 		if err != nil {
-			log.WithField("error", err).Errorln("Unable to fetch film from database")
+			log.Error().Err(err).Msg("Unable to fetch film from database")
 		}
 		films = append(films, film)
 	}

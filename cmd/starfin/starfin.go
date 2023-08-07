@@ -5,12 +5,14 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/Agurato/starfin/internal/business"
 	"github.com/Agurato/starfin/internal/infrastructure"
 	"github.com/Agurato/starfin/internal/model"
 	"github.com/Agurato/starfin/internal/service/server"
-	"github.com/joho/godotenv"
-	log "github.com/sirupsen/logrus"
 )
 
 // Environment variables names
@@ -33,16 +35,16 @@ const (
 func main() {
 	err := initApp()
 	if err != nil {
-		log.WithError(err).Errorln("Error during initialization")
+		log.Error().Err(fmt.Errorf("error during initialization: %w", err))
 	}
 }
 
 func initApp() error {
 	err := godotenv.Load()
 
-	log.SetOutput(os.Stdout)
 	// TODO: Set level via environment variable
-	log.SetLevel(log.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	db := infrastructure.NewMongoDB(
 		os.Getenv(EnvDBUser),
@@ -68,7 +70,12 @@ func initApp() error {
 	filterer.AddFilms(fm.GetFilms())
 
 	fw := business.NewFileWatcher(db, fm, metadata)
-	go fw.Run()
+	go func() {
+		err = fw.Run()
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+	}()
 
 	pm := business.NewPersonManager(db)
 	um := business.NewUserManager(db)

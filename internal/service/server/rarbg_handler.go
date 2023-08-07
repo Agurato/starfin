@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type TorrentStorer interface {
@@ -83,7 +84,7 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 			"error": "Invalid API Key",
 		})
 		if err != nil {
-			log.Errorln(err)
+			log.Error().Err(err).Send()
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -107,7 +108,7 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 		torrents, err = rh.TorrentStorer.GetTorrents(c, imdbID, offset, limit)
 
 		if err != nil {
-			log.Errorln(err)
+			log.Error().Err(err).Send()
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -128,7 +129,7 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 		}
 
 		if err != nil {
-			log.Errorln(err)
+			log.Error().Err(err).Send()
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -146,7 +147,7 @@ func (rh RarbgHandler) GETTorznab(c *gin.Context) {
 	}
 
 	if err != nil {
-		log.Errorln(err)
+		log.Error().Err(err).Send()
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}

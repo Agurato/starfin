@@ -9,7 +9,7 @@ import (
 
 	"github.com/Agurato/starfin/internal/model"
 	"github.com/radovskyb/watcher"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/exp/slices"
 )
@@ -68,10 +68,9 @@ func NewFileWatcher(fs FileStorer, fm FileWatcherFilmManager, wmg WatcherMetadat
 	return fileWatcher
 }
 
-func (fw *FileWatcher) Run() {
-	if err := fw.watcher.Start(1 * time.Second); err != nil {
-		log.Fatalln(err)
-	}
+func (fw *FileWatcher) Run() error {
+	err := fw.watcher.Start(1 * time.Second)
+	return err
 }
 
 func (fw *FileWatcher) Stop() {
@@ -81,12 +80,12 @@ func (fw *FileWatcher) Stop() {
 func (fw *FileWatcher) AddVolume(v *model.Volume) {
 	if v.IsRecursive {
 		if err := fw.watcher.AddRecursive(v.Path); err != nil {
-			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
+			log.Error().Str("path", v.Path).Err(err).Msg("Could not watch volume")
 			return
 		}
 	} else {
 		if err := fw.watcher.Add(v.Path); err != nil {
-			log.WithFields(log.Fields{"path": v.Path, "error": err}).Errorln("Could not watch volume")
+			log.Error().Str("path", v.Path).Err(err).Msg("Could not watch volume")
 			return
 		}
 	}
@@ -115,17 +114,17 @@ func (fw *FileWatcher) eventListener() {
 				}
 
 				// File is not being written anymore
-				log.Debugln("File has stopped writing", path)
+				log.Debug().Str("path", path).Msg("File has stopped writing")
 				delete(fileWrites, path)
 
 				if err := fw.handleFileCreate(path); err != nil {
-					log.Errorln(err)
+					log.Error().Err(err).Send()
 					continue
 				}
 			}
 		// There is a new file event
 		case event := <-fw.watcher.Event:
-			log.WithField("event", event).Debugln("New file event")
+			log.Debug().Any("event", event).Msg("New file event")
 			if event.Op == watcher.Create || event.Op == watcher.Write {
 				// Add file if not a video or sub and if not already in map
 				if _, ok := fileWrites[event.Path]; !ok && !event.IsDir() {
@@ -142,7 +141,7 @@ func (fw *FileWatcher) eventListener() {
 			}
 		// Error in file watching
 		case err := <-fw.watcher.Error:
-			log.WithField("error", err).Errorln("Error event")
+			log.Error().Err(err).Msg("Error event")
 			return
 		// Stop watching files
 		case <-fw.watcher.Closed:
@@ -168,7 +167,7 @@ func (fw *FileWatcher) handleFileCreate(path string) error {
 			// Add it to the database
 			err := fw.FileStorer.AddSubtitleToFilmPath(mediaPath, *subtitle)
 			if err != nil {
-				log.WithFields(log.Fields{"subtitle": path, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
+				log.Error().Str("subtitle", path).Str("media", mediaPath).Err(err).Msg("Cannot add subtitle to media")
 			}
 		}
 	}
@@ -185,13 +184,13 @@ func (fw *FileWatcher) handleFileRenamed(oldPath, newPath string) error {
 		// Get related subtitles
 		subFiles, err := fw.getRelatedSubFiles(newPath)
 		if err != nil {
-			log.WithField("path", newPath).Errorln("Error with file rename: could not get related subtitles")
+			log.Error().Str("path", newPath).Err(err).Msg("Error with file rename: could not get related subtitles")
 		}
 		// Create film
 		newFilm := fw.WatcherMetadataGetter.CreateFilm(newPath, volume.ID, subFiles)
 		err = fw.WatcherMetadataGetter.FetchFilmTMDBID(newFilm)
 		if err != nil {
-			log.WithFields(log.Fields{"path": newPath, "error": err}).Errorln("Error with file rename: could not get TMDB ID")
+			log.Error().Str("path", newPath).Err(err).Msg("Error with file rename: could not get TMDB ID")
 			// TODO
 		}
 
@@ -204,7 +203,7 @@ func (fw *FileWatcher) handleFileRenamed(oldPath, newPath string) error {
 		if oldFilm.TMDBID == newFilm.TMDBID {
 			// If they have the same TMDB ID, replace the correct volumeFile
 			if err = fw.FileStorer.UpdateFilmVolumeFile(oldFilm, oldPath, newFilm.VolumeFiles[0]); err != nil {
-				log.WithFields(log.Fields{"oldPath": oldPath}).Errorln(err)
+				log.Error().Str("oldPath", oldPath).Err(err).Send()
 			}
 		} else {
 			// If they don't have the same TMDB ID, remove the path from the previous film
@@ -230,7 +229,7 @@ func (fw *FileWatcher) handleFileRenamed(oldPath, newPath string) error {
 			// Add it to the database
 			err := fw.FileStorer.AddSubtitleToFilmPath(mediaPath, *subtitle)
 			if err != nil {
-				log.WithFields(log.Fields{"subtitle": newPath, "media": mediaPath, "error": err}).Error("Cannot add subtitle to media")
+				log.Error().Err(err).Str("subtitle", newPath).Str("media", mediaPath).Msg("Cannot add subtitle to media")
 			}
 		}
 	}
@@ -242,7 +241,7 @@ func (fw *FileWatcher) handleFileRemoved(path string) {
 	ext := filepath.Ext(path)
 	if model.IsVideoFileExtension(ext) { // If we're deleting a video
 		if err := fw.FileStorer.DeleteFilmVolumeFile(path); err != nil {
-			log.Errorln(err)
+			log.Error().Err(err).Send()
 		}
 	} else if model.IsSubtitleFileExtension(ext) { // If we're deleting a subtitle
 		// Get related media file
@@ -259,7 +258,7 @@ func (fw *FileWatcher) handleFileRemoved(path string) {
 func (fw *FileWatcher) synchronizeFilesAndDB(volume *model.Volume) {
 	videoFiles, subFiles, err := volume.ListVideoFiles()
 	if err != nil {
-		log.WithField("volume", volume.Path).Errorln("Could not synchronize volume with database")
+		log.Error().Str("volume", volume.Path).Msg("Could not synchronize volume with database")
 	}
 
 	// Add to database all new video files
@@ -353,22 +352,22 @@ func (fw *FileWatcher) addFilmFromPath(path string, volumeID primitive.ObjectID)
 	// Get subtitle files in same directory
 	subs, err := fw.getRelatedSubFiles(path)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "path": path}).Debugln("Cannot get related subtitle files")
+		log.Debug().Err(err).Str("path", path).Msg("Cannot get related subtitle files")
 	}
 	film := fw.WatcherMetadataGetter.CreateFilm(path, volumeID, subs)
 	// Search ID on TMDB
 	if err := fw.WatcherMetadataGetter.FetchFilmTMDBID(film); err != nil {
-		log.WithFields(log.Fields{"file": path, "error": err}).Warningln("Unable to fetch film ID from TMDB")
+		log.Warn().Str("file", path).Err(err).Msg("Unable to fetch film ID from TMDB")
 		film.Title = film.Name
 	} else {
-		log.WithField("tmdbID", film.TMDBID).Infoln("Found media with TMDB ID")
+		log.Info().Int("tmdbID", film.TMDBID).Msg("Found media with TMDB ID")
 		// Fill info from TMDB
 		fw.WatcherMetadataGetter.UpdateFilmDetails(film)
 	}
 
 	// Add media to DB
 	if err = fw.FileWatcherFilmManager.AddFilm(film, false); err != nil {
-		log.WithField("path", film.VolumeFiles[0].Path).Errorln(err)
+		log.Error().Err(err).Str("path", film.VolumeFiles[0].Path).Send()
 	}
 
 	return nil

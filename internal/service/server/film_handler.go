@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/pariz/gountries"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type FilmManager interface {

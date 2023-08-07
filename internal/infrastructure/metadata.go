@@ -14,13 +14,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/agnivade/levenshtein"
 	tmdb "github.com/cyruzin/golang-tmdb"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/exp/slices"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type Metadata interface {
@@ -76,7 +77,7 @@ func (mw MetadataWrapper) CreateFilm(file string, volumeID primitive.ObjectID, s
 	filename := filepath.Base(file)
 	mediaInfo, err := mw.getMediaInfo(os.Getenv("MEDIAINFO_PATH"), file)
 	if err != nil {
-		log.WithField("file", file).Errorln("Could not get media info")
+		log.Error().Str("file", file).Msg("Could not get media info")
 	}
 	subtitles := model.GetExternalSubtitles(file, subFiles)
 	film := model.Film{
@@ -137,7 +138,7 @@ func (mw MetadataWrapper) CreateFilm(file string, volumeID primitive.ObjectID, s
 	return &film
 }
 
-// FetchMediaID fetches media ID from TMDB and stores it
+// FetchFilmTMDBID fetches media ID from TMDB and stores it
 func (mw MetadataWrapper) FetchFilmTMDBID(f *model.Film) error {
 	urlOptions := make(map[string]string)
 	if f.ReleaseYear != 0 {
@@ -168,7 +169,7 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	// Get details
 	details, err := mw.client.GetMovieDetails(film.TMDBID, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film details from TMDB")
+		log.Error().Err(err).Int("tmdbID", film.TMDBID).Msg("Unable to fetch film details from TMDB")
 	}
 	film.IMDbID = details.IMDbID
 	film.Title = details.Title
@@ -191,7 +192,7 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	// Set classification
 	releaseDates, err := mw.client.GetMovieReleaseDates(film.TMDBID)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film release dates from TMDB")
+		log.Error().Err(err).Int("tmdbID", film.TMDBID).Msg("Unable to fetch film release dates from TMDB")
 	} else {
 		for _, releasesCountry := range releaseDates.Results {
 			if releasesCountry.Iso3166_1 == "US" {
@@ -204,7 +205,7 @@ func (mw MetadataWrapper) UpdateFilmDetails(film *model.Film) {
 	// Set cast and crew
 	credits, err := mw.client.GetMovieCredits(film.TMDBID, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"tmdbID": film.TMDBID, "error": err}).Errorln("Unable to fetch film credits from TMDB")
+		log.Error().Err(err).Int("tmdbID", film.TMDBID).Msg("Unable to fetch film credits from TMDB")
 	} else {
 		film.Directors = nil
 		film.Writers = nil
@@ -332,17 +333,17 @@ func (mw MetadataWrapper) getIMDbRating(imdbId string) string {
 	req.Header.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from IMDb")
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from IMDb")
 		return ""
 	}
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from IMDb")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from IMDb")
 		return ""
 	}
 
@@ -351,41 +352,41 @@ func (mw MetadataWrapper) getIMDbRating(imdbId string) string {
 
 // getLetterboxdRating fetchs rating from letterboxd using IMDbID
 func (mw MetadataWrapper) getLetterboxdRating(imdbId string) string {
-	res, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/films/%s/", imdbId))
+	resp, err := http.Get(fmt.Sprintf("https://letterboxd.com/search/films/%s/", imdbId))
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != 200 {
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
 
 	filmUrl, exists := doc.Find("#content > div > div > section > ul > li:nth-child(1) > div").First().Attr("data-target-link")
 	if !exists {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
 
-	res, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", filmUrl))
+	resp, err = http.Get(fmt.Sprintf("https://letterboxd.com/csi%srating-histogram/", filmUrl))
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
-	doc, err = goquery.NewDocumentFromReader(res.Body)
+	doc, err = goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.WithField("imdb_id", imdbId).Errorln("Cannot fetch rating from Letterboxd")
+		log.Error().Str("imdb_id", imdbId).Msg("Cannot fetch rating from Letterboxd")
 		return ""
 	}
 
@@ -396,7 +397,7 @@ func (mw MetadataWrapper) getLetterboxdRating(imdbId string) string {
 func (mw MetadataWrapper) GetPersonDetails(personID int64) *model.Person {
 	details, err := mw.client.GetPersonDetails(int(personID), nil)
 	if err != nil {
-		log.WithField("personID", personID).Errorln(err)
+		log.Error().Int64("personID", personID).Err(err).Send()
 		return &model.Person{
 			ID:     primitive.NewObjectID(),
 			TMDBID: personID,
@@ -466,7 +467,7 @@ func (mw MetadataWrapper) getTMDBIDFromLetterboxd(inputUrl string) (TMDBID int, 
 	// Get the page's HTML
 	res, err := http.Get(inputUrl)
 	if err != nil {
-		log.WithField("url", inputUrl).Errorln("Cannot fetch TMDB ID from Letterboxd")
+		log.Error().Str("url", inputUrl).Msg("Cannot fetch TMDB ID from Letterboxd")
 		return TMDBID, err
 	}
 	defer res.Body.Close()
