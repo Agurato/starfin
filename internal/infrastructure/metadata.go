@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -19,7 +20,6 @@ import (
 	tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/exp/slices"
 
 	"github.com/Agurato/starfin/internal/model"
 )

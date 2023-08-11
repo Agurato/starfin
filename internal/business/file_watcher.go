@@ -4,14 +4,15 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/radovskyb/watcher"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/exp/slices"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type FileStorer interface {

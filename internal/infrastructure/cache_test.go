@@ -5,14 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Agurato/starfin/internal/infrastructure"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Agurato/starfin/internal/infrastructure"
 )
 
 func TestCache(t *testing.T) {
 	const cachePath = "../../cache"
 	cache := infrastructure.NewCache(cachePath)
-	os.RemoveAll(cachePath + "/test")
+	_ = os.RemoveAll(cachePath + "/test")
 
 	t.Run("GetCachedPath", func(t *testing.T) {
 		path := "/foo/bar"

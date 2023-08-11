@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type VolumeStorer interface {

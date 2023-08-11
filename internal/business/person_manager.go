@@ -3,8 +3,9 @@ package business
 import (
 	"fmt"
 
-	"github.com/Agurato/starfin/internal/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type PersonStorer interface {

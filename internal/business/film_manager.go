@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Agurato/starfin/internal/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type FilmStorer interface {

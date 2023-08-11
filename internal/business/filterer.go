@@ -1,12 +1,14 @@
 package business
 
 import (
+	"cmp"
 	"regexp"
+	"slices"
 	"strconv"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/pariz/gountries"
-	"golang.org/x/exp/slices"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type Filterer struct {
@@ -44,8 +46,8 @@ func (f *Filterer) AddFilms(films []model.Film) {
 	}
 	f.computeDecades()
 	slices.Sort(f.Genres)
-	slices.SortFunc(f.Countries, func(a, b string) bool {
-		return f.GetCountryName(a) < f.GetCountryName(b)
+	slices.SortFunc(f.Countries, func(a, b string) int {
+		return cmp.Compare(f.GetCountryName(a), f.GetCountryName(b))
 	})
 }
 
@@ -57,8 +59,8 @@ func (f *Filterer) AddFilm(film *model.Film) {
 	f.addToGenres(film.Genres)
 	slices.Sort(f.Genres)
 	f.addToCountries(film.ProdCountries)
-	slices.SortFunc(f.Countries, func(a, b string) bool {
-		return f.GetCountryName(a) < f.GetCountryName(b)
+	slices.SortFunc(f.Countries, func(a, b string) int {
+		return cmp.Compare(f.GetCountryName(a), f.GetCountryName(b))
 	})
 }
 

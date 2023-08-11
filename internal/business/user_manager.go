@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Agurato/starfin/internal/model"
 	"github.com/matthewhartstonge/argon2"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/Agurato/starfin/internal/model"
 )
 
 type UserStorer interface {
